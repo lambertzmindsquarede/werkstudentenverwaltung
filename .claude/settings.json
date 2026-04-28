@@ -16,7 +16,27 @@
       "Bash(kill:*)",
       "Bash(npx shadcn@latest add:*)",
       "Bash(ls:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(git -C \"/Users/lambertz/Visual Studio Projekte/werkstudentenverwaltung\" ls-files src/components/ src/app/api/)",
+      "Bash(git -C \"/Users/lambertz/Visual Studio Projekte/werkstudentenverwaltung\" ls-files src/app/api/)",
+      "Bash(git -C \"/Users/lambertz/Visual Studio Projekte/werkstudentenverwaltung\" log --oneline -S \"CREATE TABLE\" -10)",
+      "mcp__claude_ai_Supabase__list_projects",
+      "mcp__claude_ai_Supabase__list_tables",
+      "mcp__claude_ai_Supabase__apply_migration",
+      "mcp__claude_ai_Supabase__generate_typescript_types",
+      "mcp__claude_ai_Supabase__get_project_url",
+      "mcp__claude_ai_Supabase__get_publishable_keys",
+      "Bash(npx playwright *)",
+      "Bash(npm test *)",
+      "Bash(npm run *)",
+      "Bash(echo \"PID: $!\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{redirect_url}\" http://localhost:3000/dashboard)",
+      "Read(//private/tmp/**)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{redirect_url}\" http://localhost:3000/manager)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{redirect_url}\" http://localhost:3000/pending)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{redirect_url}\" http://localhost:3000/login)",
+      "Bash(curl -s -o /dev/null -w \"auth/callback: %{http_code} %{redirect_url}\\\\n\" http://localhost:3000/auth/callback)",
+      "Bash(curl -s -o /dev/null -w \"login?error=auth_failed: %{http_code}\\\\n\" \"http://localhost:3000/login?error=auth_failed\")"
     ]
   }
 }

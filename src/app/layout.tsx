@@ -1,21 +1,23 @@
-import type { Metadata } from "next";
-import "./globals.css";
+import type { Metadata } from 'next'
+import { Toaster } from '@/components/ui/sonner'
+import './globals.css'
 
 export const metadata: Metadata = {
-  title: "AI Coding Starter Kit",
-  description: "Built with AI Agent Team System",
-};
+  title: 'Werkstudentenverwaltung – mindsquare',
+  description: 'Verwaltung von Werkstudenten-Arbeitszeiten bei mindsquare',
+}
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="de">
       <body className="antialiased">
         {children}
+        <Toaster richColors />
       </body>
     </html>
-  );
+  )
 }

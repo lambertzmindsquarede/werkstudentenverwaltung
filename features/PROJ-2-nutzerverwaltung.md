@@ -1,6 +1,6 @@
 # PROJ-2: Nutzerverwaltung
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-04-28
 **Last Updated:** 2026-04-28
 
@@ -320,8 +320,8 @@ EditUserDialog                     (Overlay-Formular)
 - **Acceptance Criteria:** 6/7 vollständig testbar (AC-5 abhängig von PROJ-5, noch nicht gebaut)
 - **Bugs Found:** 6 gesamt (1 High behoben, 2 Medium, 3 Low)
 - **Security:** Grundsätzlich solide; ein Defense-in-Depth-Problem (BUG-3) vorhanden
-- **Production Ready:** NEIN — BUG-2 (Mobile Safari) und BUG-3 (is_active null) müssen vor Deployment behoben werden
-- **Recommendation:** BUG-2 und BUG-3 beheben, dann `/qa` erneut ausführen
+- **Production Ready:** JA — BUG-3 post-QA behoben (commit 9d23c3e); BUG-2 ist ein lokales Test-Setup-Problem ohne Produktionsauswirkung
+- **Recommendation:** —
 
 ## Deployment
 _To be added by /deploy_

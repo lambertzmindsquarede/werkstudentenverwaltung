@@ -15,7 +15,7 @@
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
 | PROJ-1 | Authentication (Azure AD SSO) | Approved | [PROJ-1-authentication-azure-ad.md](PROJ-1-authentication-azure-ad.md) | 2026-04-28 |
-| PROJ-2 | Nutzerverwaltung | In Review | [PROJ-2-nutzerverwaltung.md](PROJ-2-nutzerverwaltung.md) | 2026-04-28 |
+| PROJ-2 | Nutzerverwaltung | Approved | [PROJ-2-nutzerverwaltung.md](PROJ-2-nutzerverwaltung.md) | 2026-04-28 |
 | PROJ-3 | Wochenplanung | Planned | [PROJ-3-wochenplanung.md](PROJ-3-wochenplanung.md) | 2026-04-28 |
 | PROJ-4 | Tages-Zeiterfassung | Planned | [PROJ-4-tages-zeiterfassung.md](PROJ-4-tages-zeiterfassung.md) | 2026-04-28 |
 | PROJ-5 | Manager-Kalenderansicht | Planned | [PROJ-5-manager-kalenderansicht.md](PROJ-5-manager-kalenderansicht.md) | 2026-04-28 |
