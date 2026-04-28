@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import { MicrosoftSignInButton } from '@/components/MicrosoftSignInButton'
+import { DevLoginButton } from '@/components/DevLoginButton'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -56,6 +57,7 @@ export default async function LoginPage({
               </Alert>
             )}
             <MicrosoftSignInButton />
+            <DevLoginButton />
             <p className="text-xs text-slate-500 text-center mt-6">
               Nur für mindsquare-Mitarbeiter zugänglich.
               <br />
