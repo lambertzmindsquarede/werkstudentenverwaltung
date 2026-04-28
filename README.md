@@ -1,5 +1,4 @@
-# AI Coding Starter Kit
-
+# Werkstudentenverwaltung
 > Build production-ready web apps faster with AI-powered Skills handling Requirements, Architecture, Development, QA, and Deployment.
 
 This template uses [Claude Code](https://docs.anthropic.com/en/docs/claude-code) with modern Skills, Rules, and Sub-Agents to provide a complete AI-powered development workflow.
