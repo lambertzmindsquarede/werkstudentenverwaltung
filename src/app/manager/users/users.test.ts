@@ -120,7 +120,9 @@ describe('filterUsers', () => {
     expect(result[0].id).toBe('4')
   })
 
-  it('treats is_active=null as active (existing behavior)', () => {
+  it('treats is_active=null as active in filter (consistent with proxy fix)', () => {
+    // The filter uses is_active !== false (same semantics as before BUG-3 fix).
+    // The proxy now blocks null at the middleware level, so null never reaches the UI.
     const nullActive = makeProfile({ id: '6', role: 'werkstudent', is_active: null })
     const result = filterUsers([nullActive], 'active', 'all')
     expect(result).toHaveLength(1)
