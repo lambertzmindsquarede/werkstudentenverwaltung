@@ -21,7 +21,7 @@
 | PROJ-5 | Manager-Kalenderansicht | Approved | [PROJ-5-manager-kalenderansicht.md](PROJ-5-manager-kalenderansicht.md) | 2026-04-28 |
 | PROJ-6 | Auswertung & Export | Planned | [PROJ-6-auswertung-export.md](PROJ-6-auswertung-export.md) | 2026-04-28 |
 | PROJ-7 | Lokaler Dev-Login | Approved | [PROJ-7-lokaler-dev-login.md](PROJ-7-lokaler-dev-login.md) | 2026-04-28 |
-| PROJ-8 | Mehrere Zeitblöcke pro Tag | In Review | [PROJ-8-mehrere-zeitbloecke-pro-tag.md](PROJ-8-mehrere-zeitbloecke-pro-tag.md) | 2026-04-29 |
+| PROJ-8 | Mehrere Zeitblöcke pro Tag | Approved | [PROJ-8-mehrere-zeitbloecke-pro-tag.md](PROJ-8-mehrere-zeitbloecke-pro-tag.md) | 2026-04-29 |
 
 <!-- Add features above this line -->
 

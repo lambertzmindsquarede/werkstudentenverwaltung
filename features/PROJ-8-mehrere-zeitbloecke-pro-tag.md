@@ -1,6 +1,6 @@
 # PROJ-8: Mehrere Zeitblöcke pro Tag
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-04-29
 **Last Updated:** 2026-04-29
 
@@ -248,11 +248,10 @@ supabase/migrations/20260429_proj8_multi_block.sql
 - **Impact:** Save button correctly remains disabled; only the visual error indicator is on the wrong block. Requires an unlikely manual sequence to trigger.
 - **Workaround:** Clear or fix the incomplete block; the UI resolves correctly.
 
-#### BUG-8-2: DB migration not yet applied (blocker for live deployment)
-- **Severity:** Critical (deployment blocker, not a code bug)
-- **Description:** `supabase/migrations/20260429_proj8_multi_block.sql` must be applied to the Supabase project before the feature functions. Without the migration, stamp POST fails (inserts `block_index` into non-existent column), and the old `UNIQUE(user_id, date)` constraint prevents multiple blocks.
-- **Status:** Known/documented. Migration file is ready. Must be applied before deploy.
-- **Fix:** Run the migration via Supabase SQL Editor or `supabase db push`.
+#### ~~BUG-8-2: DB migration not yet applied~~ — FIXED (2026-04-29)
+- **Severity:** ~~Critical~~ → Resolved
+- **Description:** Migration was partially pre-applied; the old `actual_entries_user_date_unique` constraint (differently named than expected) was still present, blocking multiple blocks per day.
+- **Fix applied:** Ran `proj8_drop_actual_entries_old_unique` via Supabase MCP CLI. Both tables now have `UNIQUE(user_id, date, block_index)` and no old single-entry constraint remains.
 
 #### BUG-8-3 (FIXED): PROJ-4 E2E tests expected 307, PROJ-8 route now returns 401
 - **Severity:** Low (test regression, code behavior improved)
@@ -272,7 +271,7 @@ supabase/migrations/20260429_proj8_multi_block.sql
 
 ### Production-Ready Decision
 
-**NOT READY** — BUG-8-2 (DB migration not applied) is a deployment blocker. Once the migration is applied, no critical or high code bugs remain. The feature can be re-assessed after the migration is confirmed applied.
+**READY** — BUG-8-2 resolved (DB migration applied 2026-04-29). No remaining critical or high bugs. Only BUG-8-1 (Low, edge case) is open.
 
 ### Regression
 
