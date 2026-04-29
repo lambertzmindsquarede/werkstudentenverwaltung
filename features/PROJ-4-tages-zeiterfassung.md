@@ -239,26 +239,13 @@ IstEintragEditDialog  [NEU]
 
 ### Bugs Found
 
-#### BUG-M1: Stamp-API gibt 307-Redirect statt 401 für unauthentifizierte Requests
-- **Severity:** Medium
-- **Steps to Reproduce:**
-  1. Sende `POST /api/time-entries/stamp` ohne Auth-Cookies (z.B. per curl oder API-Client)
-  2. Expected: HTTP 401 mit `{ "error": "Unauthorized" }`
-  3. Actual: HTTP 307 Redirect auf `/login`; nicht-Browser-Clients, die Redirect folgen, erhalten 500 (POST auf /login nicht unterstützt)
-- **Ursache:** `src/proxy.ts` intercepted alle nicht-öffentlichen Routen (inkl. `/api/*`) und leitet auf `/login` um; die 401-Rückgabe in `route.ts` ist für Browser-Clients unerreichbar
-- **Impact:** API-Consumer (mobile Apps, externe Services) erhalten unerwartetes Redirect statt 401; Security ist durch Redirect gewährleistet, aber REST-Semantik verletzt
-- **Priority:** Fix in next sprint
+#### ~~BUG-M1~~: Stamp-API gibt 307-Redirect statt 401 für unauthentifizierte Requests — **FIXED**
+- **Fixed in:** 2026-04-29
+- `src/proxy.ts` returns HTTP 401 JSON `{ "error": "Unauthorized" }` for all unauthenticated `/api/*` requests instead of a 307 redirect.
 
-#### BUG-M2: Kein Datum-Constraint im DB/RLS für Zukunfts-Einträge in IstEintragEditDialog
-- **Severity:** Medium
-- **Steps to Reproduce:**
-  1. Authentifiziere dich als Werkstudent
-  2. Rufe die Supabase JS-Client direkt auf: `supabase.from('actual_entries').insert({ user_id: 'eigene-id', date: '2099-01-01', ... })`
-  3. Expected: Insert wird abgelehnt (Zukunft nicht erlaubt)
-  4. Actual: Insert erfolgreich; Eintrag für Datum in der Zukunft wird angelegt
-- **Ursache:** RLS-INSERT-Policy prüft nur `user_id = auth.uid()`, nicht das `date`-Feld; kein DB-Constraint verhindert Zukunfts-Daten
-- **Impact:** Erfordert technisches Wissen (direkter SDK-Call), nicht über UI zugänglich; betrifft nur eigene Daten des Nutzers
-- **Priority:** Fix in next sprint
+#### ~~BUG-M2~~: Kein Datum-Constraint im DB/RLS für Zukunfts-Einträge — **FIXED**
+- **Fixed in:** 2026-04-29
+- Migration `actual_entries_no_future_dates` applied: RLS INSERT policy `werkstudenten_actual_insert` now enforces `date <= (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Berlin')::date`. Direct SDK inserts for future dates are rejected at the database level.
 
 ### Pre-existing Regressions (PROJ-1)
 

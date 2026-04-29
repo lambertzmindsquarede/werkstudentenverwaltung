@@ -60,6 +60,12 @@ export default function ManagerPage() {
           >
             Nutzerverwaltung
           </a>
+          <a
+            href="/manager/kalender"
+            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
+          >
+            Kalenderansicht
+          </a>
         </div>
       </nav>
 
@@ -110,7 +116,7 @@ export default function ManagerPage() {
 
         <div className="mt-8 bg-blue-50 border border-blue-100 rounded-xl p-6 text-center">
           <p className="text-slate-500 text-sm">
-            Weitere Features werden bald verfügbar sein — Kalenderansicht (PROJ-5) und Auswertung & Export (PROJ-6).
+            Weitere Features kommen bald — Auswertung &amp; Export (PROJ-6).
           </p>
         </div>
       </main>

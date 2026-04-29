@@ -173,8 +173,8 @@ Keine – alle benötigten shadcn-Komponenten sind bereits installiert.
 
 | ID | Severity | Description |
 |----|----------|-------------|
-| BUG-5-1 | Low | **Stale copy:** `manager/page.tsx` Übersicht-Box erwähnt noch „Kalenderansicht (PROJ-5)" als „bald verfügbar" — PROJ-5 ist jetzt live. |
-| BUG-5-2 | Low | **Timezone edge case:** `today` wird in Europe/Berlin berechnet, `weekDayStrings` in UTC. Bei 00:00–02:00 Uhr Berliner Zeit kann die Heute-Hervorhebung eine Spalte daneben liegen. |
+| ~~BUG-5-1~~ | Low | **Stale copy FIXED (2026-04-29):** Removed stale "Kalenderansicht (PROJ-5) bald verfügbar" text from `manager/page.tsx`. |
+| ~~BUG-5-2~~ | Low | **Timezone edge case FIXED (2026-04-29):** `kalender/page.tsx` now derives default `weekStr` from the Berlin-timezone `today` string, eliminating the 00:00–02:00 UTC-midnight off-by-one. |
 | BUG-5-3 | Low (Pre-existing) | **PROJ-1 Regression:** E2E-Test „login page shows error message for auth_failed" schlägt auf Mobile Safari fehl. Nicht durch PROJ-5 verursacht. |
 
 ### Responsive & Cross-Browser

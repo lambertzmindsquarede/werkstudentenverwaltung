@@ -1,7 +1,7 @@
 {
-  "name": "ai-coding-starter-kit",
+  "name": "Werkstudentenverwaltung",
   "version": "1.0.0",
-  "description": "AI Coding Starter Kit with AI Agent Team System for Claude Code",
+  "description": "Zeiterfassung für die Werkstudenten und Praktikanten der mindsquare",
   "private": true,
   "scripts": {
     "dev": "next dev",

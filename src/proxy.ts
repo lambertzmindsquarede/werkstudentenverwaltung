@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-const PUBLIC_ROUTES = ['/login', '/auth']
+const PUBLIC_ROUTES = ['/login', '/auth', '/api/auth/dev-login']
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -38,6 +38,10 @@ export async function proxy(request: NextRequest) {
 
   if (!user) {
     if (isPublicRoute) return supabaseResponse
+    // API routes handle their own auth; return 401 instead of a browser redirect
+    if (pathname.startsWith('/api')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     return NextResponse.redirect(new URL('/login', request.url))
   }
 

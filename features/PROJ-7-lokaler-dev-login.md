@@ -1,6 +1,6 @@
 # PROJ-7: Lokaler Dev-Login
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-04-28
 **Last Updated:** 2026-04-28
 
@@ -69,7 +69,7 @@ VALUES (
 )
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO public.users (id, email, name, role, is_active, created_at)
+INSERT INTO public.profiles (id, email, full_name, role, is_active, created_at)
 VALUES (
   '00000000-0000-0000-0000-000000000001',
   'dev-admin@mindsquare.de',
@@ -178,7 +178,11 @@ Keine neuen npm-Pakete – `@supabase/ssr`, shadcn `Button`, `Badge`, `sonner` s
 
 ### Bugs Found
 
-#### BUG-1 (High): Proxy-Middleware blockiert `/api/auth/dev-login` für unauthentifizierte Requests
+#### ~~BUG-1~~ (High): Proxy-Middleware blockiert `/api/auth/dev-login` — **FIXED (2026-04-29)**
+
+`/api/auth/dev-login` added to `PUBLIC_ROUTES` in `src/proxy.ts`. Unauthenticated requests reach the route handler directly.
+
+#### ~~Original BUG-1 description~~: Proxy-Middleware blockiert `/api/auth/dev-login` für unauthentifizierte Requests
 
 **Beschreibung:**  
 `src/proxy.ts` definiert `PUBLIC_ROUTES = ['/login', '/auth']`. Der Pfad `/api/auth/dev-login` beginnt mit `/api/auth`, NICHT mit `/auth`. Die Proxy-Middleware erkennt ihn daher als geschützte Route und leitet unauthentifizierte Requests auf `/login` (HTML) um.
@@ -197,14 +201,22 @@ const PUBLIC_ROUTES = ['/login', '/auth', '/api/auth/dev-login']
 
 **Betroffene ACs:** AC 5, AC 6 (beide blockiert)
 
-#### BUG-2 (Low): Spec-Inkonsistenz — `public.users` vs. `public.profiles` in Seed-SQL
+#### ~~BUG-2~~ (Low): Spec-Inkonsistenz — **FIXED (2026-04-29)**
+
+"Seed-SQL (Vorschlag)" section corrected: `public.users` → `public.profiles`, column `name` → `full_name`.
+
+#### ~~Original BUG-2~~: Spec-Inkonsistenz — `public.users` vs. `public.profiles` in Seed-SQL
 
 **Beschreibung:**  
 Der Abschnitt "Seed-SQL (Vorschlag)" in der Spec referenziert `public.users`, das implementierte `docs/dev-seed.sql` korrekt `public.profiles`. Keine funktionale Auswirkung — Impl. ist richtig, Spec ist falsch.
 
 **Fix:** Spec-Tabellennamen unter "Seed-SQL (Vorschlag)" auf `public.profiles` korrigieren.
 
-#### BUG-3 (Low): Fehlermeldung bei halbfertigem Seed (nur `profiles`, kein `auth.users`)
+#### ~~BUG-3~~ (Low): Fehlermeldung bei halbfertigem Seed — **FIXED (2026-04-29)**
+
+`dev-login/route.ts` now detects "user not found" errors from `generateLink` and returns HTTP 404 (same as the profile-missing case) so the frontend shows the correct seed-hint toast.
+
+#### ~~Original BUG-3~~: Fehlermeldung bei halbfertigem Seed (nur `profiles`, kein `auth.users`)
 
 **Beschreibung:**  
 Falls nur `public.profiles` gesät wurde, aber kein `auth.users`-Eintrag existiert, schlägt `supabaseAdmin.auth.admin.generateLink()` fehl → API antwortet mit HTTP 500 statt 404. Der Frontend-Toast zeigt "Dev-Login fehlgeschlagen." statt "bitte Seed-Script ausführen".

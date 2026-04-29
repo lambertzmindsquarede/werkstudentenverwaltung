@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { createClient } from '@/lib/supabase-browser'
 
 export function DevLoginButton() {
   const [loading, setLoading] = useState(false)
@@ -16,20 +17,22 @@ export function DevLoginButton() {
   async function handleDevLogin() {
     try {
       setLoading(true)
-      const res = await fetch('/api/auth/dev-login', { method: 'POST' })
-      const data = await res.json()
+      const supabase = createClient()
 
-      if (res.status === 404) {
-        toast.error('Dev-Admin-User nicht gefunden – bitte Seed-Script ausführen (docs/dev-seed.sql)')
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: 'dev-admin@mindsquare.de',
+        password: 'dev-admin-2026',
+      })
+
+      if (error) {
+        toast.error('Dev-Login fehlgeschlagen: ' + error.message)
         return
       }
 
-      if (!res.ok) {
-        toast.error('Dev-Login fehlgeschlagen.')
-        return
-      }
-
-      window.location.href = data.redirectTo
+      const userId = data.user?.id
+      const profileResult = await supabase.from('profiles').select('role').eq('id', userId!).single()
+      const role = profileResult.data?.role ?? null
+      window.location.href = role === 'manager' ? '/manager' : '/dashboard'
     } catch {
       toast.error('Dev-Login fehlgeschlagen.')
     } finally {
