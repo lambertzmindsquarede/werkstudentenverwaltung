@@ -20,16 +20,15 @@ test('unauthenticated /dashboard redirects on tablet (768px)', async ({ page }) 
   await expect(page).toHaveURL(/\/login/)
 })
 
-// Security: POST /api/time-entries/stamp is protected (middleware redirects unauthenticated to /login)
-// NOTE: Returns 307 redirect (not 401) — see BUG-M1 in QA results
-test('POST /api/time-entries/stamp is protected — unauthenticated gets redirect', async ({ request }) => {
+// Security: POST /api/time-entries/stamp is protected — route returns 401 for unauthenticated API callers
+// NOTE: PROJ-8 route.ts now returns 401 directly (previously middleware returned 307 — BUG-M1 now fixed)
+test('POST /api/time-entries/stamp is protected — unauthenticated gets 401', async ({ request }) => {
   const response = await request.post('/api/time-entries/stamp', { maxRedirects: 0 })
-  // Middleware redirects to /login (307) rather than returning 401
-  expect(response.status()).toBe(307)
+  expect(response.status()).toBe(401)
 })
 
-// Security: PATCH /api/time-entries/stamp is protected (middleware redirects unauthenticated to /login)
-test('PATCH /api/time-entries/stamp is protected — unauthenticated gets redirect', async ({ request }) => {
+// Security: PATCH /api/time-entries/stamp is protected — route returns 401 for unauthenticated API callers
+test('PATCH /api/time-entries/stamp is protected — unauthenticated gets 401', async ({ request }) => {
   const response = await request.patch('/api/time-entries/stamp', { maxRedirects: 0 })
-  expect(response.status()).toBe(307)
+  expect(response.status()).toBe(401)
 })
