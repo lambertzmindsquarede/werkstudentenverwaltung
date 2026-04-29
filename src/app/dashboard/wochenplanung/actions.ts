@@ -4,17 +4,20 @@ import { createClient } from '@/lib/supabase-server'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { getWeekDates, getPreviousWeek, dateToString } from '@/lib/week-utils'
+import { validateBlocks } from '@/lib/time-block-utils'
 
 export type DayEntry = {
   date: string
   planned_start: string | null
   planned_end: string | null
+  block_index: number
 }
 
 const DayEntrySchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   planned_start: z.string().regex(/^\d{2}:\d{2}$/).nullable(),
   planned_end: z.string().regex(/^\d{2}:\d{2}$/).nullable(),
+  block_index: z.number().int().min(1).max(3),
 })
 
 function normalizeTime(time: string): string {
@@ -34,10 +37,12 @@ export async function loadWeekEntries(
 
   const { data, error } = await supabase
     .from('planned_entries')
-    .select('date, planned_start, planned_end')
+    .select('date, planned_start, planned_end, block_index')
     .eq('user_id', user.id)
     .in('date', dates)
-    .limit(7)
+    .order('date', { ascending: true })
+    .order('block_index', { ascending: true })
+    .limit(15)
 
   if (error) return { error: error.message }
 
@@ -45,6 +50,8 @@ export async function loadWeekEntries(
     date: row.date,
     planned_start: row.planned_start ? normalizeTime(row.planned_start) : null,
     planned_end: row.planned_end ? normalizeTime(row.planned_end) : null,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    block_index: (row as any).block_index ?? 1,
   }))
 
   return { data: normalized }
@@ -65,33 +72,40 @@ export async function saveWeekPlan(
 
   const weekDates = getWeekDates(weekStr).map(dateToString)
 
-  const toUpsert = parsed.data
+  // Server-side validation: group by date and check each day's blocks
+  const byDate = new Map<string, { start: string; end: string }[]>()
+  for (const e of parsed.data) {
+    if (!e.planned_start || !e.planned_end) continue
+    if (!byDate.has(e.date)) byDate.set(e.date, [])
+    byDate.get(e.date)!.push({ start: e.planned_start, end: e.planned_end })
+  }
+  for (const [, blocks] of byDate) {
+    const errors = validateBlocks(blocks)
+    if (errors.length > 0) return { error: errors[0].message }
+  }
+
+  const toInsert = parsed.data
     .filter((e) => e.planned_start && e.planned_end)
     .map((e) => ({
       user_id: user.id,
       date: e.date,
       planned_start: e.planned_start!,
       planned_end: e.planned_end!,
+      block_index: e.block_index,
       updated_at: new Date().toISOString(),
     }))
 
-  const activeDates = new Set(toUpsert.map((e) => e.date))
-  const toDelete = weekDates.filter((d) => !activeDates.has(d))
+  // Delete all entries for the week, then re-insert active blocks
+  const { error: deleteError } = await supabase
+    .from('planned_entries')
+    .delete()
+    .eq('user_id', user.id)
+    .in('date', weekDates)
+  if (deleteError) return { error: deleteError.message }
 
-  if (toUpsert.length > 0) {
-    const { error } = await supabase
-      .from('planned_entries')
-      .upsert(toUpsert, { onConflict: 'user_id,date' })
-    if (error) return { error: error.message }
-  }
-
-  if (toDelete.length > 0) {
-    const { error } = await supabase
-      .from('planned_entries')
-      .delete()
-      .eq('user_id', user.id)
-      .in('date', toDelete)
-    if (error) return { error: error.message }
+  if (toInsert.length > 0) {
+    const { error: insertError } = await supabase.from('planned_entries').insert(toInsert)
+    if (insertError) return { error: insertError.message }
   }
 
   revalidatePath('/dashboard/wochenplanung')

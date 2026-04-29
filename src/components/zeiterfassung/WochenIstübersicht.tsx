@@ -4,6 +4,12 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import IstEintragEditDialog from './IstEintragEditDialog'
 import {
   getWeekDates,
@@ -15,6 +21,7 @@ import {
   getCalendarWeekNumber,
 } from '@/lib/week-utils'
 import type { ActualEntry, PlannedEntry } from '@/lib/database.types'
+import { calcBlockHours } from '@/lib/time-block-utils'
 
 const DAY_NAMES = ['Mo', 'Di', 'Mi', 'Do', 'Fr']
 
@@ -26,14 +33,7 @@ interface Props {
   plannedEntries: PlannedEntry[]
   onWeekChange: (newWeek: string) => void
   onEntryChange: (entry: ActualEntry) => void
-}
-
-function calcHours(start: string | null, end: string | null): number {
-  if (!start || !end) return 0
-  const [sh, sm] = start.split(':').map(Number)
-  const [eh, em] = end.split(':').map(Number)
-  const diff = eh * 60 + em - (sh * 60 + sm)
-  return diff > 0 ? diff / 60 : 0
+  onEntryDeleted: (entryId: string) => void
 }
 
 function formatTime(time: string | null): string {
@@ -63,27 +63,50 @@ export default function WochenIstübersicht({
   plannedEntries,
   onWeekChange,
   onEntryChange,
+  onEntryDeleted,
 }: Props) {
-  const [editState, setEditState] = useState<{ date: string; entry: ActualEntry | null } | null>(
-    null
-  )
+  const [dayDetailDate, setDayDetailDate] = useState<string | null>(null)
+  const [blockEditEntry, setBlockEditEntry] = useState<ActualEntry | null>(null)
 
   const weekDates = getWeekDates(weekStr)
   const kwNumber = getCalendarWeekNumber(weekStr)
   const dateRange = getWeekDateRange(weekStr)
 
-  const actualByDate = new Map(actualEntries.map((e) => [e.date, e]))
-  const plannedByDate = new Map(plannedEntries.map((e) => [e.date, e]))
+  // Group by date
+  const actualByDate = new Map<string, ActualEntry[]>()
+  for (const e of actualEntries) {
+    if (!actualByDate.has(e.date)) actualByDate.set(e.date, [])
+    actualByDate.get(e.date)!.push(e)
+  }
+
+  const plannedByDate = new Map<string, PlannedEntry[]>()
+  for (const e of plannedEntries) {
+    if (!plannedByDate.has(e.date)) plannedByDate.set(e.date, [])
+    plannedByDate.get(e.date)!.push(e)
+  }
 
   const totalIstHours = actualEntries.reduce(
-    (sum, e) => sum + calcHours(e.actual_start, e.actual_end),
+    (sum, e) => sum + calcBlockHours(e.actual_start, e.actual_end),
     0
   )
   const isOverLimit = totalIstHours > weeklyHourLimit
 
+  // Day detail dialog state
+  const dayDetailEntries = dayDetailDate ? (actualByDate.get(dayDetailDate) ?? []) : []
+
   function handleEditSaved(entry: ActualEntry) {
     onEntryChange(entry)
-    setEditState(null)
+    setBlockEditEntry(null)
+  }
+
+  function handleEditDeleted(entryId: string) {
+    onEntryDeleted(entryId)
+    setBlockEditEntry(null)
+    // Close day detail if no more entries
+    if (dayDetailDate) {
+      const remaining = (actualByDate.get(dayDetailDate) ?? []).filter((e) => e.id !== entryId)
+      if (remaining.length === 0) setDayDetailDate(null)
+    }
   }
 
   return (
@@ -106,7 +129,7 @@ export default function WochenIstübersicht({
         </Button>
       </div>
 
-      {/* Scrollable table */}
+      {/* Table */}
       <Card className="border-slate-200 shadow-sm mb-4 overflow-hidden">
         <CardContent className="p-0 overflow-x-auto">
           <div className="min-w-[520px]">
@@ -121,18 +144,65 @@ export default function WochenIstübersicht({
 
             {weekDates.map((date, i) => {
               const dateStr = dateToString(date)
-              const actual = actualByDate.get(dateStr) ?? null
-              const planned = plannedByDate.get(dateStr) ?? null
+              const actuals = actualByDate.get(dateStr) ?? []
+              const planneds = plannedByDate.get(dateStr) ?? []
               const isToday = dateStr === today
               const isFuture = dateStr > today
-              const isIncomplete = actual && !actual.is_complete
+              const hasOpenBlock = actuals.some((e) => !e.is_complete)
 
-              const planH = calcHours(
-                planned?.planned_start ?? null,
-                planned?.planned_end ?? null
+              const planH = planneds.reduce(
+                (s, e) => s + calcBlockHours(e.planned_start, e.planned_end),
+                0
               )
-              const istH = calcHours(actual?.actual_start ?? null, actual?.actual_end ?? null)
+              const istH = actuals.reduce(
+                (s, e) => s + calcBlockHours(e.actual_start, e.actual_end),
+                0
+              )
               const diff = calcDiff(planH, istH)
+
+              // IST display
+              let istDisplay: React.ReactNode
+              if (actuals.length === 0) {
+                istDisplay = <span className="text-slate-300">—</span>
+              } else if (actuals.length === 1) {
+                const a = actuals[0]
+                const isIncomplete = !a.is_complete
+                istDisplay = (
+                  <span className={`flex items-center gap-1.5 ${isIncomplete ? 'text-amber-600' : 'text-slate-900'}`}>
+                    {formatTime(a.actual_start)}
+                    {a.actual_end ? `–${formatTime(a.actual_end)}` : '…'}
+                    {isIncomplete && (
+                      <Badge className="text-[10px] px-1 py-0 bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-100">
+                        offen
+                      </Badge>
+                    )}
+                  </span>
+                )
+              } else {
+                istDisplay = (
+                  <span className={`flex items-center gap-1.5 ${hasOpenBlock ? 'text-amber-600' : 'text-slate-900'}`}>
+                    {actuals.length} Bl.
+                    {istH > 0 && (
+                      <span className="text-slate-500">· {formatHours(istH)}</span>
+                    )}
+                    {hasOpenBlock && (
+                      <Badge className="text-[10px] px-1 py-0 bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-100">
+                        offen
+                      </Badge>
+                    )}
+                  </span>
+                )
+              }
+
+              // Plan display
+              let planDisplay: React.ReactNode
+              if (planneds.length === 0) {
+                planDisplay = <span className="text-slate-300">—</span>
+              } else if (planneds.length === 1) {
+                planDisplay = `${formatTime(planneds[0].planned_start)}–${formatTime(planneds[0].planned_end)}`
+              } else {
+                planDisplay = `${planneds.length} Bl. · ${formatHours(planH)}`
+              }
 
               return (
                 <div
@@ -143,67 +213,44 @@ export default function WochenIstübersicht({
                 >
                   {/* Day */}
                   <div>
-                    <div
-                      className={`text-sm ${
-                        isToday ? 'font-bold text-blue-700' : 'font-medium text-slate-900'
-                      }`}
-                    >
+                    <div className={`text-sm ${isToday ? 'font-bold text-blue-700' : 'font-medium text-slate-900'}`}>
                       {DAY_NAMES[i]}
                     </div>
                     <div className="text-xs text-slate-400">{formatDate(date)}</div>
                   </div>
 
                   {/* Plan */}
-                  <div className="text-sm text-slate-600">
-                    {planned?.planned_start && planned?.planned_end ? (
-                      `${formatTime(planned.planned_start)}–${formatTime(planned.planned_end)}`
-                    ) : (
-                      <span className="text-slate-300">—</span>
-                    )}
-                  </div>
+                  <div className="text-sm text-slate-600">{planDisplay}</div>
 
                   {/* Ist */}
-                  <div className="text-sm">
-                    {actual ? (
-                      <span
-                        className={`flex items-center gap-1.5 flex-wrap ${
-                          isIncomplete ? 'text-amber-600' : 'text-slate-900'
-                        }`}
-                      >
-                        {formatTime(actual.actual_start)}
-                        {actual.actual_end ? `–${formatTime(actual.actual_end)}` : '…'}
-                        {isIncomplete && (
-                          <Badge className="text-[10px] px-1 py-0 bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-100">
-                            offen
-                          </Badge>
-                        )}
-                      </span>
-                    ) : (
-                      <span className="text-slate-300">—</span>
-                    )}
-                  </div>
+                  <div className="text-sm">{istDisplay}</div>
 
                   {/* Diff */}
-                  <div
-                    className={`text-sm font-medium tabular-nums ${
-                      diff
-                        ? diff.positive
-                          ? 'text-green-600'
-                          : 'text-red-500'
-                        : 'text-slate-300'
-                    }`}
-                  >
+                  <div className={`text-sm font-medium tabular-nums ${diff ? (diff.positive ? 'text-green-600' : 'text-red-500') : 'text-slate-300'}`}>
                     {diff ? diff.text : '—'}
                   </div>
 
                   {/* Edit */}
                   <div className="flex justify-end">
-                    {!isFuture && (
+                    {!isFuture && actuals.length > 0 && (
                       <Button
                         variant="ghost"
                         size="sm"
                         className="h-7 text-xs text-slate-400 hover:text-slate-700 px-2"
-                        onClick={() => setEditState({ date: dateStr, entry: actual })}
+                        onClick={() => setDayDetailDate(dateStr)}
+                      >
+                        Blöcke
+                      </Button>
+                    )}
+                    {!isFuture && actuals.length === 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs text-slate-400 hover:text-slate-700 px-2"
+                        onClick={() => {
+                          setBlockEditEntry(null)
+                          setDayDetailDate(dateStr)
+                        }}
                       >
                         Bearbeiten
                       </Button>
@@ -217,18 +264,12 @@ export default function WochenIstübersicht({
       </Card>
 
       {/* Weekly sum */}
-      <Card
-        className={`shadow-sm ${isOverLimit ? 'border-orange-300 bg-orange-50' : 'border-slate-200'}`}
-      >
+      <Card className={`shadow-sm ${isOverLimit ? 'border-orange-300 bg-orange-50' : 'border-slate-200'}`}>
         <CardContent className="py-4 px-6">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
               <span className="text-sm text-slate-600">Ist-Stunden diese Woche:</span>
-              <span
-                className={`ml-2 font-bold text-lg tabular-nums ${
-                  isOverLimit ? 'text-orange-600' : 'text-slate-900'
-                }`}
-              >
+              <span className={`ml-2 font-bold text-lg tabular-nums ${isOverLimit ? 'text-orange-600' : 'text-slate-900'}`}>
                 {formatHours(totalIstHours)} / {weeklyHourLimit},0 Std
               </span>
             </div>
@@ -240,21 +281,72 @@ export default function WochenIstübersicht({
           </div>
           {isOverLimit && (
             <p className="text-xs text-orange-600 mt-2">
-              Du hast diese Woche bereits {formatHours(totalIstHours)}/{weeklyHourLimit}h
-              gearbeitet.
+              Du hast diese Woche bereits {formatHours(totalIstHours)}/{weeklyHourLimit}h gearbeitet.
             </p>
           )}
         </CardContent>
       </Card>
 
-      {/* Edit dialog */}
-      {editState && (
+      {/* Day detail dialog — shows all blocks for a day */}
+      <Dialog open={!!dayDetailDate} onOpenChange={(open) => !open && setDayDetailDate(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>
+              Blöcke – {dayDetailDate ? dayDetailDate.split('-').reverse().join('.') : ''}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            {dayDetailEntries.length === 0 && (
+              <p className="text-sm text-slate-400">Keine Einträge für diesen Tag.</p>
+            )}
+            {dayDetailEntries.map((entry) => {
+              const h = calcBlockHours(entry.actual_start, entry.actual_end)
+              return (
+                <div
+                  key={entry.id}
+                  className="flex items-center justify-between px-3 py-2 rounded-lg border border-slate-200"
+                >
+                  <div>
+                    <span className="text-sm text-slate-800">
+                      {formatTime(entry.actual_start)}
+                      {entry.actual_end ? ` – ${formatTime(entry.actual_end)} Uhr` : ' – laufend'}
+                    </span>
+                    {h > 0 && (
+                      <span className="text-xs text-slate-400 ml-2">{formatHours(h)}</span>
+                    )}
+                    {!entry.is_complete && (
+                      <Badge className="ml-2 text-[10px] px-1 py-0 bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-100">
+                        offen
+                      </Badge>
+                    )}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs text-slate-400 hover:text-slate-700 px-2"
+                    onClick={() => setBlockEditEntry(entry)}
+                  >
+                    Bearbeiten
+                  </Button>
+                </div>
+              )
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Block edit dialog */}
+      {blockEditEntry && (
         <IstEintragEditDialog
           open
-          date={editState.date}
-          entry={editState.entry}
-          onClose={() => setEditState(null)}
+          date={blockEditEntry.date}
+          entry={blockEditEntry}
+          otherEntries={(actualByDate.get(blockEditEntry.date) ?? []).filter(
+            (e) => e.id !== blockEditEntry.id
+          )}
+          onClose={() => setBlockEditEntry(null)}
           onSaved={handleEditSaved}
+          onDeleted={handleEditDeleted}
         />
       )}
     </div>

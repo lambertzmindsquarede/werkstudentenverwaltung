@@ -14,13 +14,16 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { createClient } from '@/lib/supabase-browser'
 import type { ActualEntry } from '@/lib/database.types'
+import { validateBlocks } from '@/lib/time-block-utils'
 
 interface Props {
   open: boolean
   date: string
   entry: ActualEntry | null
+  otherEntries?: ActualEntry[]
   onClose: () => void
   onSaved: (entry: ActualEntry) => void
+  onDeleted?: (entryId: string) => void
 }
 
 function formatDateDE(dateStr: string): string {
@@ -33,12 +36,22 @@ function timeToMinutes(time: string): number {
   return h * 60 + m
 }
 
-export default function IstEintragEditDialog({ open, date, entry, onClose, onSaved }: Props) {
+export default function IstEintragEditDialog({
+  open,
+  date,
+  entry,
+  otherEntries = [],
+  onClose,
+  onSaved,
+  onDeleted,
+}: Props) {
   const [start, setStart] = useState('')
   const [end, setEnd] = useState('')
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [awaitingLongDayConfirm, setAwaitingLongDayConfirm] = useState(false)
+  const [awaitingDeleteConfirm, setAwaitingDeleteConfirm] = useState(false)
 
   useEffect(() => {
     if (open) {
@@ -46,6 +59,7 @@ export default function IstEintragEditDialog({ open, date, entry, onClose, onSav
       setEnd(entry?.actual_end?.slice(0, 5) ?? '')
       setError(null)
       setAwaitingLongDayConfirm(false)
+      setAwaitingDeleteConfirm(false)
     }
   }, [open, entry])
 
@@ -54,6 +68,21 @@ export default function IstEintragEditDialog({ open, date, entry, onClose, onSav
     start && end && !startAfterEnd ? (timeToMinutes(end) - timeToMinutes(start)) / 60 : 0
   const isLongDay = hours > 10
 
+  // Overlap validation against other entries for the same day
+  const otherCompletedBlocks = otherEntries
+    .filter((e) => e.is_complete && e.actual_start && e.actual_end)
+    .map((e) => ({
+      start: e.actual_start!.slice(0, 5),
+      end: e.actual_end!.slice(0, 5),
+    }))
+  const overlapErrors =
+    start && end && !startAfterEnd
+      ? validateBlocks([...otherCompletedBlocks, { start, end }]).filter(
+          (e) => e.blockIndex === otherCompletedBlocks.length
+        )
+      : []
+  const hasOverlap = overlapErrors.length > 0
+
   async function handleSave() {
     if (!start || !end) {
       setError('Bitte Start- und Endzeit eingeben.')
@@ -61,6 +90,10 @@ export default function IstEintragEditDialog({ open, date, entry, onClose, onSav
     }
     if (startAfterEnd) {
       setError('Startzeit muss vor der Endzeit liegen.')
+      return
+    }
+    if (hasOverlap) {
+      setError('Dieser Zeitblock überschneidet sich mit einem anderen Block des Tages.')
       return
     }
     if (isLongDay && !awaitingLongDayConfirm) {
@@ -114,6 +147,30 @@ export default function IstEintragEditDialog({ open, date, entry, onClose, onSav
     setSaving(false)
   }
 
+  async function handleDelete() {
+    if (!entry) return
+    if (!awaitingDeleteConfirm) {
+      setAwaitingDeleteConfirm(true)
+      return
+    }
+
+    setDeleting(true)
+    setError(null)
+    const supabase = createClient()
+    const { error: dbError } = await supabase
+      .from('actual_entries')
+      .delete()
+      .eq('id', entry.id)
+
+    setDeleting(false)
+    if (dbError) {
+      setError(dbError.message)
+      setAwaitingDeleteConfirm(false)
+    } else {
+      onDeleted?.(entry.id)
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-sm">
@@ -165,11 +222,27 @@ export default function IstEintragEditDialog({ open, date, entry, onClose, onSav
             </Alert>
           )}
 
-          {awaitingLongDayConfirm && !startAfterEnd && (
+          {hasOverlap && !startAfterEnd && (
+            <Alert className="border-red-300 bg-red-50">
+              <AlertDescription className="text-red-700 text-sm">
+                Dieser Block überschneidet sich mit einem anderen Block des Tages.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {awaitingLongDayConfirm && !startAfterEnd && !hasOverlap && (
             <Alert className="border-amber-300 bg-amber-50">
               <AlertDescription className="text-amber-700 text-sm">
                 Ungewöhnlich langer Arbeitstag ({hours.toFixed(1).replace('.', ',')}h) – bitte
                 bestätigen.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {awaitingDeleteConfirm && (
+            <Alert className="border-red-300 bg-red-50">
+              <AlertDescription className="text-red-700 text-sm">
+                Block wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
               </AlertDescription>
             </Alert>
           )}
@@ -181,13 +254,38 @@ export default function IstEintragEditDialog({ open, date, entry, onClose, onSav
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={saving}>
-            Abbrechen
-          </Button>
-          <Button onClick={handleSave} disabled={saving || !!startAfterEnd}>
-            {saving ? 'Speichern…' : awaitingLongDayConfirm ? 'Trotzdem speichern' : 'Speichern'}
-          </Button>
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          <div className="flex gap-2 flex-1">
+            {entry && onDeleted && (
+              <Button
+                variant="outline"
+                onClick={handleDelete}
+                disabled={saving || deleting}
+                className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
+              >
+                {deleting ? 'Löschen…' : awaitingDeleteConfirm ? 'Wirklich löschen' : 'Löschen'}
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={onClose}
+              disabled={saving || deleting}
+            >
+              Abbrechen
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={saving || deleting || !!startAfterEnd || hasOverlap}
+            >
+              {saving
+                ? 'Speichern…'
+                : awaitingLongDayConfirm
+                ? 'Trotzdem speichern'
+                : 'Speichern'}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

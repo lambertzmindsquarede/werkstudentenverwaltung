@@ -1,8 +1,9 @@
 import type { PlannedEntry, ActualEntry } from '@/lib/database.types'
+import { calcBlockHours } from '@/lib/time-block-utils'
 
 interface Props {
-  plan: PlannedEntry | null
-  actual: ActualEntry | null
+  plans: PlannedEntry[]
+  actuals: ActualEntry[]
   date: string
   today: string
   onClick: () => void
@@ -11,26 +12,22 @@ interface Props {
 type CellStatus = 'empty' | 'plan-future' | 'plan-past' | 'actual-only' | 'both'
 
 function getCellStatus(
-  plan: PlannedEntry | null,
-  actual: ActualEntry | null,
+  plans: PlannedEntry[],
+  actuals: ActualEntry[],
   date: string,
   today: string
 ): CellStatus {
+  const hasPlan = plans.length > 0
+  const hasActual = actuals.length > 0
   const isPast = date < today
-  if (!plan && !actual) return 'empty'
-  if (!plan && actual) return 'actual-only'
-  if (plan && actual) return 'both'
+  if (!hasPlan && !hasActual) return 'empty'
+  if (!hasPlan && hasActual) return 'actual-only'
+  if (hasPlan && hasActual) return 'both'
   return isPast ? 'plan-past' : 'plan-future'
 }
 
 function normalizeTime(t: string | null): string | null {
   return t ? t.substring(0, 5) : null
-}
-
-function calcHours(start: string, end: string): number {
-  const [sh, sm] = start.split(':').map(Number)
-  const [eh, em] = end.split(':').map(Number)
-  return (eh * 60 + em - (sh * 60 + sm)) / 60
 }
 
 const statusStyles: Record<CellStatus, string> = {
@@ -41,16 +38,38 @@ const statusStyles: Record<CellStatus, string> = {
   both: 'bg-green-50 hover:bg-green-100 border border-green-200',
 }
 
-export default function KalenderZelle({ plan, actual, date, today, onClick }: Props) {
-  const status = getCellStatus(plan, actual, date, today)
+export default function KalenderZelle({ plans, actuals, date, today, onClick }: Props) {
+  const status = getCellStatus(plans, actuals, date, today)
 
-  const planStart = normalizeTime(plan?.planned_start ?? null)
-  const planEnd = normalizeTime(plan?.planned_end ?? null)
-  const actStart = normalizeTime(actual?.actual_start ?? null)
-  const actEnd = normalizeTime(actual?.actual_end ?? null)
+  const planHours = plans.reduce((s, p) => s + calcBlockHours(p.planned_start, p.planned_end), 0)
+  const actHours = actuals.reduce((s, a) => s + calcBlockHours(a.actual_start, a.actual_end), 0)
+  const hasOpenBlock = actuals.some((a) => !a.is_complete)
 
-  const planHours = planStart && planEnd ? calcHours(planStart, planEnd) : null
-  const actHours = actStart && actEnd ? calcHours(actStart, actEnd) : null
+  // For display: use first block's times when single, show total otherwise
+  const firstPlan = plans[0] ?? null
+  const firstActual = actuals[0] ?? null
+  const planStart = normalizeTime(firstPlan?.planned_start ?? null)
+  const planEnd = normalizeTime(firstPlan?.planned_end ?? null)
+  const actStart = normalizeTime(firstActual?.actual_start ?? null)
+  const actEnd = normalizeTime(firstActual?.actual_end ?? null)
+
+  const planLabel =
+    plans.length === 1 && planStart && planEnd
+      ? `${planStart} – ${planEnd}`
+      : planHours > 0
+      ? `${plans.length} Bl. · ${planHours % 1 === 0 ? planHours : planHours.toFixed(1)}h`
+      : null
+
+  const actLabel =
+    actuals.length === 1 && actStart
+      ? actEnd
+        ? `${actStart} – ${actEnd}`
+        : `${actStart} →`
+      : actHours > 0
+      ? `${actuals.length} Bl. · ${actHours % 1 === 0 ? actHours : actHours.toFixed(1)}h`
+      : actStart
+      ? `${actStart} →`
+      : null
 
   return (
     <button
@@ -61,36 +80,30 @@ export default function KalenderZelle({ plan, actual, date, today, onClick }: Pr
         ${statusStyles[status]}
         ${status === 'empty' ? 'cursor-default' : 'cursor-pointer'}
       `}
-      aria-label={
-        status === 'empty' ? 'Kein Eintrag' : 'Zellendetails öffnen'
-      }
+      aria-label={status === 'empty' ? 'Kein Eintrag' : 'Zellendetails öffnen'}
     >
-      {status === 'empty' && (
-        <span className="text-slate-300 text-xs">—</span>
-      )}
+      {status === 'empty' && <span className="text-slate-300 text-xs">—</span>}
 
-      {(status === 'plan-future' || status === 'plan-past') && planStart && planEnd && (
+      {(status === 'plan-future' || status === 'plan-past') && planLabel && (
         <div>
           <div className={`text-xs font-medium ${status === 'plan-past' ? 'text-red-700' : 'text-slate-600'}`}>
-            {planStart} – {planEnd}
+            {planLabel}
           </div>
-          {planHours !== null && (
+          {planHours > 0 && (
             <div className={`text-xs ${status === 'plan-past' ? 'text-red-500' : 'text-slate-400'}`}>
-              {planHours % 1 === 0 ? planHours : planHours.toFixed(1)}h
-              {status === 'plan-past' && <span className="ml-1">✗</span>}
+              {status === 'plan-past' && <span className="mr-1">✗</span>}
+              {plans.length === 1 ? `${planHours % 1 === 0 ? planHours : planHours.toFixed(1)}h` : ''}
             </div>
           )}
         </div>
       )}
 
-      {status === 'actual-only' && actStart && (
+      {status === 'actual-only' && actLabel && (
         <div>
-          <div className="text-xs font-medium text-orange-700">
-            {actStart}{actEnd ? ` – ${actEnd}` : ' →'}
-          </div>
-          {actHours !== null && (
+          <div className="text-xs font-medium text-orange-700">{actLabel}</div>
+          {actHours > 0 && (
             <div className="text-xs text-orange-500">
-              {actHours % 1 === 0 ? actHours : actHours.toFixed(1)}h
+              {actuals.length === 1 ? `${actHours % 1 === 0 ? actHours : actHours.toFixed(1)}h` : ''}
             </div>
           )}
           <div className="text-xs text-orange-400 mt-0.5">ungeplant</div>
@@ -100,14 +113,14 @@ export default function KalenderZelle({ plan, actual, date, today, onClick }: Pr
       {status === 'both' && (
         <div>
           <div className="text-xs font-medium text-green-700">
-            {actStart ?? planStart}{actEnd ? ` – ${actEnd}` : actStart ? ' →' : ` – ${planEnd}`}
+            {actLabel ?? planLabel}
+            {hasOpenBlock && ' →'}
           </div>
-          {(actHours ?? planHours) !== null && (
+          {(actHours > 0 || planHours > 0) && (
             <div className="text-xs text-green-600">
-              {((actHours ?? planHours)! % 1 === 0
-                ? (actHours ?? planHours)
-                : (actHours ?? planHours)!.toFixed(1)
-              )}h ✓
+              {actHours > 0
+                ? `${actHours % 1 === 0 ? actHours : actHours.toFixed(1)}h ✓`
+                : `${planHours % 1 === 0 ? planHours : planHours.toFixed(1)}h`}
             </div>
           )}
         </div>

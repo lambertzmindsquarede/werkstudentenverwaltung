@@ -15,10 +15,16 @@ function getBerlinDateTime(): { date: string; time: string } {
   return { date, time }
 }
 
-// Mirrors the duplicate-entry guard in POST handler
-function canStampIn(existingEntry: ActualEntry | null): { allowed: boolean; error?: string } {
-  if (existingEntry) {
-    return { allowed: false, error: 'Bereits eingestempelt für heute.' }
+// Mirrors the POST guard logic (multi-block)
+function canStampIn(
+  openBlock: Pick<ActualEntry, 'id'> | null,
+  blockCount: number
+): { allowed: boolean; error?: string } {
+  if (openBlock) {
+    return { allowed: false, error: 'Bitte zuerst ausstempeln.' }
+  }
+  if (blockCount >= 3) {
+    return { allowed: false, error: 'Maximum 3 Blöcke pro Tag erreicht.' }
   }
   return { allowed: true }
 }
@@ -33,6 +39,11 @@ function canStampOut(
   return { allowed: true }
 }
 
+// Mirrors block_index assignment in POST handler
+function nextBlockIndex(blockCount: number): number {
+  return blockCount + 1
+}
+
 function makeEntry(overrides: Partial<ActualEntry> = {}): ActualEntry {
   return {
     id: 'entry-id',
@@ -41,6 +52,7 @@ function makeEntry(overrides: Partial<ActualEntry> = {}): ActualEntry {
     actual_start: '09:00:00',
     actual_end: null,
     is_complete: false,
+    block_index: 1,
     created_at: '2026-04-28T07:00:00Z',
     updated_at: '2026-04-28T07:00:00Z',
     ...overrides,
@@ -65,27 +77,53 @@ describe('getBerlinDateTime', () => {
   })
 })
 
-describe('canStampIn (POST duplicate-entry guard)', () => {
-  it('allows stamp-in when no entry exists for today', () => {
-    const result = canStampIn(null)
+describe('canStampIn (POST multi-block guard)', () => {
+  it('allows stamp-in when no open block and 0 blocks today', () => {
+    const result = canStampIn(null, 0)
     expect(result.allowed).toBe(true)
     expect(result.error).toBeUndefined()
   })
 
-  it('blocks stamp-in when an entry already exists', () => {
-    const result = canStampIn(makeEntry())
-    expect(result.allowed).toBe(false)
-    expect(result.error).toBe('Bereits eingestempelt für heute.')
+  it('allows stamp-in when no open block and 1 complete block today', () => {
+    const result = canStampIn(null, 1)
+    expect(result.allowed).toBe(true)
   })
 
-  it('blocks even if existing entry is incomplete', () => {
-    const result = canStampIn(makeEntry({ is_complete: false }))
-    expect(result.allowed).toBe(false)
+  it('allows stamp-in when no open block and 2 complete blocks today', () => {
+    const result = canStampIn(null, 2)
+    expect(result.allowed).toBe(true)
   })
 
-  it('blocks even if existing entry is complete', () => {
-    const result = canStampIn(makeEntry({ is_complete: true }))
+  it('blocks stamp-in when an open block exists (must stamp out first)', () => {
+    const result = canStampIn({ id: 'open-block-id' }, 1)
     expect(result.allowed).toBe(false)
+    expect(result.error).toBe('Bitte zuerst ausstempeln.')
+  })
+
+  it('blocks stamp-in when 3 blocks already exist', () => {
+    const result = canStampIn(null, 3)
+    expect(result.allowed).toBe(false)
+    expect(result.error).toBe('Maximum 3 Blöcke pro Tag erreicht.')
+  })
+
+  it('open block check takes priority over count check', () => {
+    const result = canStampIn({ id: 'open-block-id' }, 3)
+    expect(result.allowed).toBe(false)
+    expect(result.error).toBe('Bitte zuerst ausstempeln.')
+  })
+})
+
+describe('nextBlockIndex', () => {
+  it('returns 1 for first block of the day', () => {
+    expect(nextBlockIndex(0)).toBe(1)
+  })
+
+  it('returns 2 for second block', () => {
+    expect(nextBlockIndex(1)).toBe(2)
+  })
+
+  it('returns 3 for third block', () => {
+    expect(nextBlockIndex(2)).toBe(3)
   })
 })
 
@@ -110,14 +148,16 @@ describe('canStampOut (PATCH open-entry guard)', () => {
 })
 
 describe('ActualEntry shape contract', () => {
-  it('accepts a complete entry', () => {
+  it('accepts a complete entry with block_index', () => {
     const entry: ActualEntry = makeEntry({
       actual_end: '17:30:00',
       is_complete: true,
+      block_index: 1,
     })
     expect(entry.actual_start).toBe('09:00:00')
     expect(entry.actual_end).toBe('17:30:00')
     expect(entry.is_complete).toBe(true)
+    expect(entry.block_index).toBe(1)
   })
 
   it('accepts an incomplete (stamp-in only) entry', () => {
@@ -126,9 +166,15 @@ describe('ActualEntry shape contract', () => {
     expect(entry.is_complete).toBe(false)
   })
 
-  it('has unique date per user enforced by shape', () => {
-    const e1 = makeEntry({ id: 'a', date: '2026-04-28' })
-    const e2 = makeEntry({ id: 'b', date: '2026-04-29' })
-    expect(e1.date).not.toBe(e2.date)
+  it('allows multiple entries per date with different block_index', () => {
+    const block1 = makeEntry({ id: 'a', block_index: 1, actual_end: '12:00:00', is_complete: true })
+    const block2 = makeEntry({ id: 'b', block_index: 2, actual_start: '14:00:00', actual_end: null, is_complete: false })
+    expect(block1.date).toBe(block2.date)
+    expect(block1.block_index).not.toBe(block2.block_index)
+  })
+
+  it('accepts null block_index for legacy entries', () => {
+    const entry: ActualEntry = makeEntry({ block_index: null })
+    expect(entry.block_index).toBeNull()
   })
 })

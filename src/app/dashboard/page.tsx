@@ -24,7 +24,7 @@ export default async function DashboardPage() {
   const weekStart = dateToString(weekDates[0])
   const weekEnd = dateToString(weekDates[4])
 
-  const [profileResult, todayEntryResult, weekEntriesResult, plannedEntriesResult, openEntryResult] =
+  const [profileResult, todayEntriesResult, weekEntriesResult, plannedEntriesResult, openEntryResult] =
     await Promise.all([
       supabase.from('profiles').select('weekly_hour_limit').eq('id', user.id).single(),
       supabase
@@ -32,7 +32,7 @@ export default async function DashboardPage() {
         .select('*')
         .eq('user_id', user.id)
         .eq('date', today)
-        .maybeSingle(),
+        .order('block_index', { ascending: true }),
       supabase
         .from('actual_entries')
         .select('*')
@@ -62,7 +62,7 @@ export default async function DashboardPage() {
       today={today}
       isWeekend={isWeekend}
       weeklyHourLimit={profileResult.data?.weekly_hour_limit ?? 20}
-      initialTodayEntry={(todayEntryResult.data as ActualEntry | null) ?? null}
+      initialTodayEntries={(todayEntriesResult.data as ActualEntry[] | null) ?? []}
       initialWeekEntries={(weekEntriesResult.data as ActualEntry[] | null) ?? []}
       initialPlannedEntries={(plannedEntriesResult.data as PlannedEntry[] | null) ?? []}
       initialOpenEntry={((openEntryResult.data as ActualEntry[] | null)?.[0]) ?? null}

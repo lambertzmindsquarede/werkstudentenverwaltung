@@ -17,7 +17,7 @@ interface Props {
   today: string
   isWeekend: boolean
   weeklyHourLimit: number
-  initialTodayEntry: ActualEntry | null
+  initialTodayEntries: ActualEntry[]
   initialWeekEntries: ActualEntry[]
   initialPlannedEntries: PlannedEntry[]
   initialOpenEntry: ActualEntry | null
@@ -29,14 +29,14 @@ export default function DashboardContent({
   today,
   isWeekend,
   weeklyHourLimit,
-  initialTodayEntry,
+  initialTodayEntries,
   initialWeekEntries,
   initialPlannedEntries,
   initialOpenEntry,
 }: Props) {
   const [signingOut, setSigningOut] = useState(false)
   const [currentWeekStr, setCurrentWeekStr] = useState(initialWeekStr)
-  const [todayEntry, setTodayEntry] = useState<ActualEntry | null>(initialTodayEntry)
+  const [todayEntries, setTodayEntries] = useState<ActualEntry[]>(initialTodayEntries)
   const [actualEntries, setActualEntries] = useState<ActualEntry[]>(initialWeekEntries)
   const [plannedEntries, setPlannedEntries] = useState<PlannedEntry[]>(initialPlannedEntries)
   const [openEntry, setOpenEntry] = useState<ActualEntry | null>(initialOpenEntry)
@@ -76,37 +76,41 @@ export default function DashboardContent({
     setWeekLoading(false)
   }
 
+  function upsertEntry(list: ActualEntry[], entry: ActualEntry): ActualEntry[] {
+    const idx = list.findIndex((e) => e.id === entry.id)
+    if (idx >= 0) {
+      const next = [...list]
+      next[idx] = entry
+      return next
+    }
+    return [...list, entry]
+  }
+
   function handleStampEntry(entry: ActualEntry) {
-    setTodayEntry(entry)
+    setTodayEntries((prev) => upsertEntry(prev, entry))
     if (currentWeekStr === initialWeekStr) {
-      setActualEntries((prev) => {
-        const idx = prev.findIndex((e) => e.date === today)
-        if (idx >= 0) {
-          const next = [...prev]
-          next[idx] = entry
-          return next
-        }
-        return [...prev, entry]
-      })
+      setActualEntries((prev) => upsertEntry(prev, entry))
     }
   }
 
+  function handleStampEntryDeleted(entryId: string) {
+    setTodayEntries((prev) => prev.filter((e) => e.id !== entryId))
+    setActualEntries((prev) => prev.filter((e) => e.id !== entryId))
+  }
+
   function handleEntryChange(entry: ActualEntry) {
-    setActualEntries((prev) => {
-      const idx = prev.findIndex((e) => e.date === entry.date)
-      if (idx >= 0) {
-        const next = [...prev]
-        next[idx] = entry
-        return next
-      }
-      return [...prev, entry]
-    })
-    if (openEntry && entry.date === openEntry.date && entry.is_complete) {
+    setActualEntries((prev) => upsertEntry(prev, entry))
+    if (openEntry && entry.id === openEntry.id && entry.is_complete) {
       setOpenEntry(null)
     }
     if (entry.date === today) {
-      setTodayEntry(entry)
+      setTodayEntries((prev) => upsertEntry(prev, entry))
     }
+  }
+
+  function handleEntryDeleted(entryId: string) {
+    setActualEntries((prev) => prev.filter((e) => e.id !== entryId))
+    if (openEntry?.id === entryId) setOpenEntry(null)
   }
 
   async function handleSignOut() {
@@ -178,9 +182,10 @@ export default function DashboardContent({
         {/* Stamp card */}
         <div className="mb-8">
           <StempelCard
-            todayEntry={todayEntry}
+            todayEntries={todayEntries}
             isWeekend={isWeekend}
             onEntryChange={handleStampEntry}
+            onEntryDeleted={handleStampEntryDeleted}
           />
         </div>
 
@@ -200,6 +205,7 @@ export default function DashboardContent({
               plannedEntries={plannedEntries}
               onWeekChange={setCurrentWeekStr}
               onEntryChange={handleEntryChange}
+              onEntryDeleted={handleEntryDeleted}
             />
           )}
         </div>

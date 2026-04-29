@@ -23,20 +23,44 @@ export async function POST() {
 
   const { date, time } = getBerlinDateTime()
 
-  const { data: existing } = await supabase
+  // Check for open block (must stamp out before stamping in again)
+  const { data: openBlock } = await supabase
     .from('actual_entries')
     .select('id')
     .eq('user_id', user.id)
     .eq('date', date)
+    .eq('is_complete', false)
     .maybeSingle()
 
-  if (existing) {
-    return NextResponse.json({ error: 'Bereits eingestempelt für heute.' }, { status: 409 })
+  if (openBlock) {
+    return NextResponse.json({ error: 'Bitte zuerst ausstempeln.' }, { status: 409 })
   }
+
+  // Count today's blocks
+  const { count } = await supabase
+    .from('actual_entries')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .eq('date', date)
+
+  if ((count ?? 0) >= 3) {
+    return NextResponse.json(
+      { error: 'Maximum 3 Blöcke pro Tag erreicht.' },
+      { status: 409 }
+    )
+  }
+
+  const blockIndex = (count ?? 0) + 1
 
   const { data, error } = await supabase
     .from('actual_entries')
-    .insert({ user_id: user.id, date, actual_start: time, is_complete: false })
+    .insert({
+      user_id: user.id,
+      date,
+      actual_start: time,
+      is_complete: false,
+      block_index: blockIndex,
+    })
     .select()
     .single()
 

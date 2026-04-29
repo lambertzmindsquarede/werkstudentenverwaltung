@@ -17,6 +17,7 @@ export type Database = {
           actual_start: string | null
           actual_end: string | null
           is_complete: boolean
+          block_index: number | null
           created_at: string
           updated_at: string
         }
@@ -27,6 +28,7 @@ export type Database = {
           actual_start?: string | null
           actual_end?: string | null
           is_complete?: boolean
+          block_index?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -37,6 +39,7 @@ export type Database = {
           actual_start?: string | null
           actual_end?: string | null
           is_complete?: boolean
+          block_index?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -48,6 +51,7 @@ export type Database = {
           date: string
           planned_start: string
           planned_end: string
+          block_index: number | null
           created_at: string
           updated_at: string
         }
@@ -57,6 +61,7 @@ export type Database = {
           date: string
           planned_start: string
           planned_end: string
+          block_index?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -66,6 +71,7 @@ export type Database = {
           date?: string
           planned_start?: string
           planned_end?: string
+          block_index?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -120,6 +126,7 @@ export type ActualEntry = {
   actual_start: string | null
   actual_end: string | null
   is_complete: boolean
+  block_index: number | null
   created_at: string
   updated_at: string
 }
@@ -130,6 +137,7 @@ export type PlannedEntry = {
   date: string
   planned_start: string
   planned_end: string
+  block_index: number | null
   created_at: string
   updated_at: string
 }

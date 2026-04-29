@@ -21,6 +21,7 @@ Teamleiter oder HR-Verantwortliche, die einen Überblick über die Verfügbarkei
 | P0 (MVP) | PROJ-4: Tages-Zeiterfassung | Planned |
 | P1 | PROJ-5: Manager-Kalenderansicht | Planned |
 | P1 | PROJ-6: Auswertung & Export | Planned |
+| P1 | PROJ-8: Mehrere Zeitblöcke pro Tag | Planned |
 
 ## Success Metrics
 - Alle Werkstudenten nutzen die App täglich zum Einstempeln (100% Adoption)

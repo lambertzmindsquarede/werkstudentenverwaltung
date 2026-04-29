@@ -63,17 +63,21 @@ export default function KalenderGrid({
   const kwNumber = getCalendarWeekNumber(weekStr)
   const dateRange = getWeekDateRange(weekStr)
 
-  // Build lookup maps: userId → date → entry
-  const planMap = new Map<string, Map<string, PlannedEntry>>()
+  // Build lookup maps: userId → date → entries[]
+  const planMap = new Map<string, Map<string, PlannedEntry[]>>()
   for (const p of planned) {
     if (!planMap.has(p.user_id)) planMap.set(p.user_id, new Map())
-    planMap.get(p.user_id)!.set(p.date, p)
+    const dateMap = planMap.get(p.user_id)!
+    if (!dateMap.has(p.date)) dateMap.set(p.date, [])
+    dateMap.get(p.date)!.push(p)
   }
 
-  const actualMap = new Map<string, Map<string, ActualEntry>>()
+  const actualMap = new Map<string, Map<string, ActualEntry[]>>()
   for (const a of actual) {
     if (!actualMap.has(a.user_id)) actualMap.set(a.user_id, new Map())
-    actualMap.get(a.user_id)!.set(a.date, a)
+    const dateMap = actualMap.get(a.user_id)!
+    if (!dateMap.has(a.date)) dateMap.set(a.date, [])
+    dateMap.get(a.date)!.push(a)
   }
 
   const visibleProfiles = profiles.filter((p) => !hiddenUsers.has(p.id))
@@ -103,8 +107,8 @@ export default function KalenderGrid({
     setSelectedCell({
       userName: profile.full_name ?? profile.email ?? '—',
       date,
-      plan: planMap.get(profile.id)?.get(date) ?? null,
-      actual: actualMap.get(profile.id)?.get(date) ?? null,
+      plans: planMap.get(profile.id)?.get(date) ?? [],
+      actuals: actualMap.get(profile.id)?.get(date) ?? [],
     })
   }
 
@@ -337,16 +341,16 @@ export default function KalenderGrid({
                     {/* Day cells */}
                     {weekDayStrings.map((dateStr) => {
                       const isToday = dateStr === today
-                      const plan = planMap.get(profile.id)?.get(dateStr) ?? null
-                      const act = actualMap.get(profile.id)?.get(dateStr) ?? null
+                      const plans = planMap.get(profile.id)?.get(dateStr) ?? []
+                      const acts = actualMap.get(profile.id)?.get(dateStr) ?? []
                       return (
                         <div
                           key={dateStr}
                           className={`p-1.5 ${isToday ? 'bg-blue-50/30' : ''}`}
                         >
                           <KalenderZelle
-                            plan={plan}
-                            actual={act}
+                            plans={plans}
+                            actuals={acts}
                             date={dateStr}
                             today={today}
                             onClick={() => handleCellClick(profile, dateStr)}

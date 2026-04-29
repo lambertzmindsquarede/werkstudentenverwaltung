@@ -25,13 +25,18 @@ import {
   getWeekDateRange,
   getCalendarWeekNumber,
 } from '@/lib/week-utils'
+import { validateBlocks, type BlockValidationError } from '@/lib/time-block-utils'
 
 const DAY_NAMES = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag']
 
-interface DayState {
-  keinArbeitstag: boolean
+interface TimeBlock {
   start: string
   end: string
+}
+
+interface DayState {
+  keinArbeitstag: boolean
+  blocks: TimeBlock[]
 }
 
 interface Props {
@@ -40,14 +45,11 @@ interface Props {
   weeklyHourLimit: number
 }
 
-function parseTimeToMinutes(time: string): number {
-  const [h, m] = time.split(':').map(Number)
-  return h * 60 + m
-}
-
 function calcHours(start: string, end: string): number {
   if (!start || !end) return 0
-  const diff = parseTimeToMinutes(end) - parseTimeToMinutes(start)
+  const [sh, sm] = start.split(':').map(Number)
+  const [eh, em] = end.split(':').map(Number)
+  const diff = eh * 60 + em - (sh * 60 + sm)
   return diff > 0 ? diff / 60 : 0
 }
 
@@ -56,21 +58,36 @@ function formatHours(h: number): string {
 }
 
 function buildInitialState(entries: DayEntry[], weekDates: Date[]): Record<string, DayState> {
-  const entryMap = new Map(entries.map((e) => [e.date, e]))
+  const entriesByDate = new Map<string, DayEntry[]>()
+  for (const e of entries) {
+    if (!entriesByDate.has(e.date)) entriesByDate.set(e.date, [])
+    entriesByDate.get(e.date)!.push(e)
+  }
+
   return Object.fromEntries(
     weekDates.map((date) => {
       const dateStr = dateToString(date)
-      const entry = entryMap.get(dateStr)
-      return [
-        dateStr,
-        {
-          keinArbeitstag: false,
-          start: entry?.planned_start ?? '',
-          end: entry?.planned_end ?? '',
-        },
-      ]
+      const dayEntries = (entriesByDate.get(dateStr) ?? []).sort(
+        (a, b) => a.block_index - b.block_index
+      )
+      const blocks: TimeBlock[] =
+        dayEntries.length > 0
+          ? dayEntries.map((e) => ({ start: e.planned_start ?? '', end: e.planned_end ?? '' }))
+          : [{ start: '', end: '' }]
+      return [dateStr, { keinArbeitstag: false, blocks }]
     })
   )
+}
+
+function canAddBlock(day: DayState): boolean {
+  if (day.blocks.length === 0) return true
+  const last = day.blocks[day.blocks.length - 1]
+  return !!(last.start && last.end)
+}
+
+function calcDayHours(day: DayState): number {
+  if (day.keinArbeitstag) return 0
+  return day.blocks.reduce((sum, b) => sum + calcHours(b.start, b.end), 0)
 }
 
 export default function WochenplanungClient({
@@ -92,41 +109,79 @@ export default function WochenplanungClient({
   const totalHours = weekDates.reduce((sum, date) => {
     const dateStr = dateToString(date)
     const day = dayStates[dateStr]
-    if (!day || day.keinArbeitstag) return sum
-    return sum + calcHours(day.start, day.end)
+    return sum + calcDayHours(day ?? { keinArbeitstag: true, blocks: [] })
   }, 0)
 
   const isOverLimit = totalHours > weeklyHourLimit
 
-  const validationErrors: Record<string, string> = {}
+  const validationErrors: Record<string, BlockValidationError[]> = {}
   weekDates.forEach((date) => {
     const dateStr = dateToString(date)
     const day = dayStates[dateStr]
-    if (day && !day.keinArbeitstag && day.start && day.end) {
-      if (parseTimeToMinutes(day.start) >= parseTimeToMinutes(day.end)) {
-        validationErrors[dateStr] = 'Startzeit muss vor der Endzeit liegen'
-      }
-    }
+    if (!day || day.keinArbeitstag) return
+    const completedBlocks = day.blocks
+      .filter((b) => b.start && b.end)
+      .map((b) => ({ start: b.start, end: b.end }))
+    const errors = validateBlocks(completedBlocks)
+    if (errors.length > 0) validationErrors[dateStr] = errors
   })
   const hasValidationErrors = Object.keys(validationErrors).length > 0
 
-  function updateDay(dateStr: string, updates: Partial<DayState>) {
-    setDayStates((prev) => ({ ...prev, [dateStr]: { ...prev[dateStr], ...updates } }))
+  function updateBlock(dateStr: string, blockIdx: number, field: 'start' | 'end', value: string) {
+    setDayStates((prev) => ({
+      ...prev,
+      [dateStr]: {
+        ...prev[dateStr],
+        blocks: prev[dateStr].blocks.map((b, i) =>
+          i === blockIdx ? { ...b, [field]: value } : b
+        ),
+      },
+    }))
+  }
+
+  function addBlock(dateStr: string) {
+    setDayStates((prev) => ({
+      ...prev,
+      [dateStr]: {
+        ...prev[dateStr],
+        blocks: [...prev[dateStr].blocks, { start: '', end: '' }],
+      },
+    }))
+  }
+
+  function removeBlock(dateStr: string, blockIdx: number) {
+    setDayStates((prev) => ({
+      ...prev,
+      [dateStr]: {
+        ...prev[dateStr],
+        blocks: prev[dateStr].blocks.filter((_, i) => i !== blockIdx),
+      },
+    }))
+  }
+
+  function updateDayFlag(dateStr: string, keinArbeitstag: boolean) {
+    setDayStates((prev) => ({ ...prev, [dateStr]: { ...prev[dateStr], keinArbeitstag } }))
   }
 
   async function handleSave() {
     setSaving(true)
     setSaveError(null)
 
-    const entries: DayEntry[] = weekDates.map((date) => {
+    const entries: DayEntry[] = []
+    weekDates.forEach((date) => {
       const dateStr = dateToString(date)
       const day = dayStates[dateStr]
-      const hasValidTimes = day && !day.keinArbeitstag && day.start && day.end
-      return {
-        date: dateStr,
-        planned_start: hasValidTimes ? day.start : null,
-        planned_end: hasValidTimes ? day.end : null,
-      }
+      if (!day || day.keinArbeitstag) return
+      day.blocks.forEach((block, i) => {
+        if (block.start && block.end) {
+          entries.push({
+            date: dateStr,
+            planned_start: block.start,
+            planned_end: block.end,
+            block_index: i + 1,
+          })
+        }
+      })
     })
 
     const result = await saveWeekPlan(weekStr, entries)
@@ -155,24 +210,25 @@ export default function WochenplanungClient({
     }
 
     const prevWeekDates = getWeekDates(getPreviousWeek(weekStr))
-    const templateByDayIndex = new Map(
-      result.data.map((entry) => {
-        const dayIndex = prevWeekDates.findIndex((d) => dateToString(d) === entry.date)
-        return [dayIndex, entry]
-      })
-    )
+    const templateByDayIndex = new Map<number, DayEntry[]>()
+    result.data.forEach((entry) => {
+      const dayIndex = prevWeekDates.findIndex((d) => dateToString(d) === entry.date)
+      if (dayIndex >= 0) {
+        if (!templateByDayIndex.has(dayIndex)) templateByDayIndex.set(dayIndex, [])
+        templateByDayIndex.get(dayIndex)!.push(entry)
+      }
+    })
 
     setDayStates((prev) => {
       const next = { ...prev }
       weekDates.forEach((date, i) => {
         const dateStr = dateToString(date)
-        const template = templateByDayIndex.get(i)
-        if (template) {
-          next[dateStr] = {
-            keinArbeitstag: false,
-            start: template.planned_start ?? '',
-            end: template.planned_end ?? '',
-          }
+        const dayEntries = templateByDayIndex.get(i)
+        if (dayEntries && dayEntries.length > 0) {
+          const blocks = dayEntries
+            .sort((a, b) => a.block_index - b.block_index)
+            .map((e) => ({ start: e.planned_start ?? '', end: e.planned_end ?? '' }))
+          next[dateStr] = { keinArbeitstag: false, blocks }
         }
       })
       return next
@@ -268,9 +324,7 @@ export default function WochenplanungClient({
         {!templateLoaded && (
           <Alert className="mb-5 bg-blue-50 border-blue-200">
             <AlertDescription className="flex items-center justify-between">
-              <span className="text-sm text-blue-800">
-                Vorwoche als Vorlage übernehmen?
-              </span>
+              <span className="text-sm text-blue-800">Vorwoche als Vorlage übernehmen?</span>
               <Button
                 variant="outline"
                 size="sm"
@@ -284,19 +338,15 @@ export default function WochenplanungClient({
           </Alert>
         )}
 
-        {/* Week plan table */}
+        {/* Week plan */}
         <Card className="mb-5 border-slate-200 shadow-sm">
           <CardContent className="p-0">
             <div className="divide-y divide-slate-100">
               {weekDates.map((date, i) => {
                 const dateStr = dateToString(date)
-                const day = dayStates[dateStr] ?? {
-                  keinArbeitstag: false,
-                  start: '',
-                  end: '',
-                }
-                const dayHours = !day.keinArbeitstag ? calcHours(day.start, day.end) : 0
-                const hasError = !!validationErrors[dateStr]
+                const day = dayStates[dateStr] ?? { keinArbeitstag: false, blocks: [{ start: '', end: '' }] }
+                const dayErrors = validationErrors[dateStr] ?? []
+                const dayHours = calcDayHours(day)
 
                 return (
                   <div
@@ -310,14 +360,12 @@ export default function WochenplanungClient({
                         <div className="text-xs text-slate-500">{formatDate(date)}</div>
                       </div>
 
-                      {/* kein Arbeitstag checkbox */}
+                      {/* Checkbox */}
                       <div className="flex items-center gap-1.5 pt-1.5 flex-shrink-0">
                         <Checkbox
                           id={`nowork-${dateStr}`}
                           checked={day.keinArbeitstag}
-                          onCheckedChange={(checked) =>
-                            updateDay(dateStr, { keinArbeitstag: !!checked })
-                          }
+                          onCheckedChange={(checked) => updateDayFlag(dateStr, !!checked)}
                         />
                         <label
                           htmlFor={`nowork-${dateStr}`}
@@ -327,43 +375,84 @@ export default function WochenplanungClient({
                         </label>
                       </div>
 
-                      {/* Time inputs or placeholder */}
+                      {/* Blocks or placeholder */}
                       {day.keinArbeitstag ? (
                         <div className="flex-1 flex items-center pt-1">
                           <span className="text-sm text-slate-400 italic">—</span>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-3 flex-1 flex-wrap">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs text-slate-500">Von</span>
-                            <Input
-                              type="time"
-                              value={day.start}
-                              onChange={(e) => updateDay(dateStr, { start: e.target.value })}
-                              className={`w-28 text-sm ${hasError ? 'border-red-400 focus-visible:ring-red-300' : ''}`}
-                            />
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs text-slate-500">Bis</span>
-                            <Input
-                              type="time"
-                              value={day.end}
-                              onChange={(e) => updateDay(dateStr, { end: e.target.value })}
-                              className={`w-28 text-sm ${hasError ? 'border-red-400 focus-visible:ring-red-300' : ''}`}
-                            />
-                          </div>
-                          <div className="ml-auto text-sm font-medium text-slate-700 tabular-nums">
-                            {dayHours > 0 ? formatHours(dayHours) : '–'}
-                          </div>
+                        <div className="flex-1 space-y-2 min-w-0">
+                          {day.blocks.map((block, blockIdx) => {
+                            const blockError = dayErrors.find((e) => e.blockIndex === blockIdx)
+                            const blockHours = calcHours(block.start, block.end)
+                            return (
+                              <div key={blockIdx}>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-xs text-slate-500">Von</span>
+                                    <Input
+                                      type="time"
+                                      value={block.start}
+                                      onChange={(e) =>
+                                        updateBlock(dateStr, blockIdx, 'start', e.target.value)
+                                      }
+                                      className={`w-28 text-sm ${blockError ? 'border-red-400 focus-visible:ring-red-300' : ''}`}
+                                    />
+                                  </div>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-xs text-slate-500">Bis</span>
+                                    <Input
+                                      type="time"
+                                      value={block.end}
+                                      onChange={(e) =>
+                                        updateBlock(dateStr, blockIdx, 'end', e.target.value)
+                                      }
+                                      className={`w-28 text-sm ${blockError ? 'border-red-400 focus-visible:ring-red-300' : ''}`}
+                                    />
+                                  </div>
+                                  <span className="text-xs text-slate-500 tabular-nums min-w-[44px]">
+                                    {blockHours > 0 ? formatHours(blockHours) : '–'}
+                                  </span>
+                                  {day.blocks.length > 1 && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => removeBlock(dateStr, blockIdx)}
+                                      className="h-7 w-7 p-0 text-slate-400 hover:text-red-500"
+                                      aria-label="Block entfernen"
+                                    >
+                                      −
+                                    </Button>
+                                  )}
+                                </div>
+                                {blockError && (
+                                  <p className="text-xs text-red-500 mt-1">
+                                    {blockError.message}
+                                  </p>
+                                )}
+                              </div>
+                            )
+                          })}
+
+                          {day.blocks.length < 3 && (
+                            <button
+                              type="button"
+                              onClick={() => addBlock(dateStr)}
+                              disabled={!canAddBlock(day)}
+                              className="text-xs text-blue-600 hover:text-blue-800 disabled:text-slate-300 disabled:cursor-not-allowed flex items-center gap-1 mt-1"
+                            >
+                              + Block hinzufügen
+                            </button>
+                          )}
+
+                          {day.blocks.length > 1 && dayHours > 0 && (
+                            <div className="text-xs font-medium text-slate-600 pt-1.5 border-t border-slate-100">
+                              Gesamt: {formatHours(dayHours)}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
-
-                    {hasError && (
-                      <p className="text-xs text-red-500 mt-1.5 ml-32">
-                        {validationErrors[dateStr]}
-                      </p>
-                    )}
                   </div>
                 )
               })}
