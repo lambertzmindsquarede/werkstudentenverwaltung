@@ -20,7 +20,8 @@
 | PROJ-4 | Tages-Zeiterfassung | Approved | [PROJ-4-tages-zeiterfassung.md](PROJ-4-tages-zeiterfassung.md) | 2026-04-28 |
 | PROJ-5 | Manager-Kalenderansicht | Approved | [PROJ-5-manager-kalenderansicht.md](PROJ-5-manager-kalenderansicht.md) | 2026-04-28 |
 | PROJ-6 | Auswertung & Export | Planned | [PROJ-6-auswertung-export.md](PROJ-6-auswertung-export.md) | 2026-04-28 |
+| PROJ-7 | Lokaler Dev-Login | In Review | [PROJ-7-lokaler-dev-login.md](PROJ-7-lokaler-dev-login.md) | 2026-04-28 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-7
+## Next Available ID: PROJ-8

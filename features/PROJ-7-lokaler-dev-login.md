@@ -156,7 +156,98 @@ Die PROJ-7-Spec referenziert eine `users`-Tabelle, PROJ-1 implementiert aber ein
 Keine neuen npm-Pakete – `@supabase/ssr`, shadcn `Button`, `Badge`, `sonner` sind bereits installiert.
 
 ## QA Test Results
-_To be added by /qa_
+
+**QA Date:** 2026-04-29
+**Tester:** /qa skill (automated + code review)
+**Status:** NOT READY — 1 High bug found
+
+### Acceptance Criteria Results
+
+| # | Acceptance Criterion | Result | Notes |
+|---|---|---|---|
+| AC 1 | Button sichtbar wenn `NEXT_PUBLIC_DEV_LOGIN_ENABLED=true` | ✅ PASS | E2E test bestätigt |
+| AC 2 | Button klar unterscheidbar (amber, "Dev only" Badge) | ✅ PASS | Badge + "Nur lokal sichtbar" Text vorhanden |
+| AC 3 | Klick löst POST an `/api/auth/dev-login` aus | ✅ PASS | E2E via Playwright request interception |
+| AC 4 | API nur aktiv wenn `NODE_ENV=development` UND `DEV_LOGIN_ENABLED=true` | ✅ PASS | Code-Review: Double-Guard korrekt implementiert |
+| AC 5 | Session/Cookie identisch zum Azure-AD-Flow | ❌ BLOCKED | API wird durch Proxy blockiert (BUG-1) |
+| AC 6 | Weiterleitung zu `/manager` oder `/dashboard` je nach Rolle | ❌ BLOCKED | Nicht erreichbar wegen BUG-1 |
+| AC 7 | Seeded Dev-Admin hat Rolle `manager` | ✅ PASS | `docs/dev-seed.sql` setzt `role = 'manager'` |
+| AC 8 | SQL-Seed-Snippet in `docs/dev-seed.sql` vorhanden | ✅ PASS | Datei existiert, Inhalt korrekt (`public.profiles`) |
+| AC 9 | Fehlender Seed-User → verständlicher Error-Toast | ✅ PASS | Toast "bitte Seed-Script ausführen (docs/dev-seed.sql)" |
+| AC 10 | Im Production-Build Button nicht im DOM | ✅ PASS | `return null` wenn `NEXT_PUBLIC_DEV_LOGIN_ENABLED !== 'true'` |
+
+### Bugs Found
+
+#### BUG-1 (High): Proxy-Middleware blockiert `/api/auth/dev-login` für unauthentifizierte Requests
+
+**Beschreibung:**  
+`src/proxy.ts` definiert `PUBLIC_ROUTES = ['/login', '/auth']`. Der Pfad `/api/auth/dev-login` beginnt mit `/api/auth`, NICHT mit `/auth`. Die Proxy-Middleware erkennt ihn daher als geschützte Route und leitet unauthentifizierte Requests auf `/login` (HTML) um.
+
+**Symptom:**  
+Klick auf "Als Admin einloggen" → `fetch('/api/auth/dev-login')` folgt dem 302-Redirect zur `/login`-HTML-Seite → `res.json()` wirft einen SyntaxError → `catch`-Block zeigt Toast "Dev-Login fehlgeschlagen." — der eigentliche Route-Handler wird nie erreicht.
+
+**Nachweis:**  
+Direkter `POST /api/auth/dev-login` ohne Auth-Cookies liefert `<!DOCTYPE html>` (HTML-Login-Seite) statt JSON.
+
+**Fix:**  
+In `src/proxy.ts` `PUBLIC_ROUTES` um `/api/auth` oder spezifisch `/api/auth/dev-login` erweitern:
+```typescript
+const PUBLIC_ROUTES = ['/login', '/auth', '/api/auth/dev-login']
+```
+
+**Betroffene ACs:** AC 5, AC 6 (beide blockiert)
+
+#### BUG-2 (Low): Spec-Inkonsistenz — `public.users` vs. `public.profiles` in Seed-SQL
+
+**Beschreibung:**  
+Der Abschnitt "Seed-SQL (Vorschlag)" in der Spec referenziert `public.users`, das implementierte `docs/dev-seed.sql` korrekt `public.profiles`. Keine funktionale Auswirkung — Impl. ist richtig, Spec ist falsch.
+
+**Fix:** Spec-Tabellennamen unter "Seed-SQL (Vorschlag)" auf `public.profiles` korrigieren.
+
+#### BUG-3 (Low): Fehlermeldung bei halbfertigem Seed (nur `profiles`, kein `auth.users`)
+
+**Beschreibung:**  
+Falls nur `public.profiles` gesät wurde, aber kein `auth.users`-Eintrag existiert, schlägt `supabaseAdmin.auth.admin.generateLink()` fehl → API antwortet mit HTTP 500 statt 404. Der Frontend-Toast zeigt "Dev-Login fehlgeschlagen." statt "bitte Seed-Script ausführen".
+
+**Schweregrad:** Low (betrifft nur fehlerhafte Seed-Ausführung; vollständiger Seed aus `docs/dev-seed.sql` setzt beide Tabellen korrekt)
+
+### Security Audit
+
+| Prüfpunkt | Ergebnis |
+|---|---|
+| API in Production erreichbar? | ✅ SICHER — `NODE_ENV !== 'development'` → HTTP 403 |
+| Button im Production-DOM? | ✅ SICHER — compile-time `NEXT_PUBLIC_` Guard, gibt `null` zurück |
+| Service-Role-Key nur server-seitig? | ✅ SICHER — nur in `process.env.SUPABASE_SERVICE_ROLE_KEY`, kein `NEXT_PUBLIC_` |
+| `redirectTo` manipulierbar? | ✅ SICHER — hardcodierter Wert (`/manager` oder `/dashboard`), kein User-Input |
+| Rate-Limiting fehlt? | ✅ AKZEPTIERT — Dev-only, Production gibt 403 |
+| Information Disclosure? | ✅ AKZEPTIERT — 404-Message nur in Dev sichtbar |
+
+### Automated Tests
+
+**Unit Tests:** Kein geeigneter Kandidat (Logik ist fetch-/Supabase-integriert; E2E aussagekräftiger)
+
+**E2E Tests:** `tests/PROJ-7-dev-login.spec.ts` — 22 Tests, **22/22 bestanden** (Chromium + Mobile Safari)
+
+Abgedeckte Szenarien:
+- Button sichtbar, Badge/Label sichtbar
+- Microsoft- und Dev-Login-Buttons koexistieren
+- POST-Request ausgelöst
+- Loading-Spinner sichtbar
+- Proxy-Intercept bei direktem API-Aufruf ohne Auth (BUG-1 dokumentiert)
+- Error-Toast bei 404 (kein Seed-User)
+- Error-Toast bei 500 (Serverfehler)
+- Weiterleitung zu `/manager` bei Erfolg (Mocked)
+- Responsive: Mobile (375px) + Tablet (768px)
+
+### Regression Testing
+
+Bestehende PROJ-1 E2E Tests zeigen intermittente Fehler (8/68 bei Parallel-Ausführung) — analysiert und als **Pre-existing Flakiness** eingestuft. Diese Fehler sind weder neu noch durch PROJ-7 verursacht; PROJ-7 fügt lediglich ein zusätzliches UI-Element zur Login-Seite hinzu, das die Kern-Tests nicht beeinflusst.
+
+Alle anderen PROJ-2/4/5 E2E Tests: ✅ unverändert bestanden.
+
+### Production-Ready Decision
+
+**NOT READY** — BUG-1 (High) muss behoben werden: die Dev-Login-API wird durch die Proxy-Middleware blockiert, womit das Kernfeature nicht funktioniert.
 
 ## Deployment
 _To be added by /deploy_
