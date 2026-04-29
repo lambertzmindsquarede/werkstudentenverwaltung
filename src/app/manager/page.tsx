@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { createClient } from '@/lib/supabase-server'
 import { ManagerSignOutButton } from '@/components/ManagerSignOutButton'
 
+export const dynamic = 'force-dynamic'
+
 export default async function ManagerPage() {
   const supabase = await createClient()
 
