@@ -23,8 +23,8 @@
 | PROJ-7 | Lokaler Dev-Login | Approved | [PROJ-7-lokaler-dev-login.md](PROJ-7-lokaler-dev-login.md) | 2026-04-28 |
 | PROJ-8 | Mehrere Zeitblöcke pro Tag | Approved | [PROJ-8-mehrere-zeitbloecke-pro-tag.md](PROJ-8-mehrere-zeitbloecke-pro-tag.md) | 2026-04-29 |
 | PROJ-9 | Pausenerfassung | Approved | [PROJ-9-pausenerfassung.md](PROJ-9-pausenerfassung.md) | 2026-04-30 |
-| PROJ-10 | Feiertagsanzeige & Bundesland-Kalender | Planned | [PROJ-10-feiertagsanzeige.md](PROJ-10-feiertagsanzeige.md) | 2026-04-30 |
-| PROJ-11 | Dev-Login Werkstudenten Test-Accounts | Architected | [PROJ-11-dev-werkstudenten-testaccounts.md](PROJ-11-dev-werkstudenten-testaccounts.md) | 2026-04-30 |
+| PROJ-10 | Feiertagsanzeige & Bundesland-Kalender | Architected | [PROJ-10-feiertagsanzeige.md](PROJ-10-feiertagsanzeige.md) | 2026-04-30 |
+| PROJ-11 | Dev-Login Werkstudenten Test-Accounts | In Progress | [PROJ-11-dev-werkstudenten-testaccounts.md](PROJ-11-dev-werkstudenten-testaccounts.md) | 2026-04-30 |
 
 <!-- Add features above this line -->
 
