@@ -22,6 +22,12 @@ Teamleiter oder HR-Verantwortliche, die einen Überblick über die Verfügbarkei
 | P1 | PROJ-5: Manager-Kalenderansicht | Planned |
 | P1 | PROJ-6: Auswertung & Export | Planned |
 | P1 | PROJ-8: Mehrere Zeitblöcke pro Tag | Planned |
+| P1 | PROJ-9: Pausenerfassung | Planned |
+| P1 | PROJ-10: Feiertagsanzeige & Bundesland-Kalender | Planned |
+| Dev | PROJ-11: Dev-Login Werkstudenten Test-Accounts | Planned |
+| P1 | PROJ-12: Planung für vergangene Tage sperren | Planned |
+| P1 | PROJ-13: Viertelstunden-Genauigkeit für Planungszeiten | Planned |
+| P1 | PROJ-14: Bearbeitungsfrist für Zeiterfassung | Planned |
 
 ## Success Metrics
 - Alle Werkstudenten nutzen die App täglich zum Einstempeln (100% Adoption)
