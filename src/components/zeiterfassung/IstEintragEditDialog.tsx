@@ -12,9 +12,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { createClient } from '@/lib/supabase-browser'
 import type { ActualEntry } from '@/lib/database.types'
-import { validateBlocks } from '@/lib/time-block-utils'
+import {
+  updateActualEntry,
+  insertActualEntry,
+  deleteActualEntry,
+} from '@/app/dashboard/actions'
+import { validateBlocks, calcNetHours, checkArbZGWarning, timeToMinutes } from '@/lib/time-block-utils'
 
 interface Props {
   open: boolean
@@ -31,11 +35,6 @@ function formatDateDE(dateStr: string): string {
   return `${d}.${m}.${y}`
 }
 
-function timeToMinutes(time: string): number {
-  const [h, m] = time.split(':').map(Number)
-  return h * 60 + m
-}
-
 export default function IstEintragEditDialog({
   open,
   date,
@@ -47,6 +46,7 @@ export default function IstEintragEditDialog({
 }: Props) {
   const [start, setStart] = useState('')
   const [end, setEnd] = useState('')
+  const [breakMinutes, setBreakMinutes] = useState(0)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -57,6 +57,7 @@ export default function IstEintragEditDialog({
     if (open) {
       setStart(entry?.actual_start?.slice(0, 5) ?? '')
       setEnd(entry?.actual_end?.slice(0, 5) ?? '')
+      setBreakMinutes(entry?.break_minutes ?? 0)
       setError(null)
       setAwaitingLongDayConfirm(false)
       setAwaitingDeleteConfirm(false)
@@ -64,9 +65,12 @@ export default function IstEintragEditDialog({
   }, [open, entry])
 
   const startAfterEnd = start && end && timeToMinutes(start) >= timeToMinutes(end)
-  const hours =
-    start && end && !startAfterEnd ? (timeToMinutes(end) - timeToMinutes(start)) / 60 : 0
+  const grossMinutes =
+    start && end && !startAfterEnd ? timeToMinutes(end) - timeToMinutes(start) : 0
+  const hours = grossMinutes / 60
   const isLongDay = hours > 10
+  const breakExceedsDuration = breakMinutes > 0 && grossMinutes > 0 && breakMinutes >= grossMinutes
+  const netHours = calcNetHours(start || null, end || null, breakMinutes)
 
   // Overlap validation against other entries for the same day
   const otherCompletedBlocks = otherEntries
@@ -83,6 +87,19 @@ export default function IstEintragEditDialog({
       : []
   const hasOverlap = overlapErrors.length > 0
 
+  // ArbZG warning: computed against all day's blocks (this block + other completed)
+  const otherBruttoMinutes = otherEntries
+    .filter((e) => e.is_complete && e.actual_start && e.actual_end)
+    .reduce((sum, e) => sum + (timeToMinutes(e.actual_end!.slice(0, 5)) - timeToMinutes(e.actual_start!.slice(0, 5))), 0)
+  const otherBreakMinutes = otherEntries
+    .filter((e) => e.is_complete)
+    .reduce((sum, e) => sum + (e.break_minutes ?? 0), 0)
+  const totalBruttoMinutes = otherBruttoMinutes + grossMinutes
+  const totalBreakMinutes = otherBreakMinutes + breakMinutes
+  const arbZGWarning = checkArbZGWarning(totalBruttoMinutes, totalBreakMinutes)
+
+  const canSave = !startAfterEnd && !hasOverlap && !breakExceedsDuration
+
   async function handleSave() {
     if (!start || !end) {
       setError('Bitte Start- und Endzeit eingeben.')
@@ -96,6 +113,10 @@ export default function IstEintragEditDialog({
       setError('Dieser Zeitblock überschneidet sich mit einem anderen Block des Tages.')
       return
     }
+    if (breakExceedsDuration) {
+      setError('Pause darf die Blockdauer nicht überschreiten.')
+      return
+    }
     if (isLongDay && !awaitingLongDayConfirm) {
       setAwaitingLongDayConfirm(true)
       return
@@ -103,48 +124,30 @@ export default function IstEintragEditDialog({
 
     setSaving(true)
     setError(null)
-    const supabase = createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) {
-      setError('Nicht angemeldet.')
-      setSaving(false)
-      return
-    }
 
+    let result: { error?: string; data?: ActualEntry }
     if (entry) {
-      const { data, error: dbError } = await supabase
-        .from('actual_entries')
-        .update({ actual_start: start + ':00', actual_end: end + ':00', is_complete: true })
-        .eq('id', entry.id)
-        .select()
-        .single()
-      if (dbError || !data) {
-        setError(dbError?.message ?? 'Speichern fehlgeschlagen.')
-      } else {
-        onSaved(data as unknown as ActualEntry)
-      }
+      result = await updateActualEntry(entry.id, {
+        date,
+        actual_start: start + ':00',
+        actual_end: end + ':00',
+        break_minutes: breakMinutes,
+      })
     } else {
-      const { data, error: dbError } = await supabase
-        .from('actual_entries')
-        .insert({
-          user_id: user.id,
-          date,
-          actual_start: start + ':00',
-          actual_end: end + ':00',
-          is_complete: true,
-        })
-        .select()
-        .single()
-      if (dbError || !data) {
-        setError(dbError?.message ?? 'Speichern fehlgeschlagen.')
-      } else {
-        onSaved(data as unknown as ActualEntry)
-      }
+      result = await insertActualEntry({
+        date,
+        actual_start: start + ':00',
+        actual_end: end + ':00',
+        break_minutes: breakMinutes,
+      })
     }
 
     setSaving(false)
+    if (result.error || !result.data) {
+      setError(result.error ?? 'Speichern fehlgeschlagen.')
+    } else {
+      onSaved(result.data)
+    }
   }
 
   async function handleDelete() {
@@ -156,15 +159,10 @@ export default function IstEintragEditDialog({
 
     setDeleting(true)
     setError(null)
-    const supabase = createClient()
-    const { error: dbError } = await supabase
-      .from('actual_entries')
-      .delete()
-      .eq('id', entry.id)
-
+    const { error: deleteError } = await deleteActualEntry(entry.id, entry.date)
     setDeleting(false)
-    if (dbError) {
-      setError(dbError.message)
+    if (deleteError) {
+      setError(deleteError)
       setAwaitingDeleteConfirm(false)
     } else {
       onDeleted?.(entry.id)
@@ -214,6 +212,30 @@ export default function IstEintragEditDialog({
             </div>
           </div>
 
+          <div>
+            <Label htmlFor="ist-break" className="text-sm text-slate-700">
+              Pause (Min)
+            </Label>
+            <Input
+              id="ist-break"
+              type="number"
+              min={0}
+              max={480}
+              value={breakMinutes}
+              onChange={(e) => {
+                const val = Math.max(0, Math.floor(Number(e.target.value) || 0))
+                setBreakMinutes(val)
+                setError(null)
+              }}
+              className="mt-1"
+            />
+            {grossMinutes > 0 && !startAfterEnd && !breakExceedsDuration && (
+              <p className="text-xs text-slate-500 mt-1">
+                Netto: {netHours.toFixed(1).replace('.', ',')} Std
+              </p>
+            )}
+          </div>
+
           {startAfterEnd && (
             <Alert className="border-red-300 bg-red-50">
               <AlertDescription className="text-red-700 text-sm">
@@ -230,7 +252,15 @@ export default function IstEintragEditDialog({
             </Alert>
           )}
 
-          {awaitingLongDayConfirm && !startAfterEnd && !hasOverlap && (
+          {breakExceedsDuration && (
+            <Alert className="border-red-300 bg-red-50">
+              <AlertDescription className="text-red-700 text-sm">
+                Pause darf die Blockdauer nicht überschreiten.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {awaitingLongDayConfirm && !startAfterEnd && !hasOverlap && !breakExceedsDuration && (
             <Alert className="border-amber-300 bg-amber-50">
               <AlertDescription className="text-amber-700 text-sm">
                 Ungewöhnlich langer Arbeitstag ({hours.toFixed(1).replace('.', ',')}h) – bitte
@@ -243,6 +273,14 @@ export default function IstEintragEditDialog({
             <Alert className="border-red-300 bg-red-50">
               <AlertDescription className="text-red-700 text-sm">
                 Block wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {arbZGWarning && !startAfterEnd && !breakExceedsDuration && (
+            <Alert className="border-amber-300 bg-amber-50">
+              <AlertDescription className="text-amber-700 text-sm">
+                {arbZGWarning}
               </AlertDescription>
             </Alert>
           )}
@@ -277,7 +315,7 @@ export default function IstEintragEditDialog({
             </Button>
             <Button
               onClick={handleSave}
-              disabled={saving || deleting || !!startAfterEnd || hasOverlap}
+              disabled={saving || deleting || !canSave}
             >
               {saving
                 ? 'Speichern…'

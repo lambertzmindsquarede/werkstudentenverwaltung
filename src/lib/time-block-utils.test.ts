@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { timeToMinutes, calcBlockHours, validateBlocks } from './time-block-utils'
+import { timeToMinutes, calcBlockHours, calcNetHours, checkArbZGWarning, validateBlocks } from './time-block-utils'
 
 describe('timeToMinutes', () => {
   it('converts midnight to 0', () => {
@@ -54,6 +54,71 @@ describe('calcBlockHours', () => {
 
   it('handles HH:MM:SS format (DB time strings)', () => {
     expect(calcBlockHours('09:00:00', '12:00:00')).toBe(3)
+  })
+})
+
+describe('calcNetHours', () => {
+  it('returns 0 when start is null', () => {
+    expect(calcNetHours(null, '17:00', 0)).toBe(0)
+  })
+
+  it('returns 0 when end is null', () => {
+    expect(calcNetHours('09:00', null, 0)).toBe(0)
+  })
+
+  it('equals calcBlockHours when breakMinutes is 0', () => {
+    expect(calcNetHours('09:00', '17:00', 0)).toBe(8)
+  })
+
+  it('subtracts break from gross hours', () => {
+    expect(calcNetHours('09:00', '17:00', 30)).toBeCloseTo(7.5)
+  })
+
+  it('returns 0 when break equals block duration', () => {
+    expect(calcNetHours('09:00', '10:00', 60)).toBe(0)
+  })
+
+  it('returns 0 when break exceeds block duration', () => {
+    expect(calcNetHours('09:00', '10:00', 90)).toBe(0)
+  })
+
+  it('handles DB time format HH:MM:SS', () => {
+    expect(calcNetHours('09:00:00', '12:00:00', 30)).toBeCloseTo(2.5)
+  })
+})
+
+describe('checkArbZGWarning', () => {
+  it('returns null when brutto <= 6h with any break', () => {
+    expect(checkArbZGWarning(360, 0)).toBeNull()
+  })
+
+  it('returns null when brutto > 6h and break >= 30 min', () => {
+    expect(checkArbZGWarning(361, 30)).toBeNull()
+  })
+
+  it('warns when brutto > 6h and break < 30 min', () => {
+    const warning = checkArbZGWarning(361, 29)
+    expect(warning).toContain('30 Min')
+    expect(warning).toContain('§ 4 ArbZG')
+  })
+
+  it('returns null when brutto > 9h and break >= 45 min', () => {
+    expect(checkArbZGWarning(541, 45)).toBeNull()
+  })
+
+  it('warns when brutto > 9h and break < 45 min (uses 45-min threshold, not 30-min)', () => {
+    const warning = checkArbZGWarning(541, 44)
+    expect(warning).toContain('45 Min')
+  })
+
+  it('warns 30 min threshold when brutto > 6h but not > 9h with break < 30', () => {
+    const warning = checkArbZGWarning(420, 0)
+    expect(warning).toContain('30 Min')
+  })
+
+  it('warns 45 min threshold even if break >= 30 when brutto > 9h', () => {
+    const warning = checkArbZGWarning(541, 30)
+    expect(warning).toContain('45 Min')
   })
 })
 

@@ -17,6 +17,8 @@ interface Props {
   today: string
   isWeekend: boolean
   weeklyHourLimit: number
+  bundesland: string
+  maxEditDaysPast: number | null
   initialTodayEntries: ActualEntry[]
   initialWeekEntries: ActualEntry[]
   initialPlannedEntries: PlannedEntry[]
@@ -29,6 +31,8 @@ export default function DashboardContent({
   today,
   isWeekend,
   weeklyHourLimit,
+  bundesland,
+  maxEditDaysPast,
   initialTodayEntries,
   initialWeekEntries,
   initialPlannedEntries,
@@ -183,7 +187,9 @@ export default function DashboardContent({
         <div className="mb-8">
           <StempelCard
             todayEntries={todayEntries}
+            today={today}
             isWeekend={isWeekend}
+            bundesland={bundesland}
             onEntryChange={handleStampEntry}
             onEntryDeleted={handleStampEntryDeleted}
           />
@@ -201,6 +207,7 @@ export default function DashboardContent({
               weekStr={currentWeekStr}
               today={today}
               weeklyHourLimit={weeklyHourLimit}
+              maxEditDaysPast={maxEditDaysPast}
               actualEntries={actualEntries}
               plannedEntries={plannedEntries}
               onWeekChange={setCurrentWeekStr}

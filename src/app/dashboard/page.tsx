@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase-server'
 import DashboardContent from '@/components/zeiterfassung/DashboardContent'
 import { getCurrentISOWeek, getWeekDates, dateToString } from '@/lib/week-utils'
 import type { ActualEntry, PlannedEntry } from '@/lib/database.types'
+import { DEFAULT_MAX_EDIT_DAYS_PAST } from '@/lib/database.types'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -24,9 +25,9 @@ export default async function DashboardPage() {
   const weekStart = dateToString(weekDates[0])
   const weekEnd = dateToString(weekDates[4])
 
-  const [profileResult, todayEntriesResult, weekEntriesResult, plannedEntriesResult, openEntryResult] =
+  const [profileResult, todayEntriesResult, weekEntriesResult, plannedEntriesResult, openEntryResult, settingResult] =
     await Promise.all([
-      supabase.from('profiles').select('weekly_hour_limit').eq('id', user.id).single(),
+      supabase.from('profiles').select('weekly_hour_limit, bundesland, role').eq('id', user.id).single(),
       supabase
         .from('actual_entries')
         .select('*')
@@ -53,7 +54,13 @@ export default async function DashboardPage() {
         .lt('date', today)
         .order('date', { ascending: false })
         .limit(1),
+      supabase.from('app_settings').select('value').eq('key', 'max_edit_days_past').single(),
     ])
+
+  const isManager = profileResult.data?.role === 'manager'
+  const rawDays = settingResult.data ? parseInt(settingResult.data.value, 10) : DEFAULT_MAX_EDIT_DAYS_PAST
+  // Managers have no cutoff (null = unrestricted)
+  const maxEditDaysPast = isManager ? null : rawDays
 
   return (
     <DashboardContent
@@ -62,6 +69,8 @@ export default async function DashboardPage() {
       today={today}
       isWeekend={isWeekend}
       weeklyHourLimit={profileResult.data?.weekly_hour_limit ?? 20}
+      bundesland={profileResult.data?.bundesland ?? 'NW'}
+      maxEditDaysPast={maxEditDaysPast}
       initialTodayEntries={(todayEntriesResult.data as ActualEntry[] | null) ?? []}
       initialWeekEntries={(weekEntriesResult.data as ActualEntry[] | null) ?? []}
       initialPlannedEntries={(plannedEntriesResult.data as PlannedEntry[] | null) ?? []}

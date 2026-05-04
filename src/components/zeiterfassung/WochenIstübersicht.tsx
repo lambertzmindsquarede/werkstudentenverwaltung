@@ -21,7 +21,7 @@ import {
   getCalendarWeekNumber,
 } from '@/lib/week-utils'
 import type { ActualEntry, PlannedEntry } from '@/lib/database.types'
-import { calcBlockHours } from '@/lib/time-block-utils'
+import { calcBlockHours, calcNetHours } from '@/lib/time-block-utils'
 
 const DAY_NAMES = ['Mo', 'Di', 'Mi', 'Do', 'Fr']
 
@@ -29,6 +29,7 @@ interface Props {
   weekStr: string
   today: string
   weeklyHourLimit: number
+  maxEditDaysPast: number | null
   actualEntries: ActualEntry[]
   plannedEntries: PlannedEntry[]
   onWeekChange: (newWeek: string) => void
@@ -59,6 +60,7 @@ export default function WochenIstübersicht({
   weekStr,
   today,
   weeklyHourLimit,
+  maxEditDaysPast,
   actualEntries,
   plannedEntries,
   onWeekChange,
@@ -71,6 +73,14 @@ export default function WochenIstübersicht({
   const weekDates = getWeekDates(weekStr)
   const kwNumber = getCalendarWeekNumber(weekStr)
   const dateRange = getWeekDateRange(weekStr)
+
+  // Compute cutoff date for edit buttons (null = no cutoff, i.e. manager)
+  const cutoffStr: string | null = (() => {
+    if (maxEditDaysPast === null) return null
+    const d = new Date(today)
+    d.setDate(d.getDate() - maxEditDaysPast)
+    return d.toISOString().slice(0, 10)
+  })()
 
   // Group by date
   const actualByDate = new Map<string, ActualEntry[]>()
@@ -86,7 +96,7 @@ export default function WochenIstübersicht({
   }
 
   const totalIstHours = actualEntries.reduce(
-    (sum, e) => sum + calcBlockHours(e.actual_start, e.actual_end),
+    (sum, e) => sum + calcNetHours(e.actual_start, e.actual_end, e.break_minutes ?? 0),
     0
   )
   const isOverLimit = totalIstHours > weeklyHourLimit
@@ -155,7 +165,7 @@ export default function WochenIstübersicht({
                 0
               )
               const istH = actuals.reduce(
-                (s, e) => s + calcBlockHours(e.actual_start, e.actual_end),
+                (s, e) => s + calcNetHours(e.actual_start, e.actual_end, e.break_minutes ?? 0),
                 0
               )
               const diff = calcDiff(planH, istH)
@@ -230,32 +240,37 @@ export default function WochenIstübersicht({
                     {diff ? diff.text : '—'}
                   </div>
 
-                  {/* Edit */}
-                  <div className="flex justify-end">
-                    {!isFuture && actuals.length > 0 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 text-xs text-slate-400 hover:text-slate-700 px-2"
-                        onClick={() => setDayDetailDate(dateStr)}
-                      >
-                        Blöcke
-                      </Button>
-                    )}
-                    {!isFuture && actuals.length === 0 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 text-xs text-slate-400 hover:text-slate-700 px-2"
-                        onClick={() => {
-                          setBlockEditEntry(null)
-                          setDayDetailDate(dateStr)
-                        }}
-                      >
-                        Bearbeiten
-                      </Button>
-                    )}
-                  </div>
+                  {/* Edit — hidden when entry is outside the edit deadline */}
+                  {(() => {
+                    const withinCutoff = cutoffStr === null || dateStr >= cutoffStr
+                    return (
+                      <div className="flex justify-end">
+                        {!isFuture && withinCutoff && actuals.length > 0 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs text-slate-400 hover:text-slate-700 px-2"
+                            onClick={() => setDayDetailDate(dateStr)}
+                          >
+                            Blöcke
+                          </Button>
+                        )}
+                        {!isFuture && withinCutoff && actuals.length === 0 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs text-slate-400 hover:text-slate-700 px-2"
+                            onClick={() => {
+                              setBlockEditEntry(null)
+                              setDayDetailDate(dateStr)
+                            }}
+                          >
+                            Bearbeiten
+                          </Button>
+                        )}
+                      </div>
+                    )
+                  })()}
                 </div>
               )
             })}
@@ -300,7 +315,8 @@ export default function WochenIstübersicht({
               <p className="text-sm text-slate-400">Keine Einträge für diesen Tag.</p>
             )}
             {dayDetailEntries.map((entry) => {
-              const h = calcBlockHours(entry.actual_start, entry.actual_end)
+              const h = calcNetHours(entry.actual_start, entry.actual_end, entry.break_minutes ?? 0)
+              const withinCutoff = cutoffStr === null || entry.date >= cutoffStr
               return (
                 <div
                   key={entry.id}
@@ -320,14 +336,16 @@ export default function WochenIstübersicht({
                       </Badge>
                     )}
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-xs text-slate-400 hover:text-slate-700 px-2"
-                    onClick={() => setBlockEditEntry(entry)}
-                  >
-                    Bearbeiten
-                  </Button>
+                  {withinCutoff && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs text-slate-400 hover:text-slate-700 px-2"
+                      onClick={() => setBlockEditEntry(entry)}
+                    >
+                      Bearbeiten
+                    </Button>
+                  )}
                 </div>
               )
             })}

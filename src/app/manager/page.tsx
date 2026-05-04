@@ -12,9 +12,9 @@ export default async function ManagerPage() {
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin' }).format(new Date())
 
   const [
-    { count: activeWerkstudenten },
-    { count: pendingUsers },
-    { data: todayEntries },
+    { count: activeWerkstudenten, error: err1 },
+    { count: pendingUsers, error: err2 },
+    { data: todayEntries, error: err3 },
   ] = await Promise.all([
     supabase
       .from('profiles')
@@ -30,6 +30,10 @@ export default async function ManagerPage() {
       .select('user_id')
       .eq('date', today),
   ])
+
+  if (err1 || err2 || err3) {
+    console.error('[Manager] Supabase query errors:', { err1, err2, err3 })
+  }
 
   const todayAnwesend = new Set(todayEntries?.map((e) => e.user_id) ?? []).size
 
@@ -68,6 +72,12 @@ export default async function ManagerPage() {
             className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
           >
             Kalenderansicht
+          </Link>
+          <Link
+            href="/manager/settings"
+            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
+          >
+            Einstellungen
           </Link>
         </div>
       </nav>
