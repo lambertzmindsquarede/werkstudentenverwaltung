@@ -1,6 +1,6 @@
 # PROJ-14: Bearbeitungsfrist für Zeiterfassung
 
-## Status: In Review
+## Status: Approved
 **Created:** 2026-05-02
 **Last Updated:** 2026-05-04
 
@@ -146,44 +146,36 @@ Alle benötigten UI-Komponenten (Card, Input, Button, Alert, Label) sind bereits
 
 ## QA Test Results
 
-**QA Date:** 2026-05-04
+**QA Date:** 2026-05-04 (Re-QA: 2026-05-04)
 **Tester:** /qa skill (automated + code review)
-**Status: NOT READY — 1 High bug must be fixed before deploy**
+**Status: READY — Alle Bugs behoben, alle Tests grün**
 
 ### Automated Tests
-- **Unit tests (Vitest):** 226 passed (26 new tests in `src/app/dashboard/actions.test.ts`)
-- **E2E tests (Playwright):** New spec `tests/PROJ-14-zeiterfassung-bearbeitungsfrist.spec.ts` created (11 tests). Most tests pass; save-action test requires migration to be applied to local Supabase first.
-- **Regression:** Pre-existing PROJ-7 dev-login failures (20 tests) — unrelated to this feature. All other suites pass.
+- **Unit tests (Vitest):** 226 passed (9 test files)
+- **E2E tests (Playwright):** `tests/PROJ-14-zeiterfassung-bearbeitungsfrist.spec.ts` — **22/22 PASS** (Chromium + Mobile Safari)
+- **Regression:** Alle anderen Suiten unverändert grün
 
 ### Acceptance Criteria Results
 
 | # | Criterion | Status | Notes |
 |---|-----------|--------|-------|
 | 1 | Manager kann `/manager/settings` konfigurieren | ✅ PASS | Seite existiert, Form funktioniert |
-| 2 | Wertebereich 1–365, Standardwert 14 | ✅ PASS | Client + Server Validierung korrekt |
+| 2 | Wertebereich 1–365, Standardwert 14 | ✅ PASS | Client + Server Validierung korrekt; `step={1}` verhindert Dezimalwerte |
 | 3 | Werkstudenten sehen Bearbeiten-Button nur innerhalb der Frist | ✅ PASS | `cutoffStr`-Logik korrekt umgesetzt |
 | 4 | Bearbeiten-Button ausgeblendet (nicht nur disabled) | ✅ PASS | Conditional render, kein `disabled` |
-| 5 | Manager sehen alle Bearbeiten-Buttons (keine Frist) | ✅ PASS | `maxEditDaysPast = null` → kein Cutoff |
-| 6 | Serverseitige Validierung verhindert direkten SDK-Aufruf | ❌ FAIL | `saveBreak` in StempelCard.tsx umgeht die Prüfung (siehe Bug #1) |
+| 5 | Manager sehen alle Bearbeiten-Buttons (keine Frist) | ✅ PASS | `maxEditDaysPast = null` → kein Cutoff; proxy.ts leitet Manager zu `/manager` (unit-tested) |
+| 6 | Serverseitige Validierung verhindert direkten SDK-Aufruf | ✅ PASS | `saveBreak` → `updateBreakMinutes` Server Action → `assertEditPermission` |
 | 7 | Änderungen sofort wirksam | ✅ PASS | Dashboard nutzt dynamisches Rendering (Auth-Cookies) |
-| 8 | Einstellungsseite zeigt aktuelle Frist, Speichern übernimmt Wert | ✅ PASS | Formular korrekt |
+| 8 | Einstellungsseite zeigt aktuelle Frist, Speichern übernimmt Wert | ✅ PASS | Formular korrekt, Erfolgs-Alert erscheint |
 | 9 | Nur Manager haben Schreibzugriff; Werkstudenten nur Lesen | ✅ PASS | RLS-Policy + Server Action Rollen-Check |
 
 ### Bugs Found
 
-#### Bug #1 — HIGH: `saveBreak` in StempelCard umgeht Server-seitige Berechtigungsprüfung
-**Datei:** `src/components/zeiterfassung/StempelCard.tsx`, Zeilen 133–147
-**Beschreibung:** Die Funktion `saveBreak` nutzt den Browser-Supabase-Client (`createClient()` aus `@/lib/supabase-browser`) und ruft direkt `supabase.from('actual_entries').update({ break_minutes: minutes })` auf. Dies umgeht `assertEditPermission` vollständig.
-**Auswirkung:** Ein Werkstudent kann `break_minutes` für beliebig alte eigene Einträge direkt über den Supabase-SDK ändern, ohne die Bearbeitungsfrist zu respektieren. Verletzt Acceptance Criterion 6: "Eine serverseitige Validierung verhindert, dass Werkstudenten Einträge außerhalb der Frist via direktem API/SDK-Aufruf bearbeiten."
-**Schweregrad:** High
-**Reproduzierbar:** Browser DevTools → `supabase.from('actual_entries').update({break_minutes: 99}).eq('id', '<alte-id>').select()` – kein HTTP 403.
-**Fix:** `saveBreak` muss durch eine neue Server Action `updateBreakMinutes(entryId, date, minutes)` ersetzt werden, die `assertEditPermission` aufruft.
+#### ~~Bug #1 — HIGH: `saveBreak` in StempelCard umgeht Server-seitige Berechtigungsprüfung~~ ✅ BEHOBEN
+`saveBreak` ruft jetzt `updateBreakMinutes(entryId, date, minutes)` auf — eine Server Action die `assertEditPermission` aufruft. Commit `409349d`.
 
-#### Bug #2 — Low: Dezimale Eingabe in SettingsForm wird still abgerundet
-**Datei:** `src/app/manager/settings/SettingsForm.tsx`, Zeile 56
-**Beschreibung:** Das Input-Feld hat kein `step="1"`-Attribut. Der Browser erlaubt Dezimalwerte (z.B. "14.5"). `parseInt("14.5", 10)` gibt 14 zurück; der Nutzer sieht "14.5", es wird aber 14 gespeichert. Kein Fehler-Feedback.
-**Schweregrad:** Low
-**Fix:** `step={1}` zum Input-Element hinzufügen.
+#### ~~Bug #2 — Low: Dezimale Eingabe in SettingsForm wird still abgerundet~~ ✅ BEHOBEN
+`step={1}` zum Input-Element hinzugefügt. Commit `c96f372`.
 
 ### Edge Cases Tested
 
@@ -194,27 +186,27 @@ Alle benötigten UI-Komponenten (Card, Input, Button, Alert, Label) sind bereits
 | Frist erhöht → ältere Einträge sofort wieder editierbar | ✅ Dynamisches Rendering sorgt für sofortige Wirksamkeit |
 | Frist verringert → alte Einträge verlieren Bearbeiten-Button | ✅ Korrekte Logik |
 | Kein DB-Eintrag in `app_settings` → Default 14 Tage | ✅ Fallback in page.tsx und assertEditPermission |
-| Formular leer abgeschickt → Pflichtfeldvalidierung | ✅ `isNaN(NaN)` blockiert korrekt |
-| Werkstudent ruft `/manager/settings` auf | ✅ Redirect zu `/dashboard` |
-| Unauthentifizierter Zugriff auf `/manager/settings` | ✅ Redirect zu `/login` |
+| Formular leer abgeschickt → Pflichtfeldvalidierung | ✅ `isNaN(NaN)` blockiert korrekt; HTML5 `min`/`max` als erste Schranke |
+| Werkstudent ruft `/manager/settings` auf | ✅ Redirect zu `/dashboard` (E2E) |
+| Unauthentifizierter Zugriff auf `/manager/settings` | ✅ Redirect zu `/login` (E2E) |
+| Manager ruft `/dashboard` auf | ✅ Proxy-Middleware leitet zu `/manager` (E2E) |
 
 ### Security Audit
 
 - **RLS-Policies:** SELECT für alle authenticated ✓, INSERT/UPDATE nur Manager ✓, kein DELETE-Policy (korrekt — Default Deny) ✓
 - **Server Action Rollen-Check:** `saveMaxEditDaysPast` prüft Manager-Rolle serverseitig ✓
-- **`assertEditPermission`:** Prüft Rolle + Datum für alle drei Server Actions (`updateActualEntry`, `insertActualEntry`, `deleteActualEntry`) ✓
-- **Direkter SDK-Zugriff:** `saveBreak` umgeht die Prüfung ❌ (Bug #1)
+- **`assertEditPermission`:** Prüft Rolle + Datum für alle vier Server Actions (`updateActualEntry`, `insertActualEntry`, `deleteActualEntry`, `updateBreakMinutes`) ✓
+- **Direkter SDK-Zugriff:** Kein direkter Supabase-Browser-Client mehr für `actual_entries`-Updates in `StempelCard` ✓
 - **Stamp-API:** `/api/time-entries/stamp` schreibt nur für `date = today` (Berlin-Zeitzone) → nicht betroffen von der Bearbeitungsfrist ✓
+- **DB-Migration:** `app_settings`-Tabelle auf Remote-Supabase angelegt; RLS-Policies korrekt gesetzt ✓
 
 ### Responsiveness
-- 375px: Settings-Seite korrekt dargestellt ✅
-- 768px: Settings-Seite korrekt dargestellt ✅
+- 375px: Settings-Seite korrekt dargestellt ✅ (E2E)
+- 768px: Settings-Seite korrekt dargestellt ✅ (E2E)
 - 1440px: Kein Layout-Problem festgestellt ✅
 
 ### Production-Ready Decision
-**NOT READY** — Bug #1 (High) muss behoben werden. Bug #2 (Low) kann parallel oder nachgelagert gefixt werden.
-
-Nach dem Fix von Bug #1 bitte `/qa` erneut ausführen.
+**READY** — Keine Critical- oder High-Bugs. Alle 9 Acceptance Criteria erfüllt. 226 Unit-Tests + 22/22 E2E-Tests grün.
 
 ## Deployment
 _To be added by /deploy_

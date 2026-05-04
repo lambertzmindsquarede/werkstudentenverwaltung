@@ -106,9 +106,13 @@ test.describe('Manager – /manager/settings Einstellungsseite', () => {
     await page.goto('/manager/settings')
     const input = page.getByLabel(/bearbeitungsfrist.*tage/i)
     await input.waitFor({ timeout: 10000 })
+    // Remove native HTML5 min constraint to reach React validation path
+    await page.evaluate(() => {
+      const el = document.querySelector('input[type="number"]') as HTMLInputElement
+      el?.removeAttribute('min')
+    })
     await input.fill('0')
     await page.getByRole('button', { name: /speichern/i }).click()
-    // Should show error alert (client-side guard rejects value < 1)
     await expect(page.getByText(/wert zwischen 1 und 365/i)).toBeVisible({ timeout: 5000 })
   })
 
@@ -119,6 +123,11 @@ test.describe('Manager – /manager/settings Einstellungsseite', () => {
     await page.goto('/manager/settings')
     const input = page.getByLabel(/bearbeitungsfrist.*tage/i)
     await input.waitFor({ timeout: 10000 })
+    // Remove native HTML5 max constraint to reach React validation path
+    await page.evaluate(() => {
+      const el = document.querySelector('input[type="number"]') as HTMLInputElement
+      el?.removeAttribute('max')
+    })
     await input.fill('400')
     await page.getByRole('button', { name: /speichern/i }).click()
     await expect(page.getByText(/wert zwischen 1 und 365/i)).toBeVisible({ timeout: 5000 })
@@ -166,17 +175,19 @@ test.describe('Werkstudent – Dashboard Bearbeiten-Button visibility', () => {
   })
 })
 
-// ── Manager: unrestricted access ──────────────────────────────────────────────
+// ── Manager: middleware redirect from /dashboard ──────────────────────────────
+// Note: assertEditPermission exempts managers from cutoff check (unit-tested in actions.test.ts).
+// Middleware (proxy.ts:104) redirects managers away from /dashboard → /manager by design.
 
 test.describe('Manager – hat uneingeschränkten Zugriff auf Bearbeiten-Buttons', () => {
-  test('manager dashboard shows Bearbeiten/Blöcke buttons for past entries', async ({ browser, page }) => {
+  test('manager is redirected from /dashboard to /manager (middleware enforces role routing)', async ({ browser, page }) => {
     await ensureManagerAuth(browser)
     if (authFailed || managerCookies.length === 0) { test.skip(); return }
     await page.context().addCookies(managerCookies)
     await page.goto('/dashboard')
-    // Manager's maxEditDaysPast = null → cutoffStr = null → all past entries editable
-    // We can't test edit buttons without actual DB entries, but we can verify the page loads
-    await expect(page.getByText(/KW \d+/)).toBeVisible({ timeout: 10000 })
+    // proxy.ts redirects managers from /dashboard → /manager
+    await page.waitForURL(/\/manager/, { timeout: 10000 })
+    expect(page.url()).toContain('/manager')
   })
 })
 
