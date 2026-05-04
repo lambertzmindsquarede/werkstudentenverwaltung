@@ -5,10 +5,25 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { createClient } from '@/lib/supabase-browser'
+
+const DEV_USERS = [
+  { userId: '00000000-0000-0000-0000-000000000001', label: 'Dev Admin (Manager)' },
+  { userId: '00000000-0000-0000-0000-000000000002', label: 'Anna Müller (Werkstudentin)' },
+  { userId: '00000000-0000-0000-0000-000000000003', label: 'Ben Schneider (Werkstudent)' },
+  { userId: '00000000-0000-0000-0000-000000000004', label: 'Clara Fischer (Werkstudentin)' },
+]
 
 export function DevLoginButton() {
   const [loading, setLoading] = useState(false)
+  const [selectedUserId, setSelectedUserId] = useState(DEV_USERS[0].userId)
 
   if (process.env.NEXT_PUBLIC_DEV_LOGIN_ENABLED !== 'true') {
     return null
@@ -19,20 +34,32 @@ export function DevLoginButton() {
       setLoading(true)
       const supabase = createClient()
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: 'dev-admin@mindsquare.de',
-        password: 'dev-admin-2026',
+      const res = await fetch('/api/auth/dev-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: selectedUserId }),
       })
+      const data = await res.json()
 
-      if (error) {
-        toast.error('Dev-Login fehlgeschlagen: ' + error.message)
+      if (!res.ok) {
+        const msg =
+          res.status === 404
+            ? 'User nicht gefunden — bitte Seed-Script ausführen (docs/dev-seed.sql)'
+            : (data.error ?? 'Dev-Login fehlgeschlagen.')
+        toast.error(msg)
         return
       }
 
-      const userId = data.user?.id
-      const profileResult = await supabase.from('profiles').select('role').eq('id', userId!).single()
-      const role = profileResult.data?.role ?? null
-      window.location.href = role === 'manager' ? '/manager' : '/dashboard'
+      const { error } = await supabase.auth.verifyOtp({
+        token_hash: data.tokenHash,
+        type: 'email',
+      })
+      if (error) {
+        toast.error('Session-Fehler: ' + error.message)
+        return
+      }
+
+      window.location.href = data.redirectTo
     } catch {
       toast.error('Dev-Login fehlgeschlagen.')
     } finally {
@@ -48,6 +75,18 @@ export function DevLoginButton() {
         </Badge>
         <span className="text-xs text-amber-400">Nur lokal sichtbar</span>
       </div>
+      <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+        <SelectTrigger className="w-full mb-2 bg-amber-500/10 border-amber-500/30 text-amber-200 text-sm">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {DEV_USERS.map((user) => (
+            <SelectItem key={user.userId} value={user.userId}>
+              {user.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       <Button
         onClick={handleDevLogin}
         disabled={loading}
@@ -59,7 +98,7 @@ export function DevLoginButton() {
             <span>Einloggen…</span>
           </div>
         ) : (
-          'Als Admin einloggen'
+          'Als gewählten User einloggen'
         )}
       </Button>
     </div>
