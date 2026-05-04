@@ -20,7 +20,7 @@ export default async function WochenplanungPage({ searchParams }: Props) {
 
   const [{ data: entries }, { data: profile }] = await Promise.all([
     loadWeekEntries(weekStr),
-    supabase.from('profiles').select('weekly_hour_limit').eq('id', user.id).single(),
+    supabase.from('profiles').select('weekly_hour_limit, bundesland').eq('id', user.id).single(),
   ])
 
   return (
@@ -29,6 +29,7 @@ export default async function WochenplanungPage({ searchParams }: Props) {
       weekStr={weekStr}
       initialEntries={entries ?? []}
       weeklyHourLimit={profile?.weekly_hour_limit ?? 20}
+      bundesland={profile?.bundesland ?? 'NW'}
     />
   )
 }

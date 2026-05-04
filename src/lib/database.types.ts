@@ -9,6 +9,26 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      app_settings: {
+        Row: {
+          key: string
+          value: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          key: string
+          value: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          key?: string
+          value?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+      }
       actual_entries: {
         Row: {
           id: string
@@ -18,6 +38,7 @@ export type Database = {
           actual_end: string | null
           is_complete: boolean
           block_index: number | null
+          break_minutes: number
           created_at: string
           updated_at: string
         }
@@ -29,6 +50,7 @@ export type Database = {
           actual_end?: string | null
           is_complete?: boolean
           block_index?: number | null
+          break_minutes?: number
           created_at?: string
           updated_at?: string
         }
@@ -40,6 +62,7 @@ export type Database = {
           actual_end?: string | null
           is_complete?: boolean
           block_index?: number | null
+          break_minutes?: number
           created_at?: string
           updated_at?: string
         }
@@ -84,6 +107,7 @@ export type Database = {
           role: 'werkstudent' | 'manager' | null
           weekly_hour_limit: number | null
           is_active: boolean | null
+          bundesland: string
           created_at: string
           updated_at: string
         }
@@ -94,6 +118,7 @@ export type Database = {
           role?: 'werkstudent' | 'manager' | null
           weekly_hour_limit?: number | null
           is_active?: boolean | null
+          bundesland?: string
           created_at?: string
           updated_at?: string
         }
@@ -104,6 +129,7 @@ export type Database = {
           role?: 'werkstudent' | 'manager' | null
           weekly_hour_limit?: number | null
           is_active?: boolean | null
+          bundesland?: string
           created_at?: string
           updated_at?: string
         }
@@ -116,6 +142,7 @@ export type Database = {
 }
 
 export type Profile = Database['public']['Tables']['profiles']['Row']
+export const DEFAULT_BUNDESLAND = 'NW'
 export type UserRole = 'werkstudent' | 'manager'
 export type ProfileUpdate = Database['public']['Tables']['profiles']['Update']
 
@@ -127,9 +154,14 @@ export type ActualEntry = {
   actual_end: string | null
   is_complete: boolean
   block_index: number | null
+  break_minutes: number
   created_at: string
   updated_at: string
 }
+
+export const DEFAULT_MAX_EDIT_DAYS_PAST = 14
+
+export type AppSetting = Database['public']['Tables']['app_settings']['Row']
 
 export type PlannedEntry = {
   id: string

@@ -12,6 +12,7 @@ export async function updateUserProfile(
     role?: UserRole | null
     weekly_hour_limit?: number
     is_active?: boolean
+    bundesland?: string
   }
 ): Promise<ActionResult> {
   const supabase = await createClient()

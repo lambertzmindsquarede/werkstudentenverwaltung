@@ -36,6 +36,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { createClient } from '@/lib/supabase-browser'
 import { updateUserProfile } from './actions'
 import type { Profile, UserRole } from '@/lib/database.types'
+import { BUNDESLAENDER, DEFAULT_BUNDESLAND } from '@/lib/bundesland-utils'
 
 type FilterStatus = 'all' | 'pending' | 'active' | 'inactive'
 type FilterRole = 'all' | 'werkstudent' | 'manager'
@@ -97,12 +98,14 @@ interface EditDialogProps {
 function EditUserDialog({ user, onClose, onSaved }: EditDialogProps) {
   const [editRole, setEditRole] = useState<UserRole | 'none'>('none')
   const [editHourLimit, setEditHourLimit] = useState<string>('20')
+  const [editBundesland, setEditBundesland] = useState<string>(DEFAULT_BUNDESLAND)
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
     if (user) {
       setEditRole(user.role ?? 'none')
       setEditHourLimit(String(user.weekly_hour_limit ?? 20))
+      setEditBundesland(user.bundesland ?? DEFAULT_BUNDESLAND)
     }
   }, [user])
 
@@ -117,6 +120,7 @@ function EditUserDialog({ user, onClose, onSaved }: EditDialogProps) {
       const result = await updateUserProfile(user.id, {
         role: editRole === 'none' ? null : editRole,
         weekly_hour_limit: limit,
+        bundesland: editBundesland,
       })
       if (result.error) {
         toast.error(result.error)
@@ -180,6 +184,21 @@ function EditUserDialog({ user, onClose, onSaved }: EditDialogProps) {
                 <span className="text-sm text-slate-500">h / Woche</span>
               </div>
               <p className="text-xs text-slate-400">Zulässig: 1–40h (gesetzlich max. 20h)</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="bundesland-select">Bundesland</Label>
+              <Select value={editBundesland} onValueChange={setEditBundesland}>
+                <SelectTrigger id="bundesland-select">
+                  <SelectValue placeholder="Bundesland auswählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(BUNDESLAENDER).sort((a, b) => a[1].localeCompare(b[1])).map(([code, name]) => (
+                    <SelectItem key={code} value={code}>{name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-slate-400">Wird für bundesland-spezifische Feiertage verwendet</p>
             </div>
           </div>
         )}

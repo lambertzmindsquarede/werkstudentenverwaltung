@@ -6,6 +6,7 @@ interface Props {
   actuals: ActualEntry[]
   date: string
   today: string
+  holidayName?: string | null
   onClick: () => void
 }
 
@@ -38,7 +39,7 @@ const statusStyles: Record<CellStatus, string> = {
   both: 'bg-green-50 hover:bg-green-100 border border-green-200',
 }
 
-export default function KalenderZelle({ plans, actuals, date, today, onClick }: Props) {
+export default function KalenderZelle({ plans, actuals, date, today, holidayName, onClick }: Props) {
   const status = getCellStatus(plans, actuals, date, today)
 
   const planHours = plans.reduce((s, p) => s + calcBlockHours(p.planned_start, p.planned_end), 0)
@@ -124,6 +125,10 @@ export default function KalenderZelle({ plans, actuals, date, today, onClick }: 
             </div>
           )}
         </div>
+      )}
+
+      {holidayName && (
+        <div className="mt-1 text-xs italic text-slate-400 truncate">{holidayName}</div>
       )}
     </button>
   )

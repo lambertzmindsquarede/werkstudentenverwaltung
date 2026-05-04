@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -25,6 +25,8 @@ import {
 import KalenderZelle from './KalenderZelle'
 import ZellDetailDialog, { type SelectedCell } from './ZellDetailDialog'
 import type { Profile, PlannedEntry, ActualEntry } from '@/lib/database.types'
+import { fetchHolidaysForDates } from '@/hooks/usePublicHolidays'
+import { DEFAULT_BUNDESLAND } from '@/lib/bundesland-utils'
 
 interface Props {
   profiles: Profile[]
@@ -57,9 +59,28 @@ export default function KalenderGrid({
   const [signingOut, setSigningOut] = useState(false)
   const [hiddenUsers, setHiddenUsers] = useState<Set<string>>(new Set())
   const [selectedCell, setSelectedCell] = useState<SelectedCell | null>(null)
+  // holidayMaps: bundesland → (date → holidayName)
+  const [holidayMaps, setHolidayMaps] = useState<Map<string, Map<string, string>>>(new Map())
 
   const weekDates = getWeekDates(weekStr)
   const weekDayStrings = weekDates.map(dateToString)
+
+  useEffect(() => {
+    const uniqueBundeslaender = [...new Set(profiles.map((p) => (p.bundesland ?? DEFAULT_BUNDESLAND).toUpperCase()))]
+    Promise.all(
+      uniqueBundeslaender.map(async (bl) => {
+        const map = await fetchHolidaysForDates(bl, weekDayStrings)
+        return [bl, map] as const
+      })
+    ).then((entries) => {
+      setHolidayMaps(new Map(entries))
+    })
+  }, [profiles, weekDayStrings.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function getHolidayName(bundesland: string, date: string): string | null {
+    const bl = (bundesland ?? DEFAULT_BUNDESLAND).toUpperCase()
+    return holidayMaps.get(bl)?.get(date) ?? null
+  }
   const kwNumber = getCalendarWeekNumber(weekStr)
   const dateRange = getWeekDateRange(weekStr)
 
@@ -343,6 +364,7 @@ export default function KalenderGrid({
                       const isToday = dateStr === today
                       const plans = planMap.get(profile.id)?.get(dateStr) ?? []
                       const acts = actualMap.get(profile.id)?.get(dateStr) ?? []
+                      const hName = getHolidayName(profile.bundesland ?? DEFAULT_BUNDESLAND, dateStr)
                       return (
                         <div
                           key={dateStr}
@@ -353,6 +375,7 @@ export default function KalenderGrid({
                             actuals={acts}
                             date={dateStr}
                             today={today}
+                            holidayName={hName}
                             onClick={() => handleCellClick(profile, dateStr)}
                           />
                         </div>
