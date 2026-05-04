@@ -1,8 +1,8 @@
 # PROJ-14: Bearbeitungsfrist für Zeiterfassung
 
-## Status: Architected
+## Status: In Review
 **Created:** 2026-05-02
-**Last Updated:** 2026-05-02
+**Last Updated:** 2026-05-04
 
 ## Dependencies
 - Requires: PROJ-4 (Tages-Zeiterfassung) – betrifft das Bearbeiten von Ist-Einträgen
@@ -122,10 +122,99 @@ Einziger Datensatz für dieses Feature: `key = "max_edit_days_past"`, `value = "
 Alle benötigten UI-Komponenten (Card, Input, Button, Alert, Label) sind bereits installiert.
 
 ## Implementation Notes
-_To be added by /frontend and /backend_
+
+### Umgesetzte Dateien
+
+**Neu:**
+- `supabase/migrations/20260502_proj14_app_settings.sql` — Tabelle `app_settings` mit RLS; Standardwert 14 Tage per INSERT ON CONFLICT DO NOTHING
+- `src/app/manager/settings/page.tsx` — Server Component; prüft Manager-Rolle, liest aktuellen Wert, rendert SettingsForm
+- `src/app/manager/settings/actions.ts` — Server Action `saveMaxEditDaysPast`: Validierung (1–365), Manager-Check, UPSERT in `app_settings`
+- `src/app/manager/settings/SettingsForm.tsx` — Client Component mit Input + Speichern-Button + Erfolgs-/Fehler-Alert
+- `src/app/dashboard/actions.ts` — Server Actions `updateActualEntry`, `insertActualEntry`, `deleteActualEntry`; interne Funktion `assertEditPermission` prüft Rolle und Frist-Cutoff für Werkstudenten
+
+**Geändert:**
+- `src/lib/database.types.ts` — `app_settings`-Tabelle hinzugefügt; `DEFAULT_MAX_EDIT_DAYS_PAST = 14` und `AppSetting`-Typ exportiert
+- `src/app/dashboard/page.tsx` — Liest `app_settings.max_edit_days_past` und Nutzerrolle; berechnet `maxEditDaysPast` (null für Manager = keine Sperre); übergibt als Prop an `DashboardContent`
+- `src/components/zeiterfassung/DashboardContent.tsx` — Prop `maxEditDaysPast: number | null` hinzugefügt; wird an `WochenIstübersicht` weitergegeben
+- `src/components/zeiterfassung/WochenIstübersicht.tsx` — Prop `maxEditDaysPast` hinzugefügt; berechnet `cutoffStr`; Bearbeiten-Buttons nur sichtbar wenn `dateStr >= cutoffStr` (oder Manager)
+- `src/components/zeiterfassung/IstEintragEditDialog.tsx` — Supabase-Browser-Calls durch Server Actions ersetzt (`updateActualEntry`, `insertActualEntry`, `deleteActualEntry`); kein direkter DB-Zugriff mehr im Client
+- `src/app/manager/page.tsx` — Einstellungen-Link in Manager-Navigation ergänzt
+
+### Abweichungen von der Spec
+- Keine; alle Acceptance Criteria und Tech-Entscheidungen wie spezifiziert umgesetzt.
+- `IstEintragEditDialog` nutzt jetzt vollständig Server Actions statt direkter Supabase-Browser-Calls — dies ist eine sauberere Architektur als die ursprünglich geplante "Datumsprüfung in bestehender Server Action", da es vorher keine Server Actions für `actual_entries` gab.
 
 ## QA Test Results
-_To be added by /qa_
+
+**QA Date:** 2026-05-04
+**Tester:** /qa skill (automated + code review)
+**Status: NOT READY — 1 High bug must be fixed before deploy**
+
+### Automated Tests
+- **Unit tests (Vitest):** 226 passed (26 new tests in `src/app/dashboard/actions.test.ts`)
+- **E2E tests (Playwright):** New spec `tests/PROJ-14-zeiterfassung-bearbeitungsfrist.spec.ts` created (11 tests). Most tests pass; save-action test requires migration to be applied to local Supabase first.
+- **Regression:** Pre-existing PROJ-7 dev-login failures (20 tests) — unrelated to this feature. All other suites pass.
+
+### Acceptance Criteria Results
+
+| # | Criterion | Status | Notes |
+|---|-----------|--------|-------|
+| 1 | Manager kann `/manager/settings` konfigurieren | ✅ PASS | Seite existiert, Form funktioniert |
+| 2 | Wertebereich 1–365, Standardwert 14 | ✅ PASS | Client + Server Validierung korrekt |
+| 3 | Werkstudenten sehen Bearbeiten-Button nur innerhalb der Frist | ✅ PASS | `cutoffStr`-Logik korrekt umgesetzt |
+| 4 | Bearbeiten-Button ausgeblendet (nicht nur disabled) | ✅ PASS | Conditional render, kein `disabled` |
+| 5 | Manager sehen alle Bearbeiten-Buttons (keine Frist) | ✅ PASS | `maxEditDaysPast = null` → kein Cutoff |
+| 6 | Serverseitige Validierung verhindert direkten SDK-Aufruf | ❌ FAIL | `saveBreak` in StempelCard.tsx umgeht die Prüfung (siehe Bug #1) |
+| 7 | Änderungen sofort wirksam | ✅ PASS | Dashboard nutzt dynamisches Rendering (Auth-Cookies) |
+| 8 | Einstellungsseite zeigt aktuelle Frist, Speichern übernimmt Wert | ✅ PASS | Formular korrekt |
+| 9 | Nur Manager haben Schreibzugriff; Werkstudenten nur Lesen | ✅ PASS | RLS-Policy + Server Action Rollen-Check |
+
+### Bugs Found
+
+#### Bug #1 — HIGH: `saveBreak` in StempelCard umgeht Server-seitige Berechtigungsprüfung
+**Datei:** `src/components/zeiterfassung/StempelCard.tsx`, Zeilen 133–147
+**Beschreibung:** Die Funktion `saveBreak` nutzt den Browser-Supabase-Client (`createClient()` aus `@/lib/supabase-browser`) und ruft direkt `supabase.from('actual_entries').update({ break_minutes: minutes })` auf. Dies umgeht `assertEditPermission` vollständig.
+**Auswirkung:** Ein Werkstudent kann `break_minutes` für beliebig alte eigene Einträge direkt über den Supabase-SDK ändern, ohne die Bearbeitungsfrist zu respektieren. Verletzt Acceptance Criterion 6: "Eine serverseitige Validierung verhindert, dass Werkstudenten Einträge außerhalb der Frist via direktem API/SDK-Aufruf bearbeiten."
+**Schweregrad:** High
+**Reproduzierbar:** Browser DevTools → `supabase.from('actual_entries').update({break_minutes: 99}).eq('id', '<alte-id>').select()` – kein HTTP 403.
+**Fix:** `saveBreak` muss durch eine neue Server Action `updateBreakMinutes(entryId, date, minutes)` ersetzt werden, die `assertEditPermission` aufruft.
+
+#### Bug #2 — Low: Dezimale Eingabe in SettingsForm wird still abgerundet
+**Datei:** `src/app/manager/settings/SettingsForm.tsx`, Zeile 56
+**Beschreibung:** Das Input-Feld hat kein `step="1"`-Attribut. Der Browser erlaubt Dezimalwerte (z.B. "14.5"). `parseInt("14.5", 10)` gibt 14 zurück; der Nutzer sieht "14.5", es wird aber 14 gespeichert. Kein Fehler-Feedback.
+**Schweregrad:** Low
+**Fix:** `step={1}` zum Input-Element hinzufügen.
+
+### Edge Cases Tested
+
+| Edge Case | Result |
+|-----------|--------|
+| Frist 0 Tage (nur heute editierbar) | ✅ Korrekte Logik in `computeCutoffStr` (unit-tested) |
+| Frist 365 Tage (volles Jahr) | ✅ Korrekte Logik (unit-tested) |
+| Frist erhöht → ältere Einträge sofort wieder editierbar | ✅ Dynamisches Rendering sorgt für sofortige Wirksamkeit |
+| Frist verringert → alte Einträge verlieren Bearbeiten-Button | ✅ Korrekte Logik |
+| Kein DB-Eintrag in `app_settings` → Default 14 Tage | ✅ Fallback in page.tsx und assertEditPermission |
+| Formular leer abgeschickt → Pflichtfeldvalidierung | ✅ `isNaN(NaN)` blockiert korrekt |
+| Werkstudent ruft `/manager/settings` auf | ✅ Redirect zu `/dashboard` |
+| Unauthentifizierter Zugriff auf `/manager/settings` | ✅ Redirect zu `/login` |
+
+### Security Audit
+
+- **RLS-Policies:** SELECT für alle authenticated ✓, INSERT/UPDATE nur Manager ✓, kein DELETE-Policy (korrekt — Default Deny) ✓
+- **Server Action Rollen-Check:** `saveMaxEditDaysPast` prüft Manager-Rolle serverseitig ✓
+- **`assertEditPermission`:** Prüft Rolle + Datum für alle drei Server Actions (`updateActualEntry`, `insertActualEntry`, `deleteActualEntry`) ✓
+- **Direkter SDK-Zugriff:** `saveBreak` umgeht die Prüfung ❌ (Bug #1)
+- **Stamp-API:** `/api/time-entries/stamp` schreibt nur für `date = today` (Berlin-Zeitzone) → nicht betroffen von der Bearbeitungsfrist ✓
+
+### Responsiveness
+- 375px: Settings-Seite korrekt dargestellt ✅
+- 768px: Settings-Seite korrekt dargestellt ✅
+- 1440px: Kein Layout-Problem festgestellt ✅
+
+### Production-Ready Decision
+**NOT READY** — Bug #1 (High) muss behoben werden. Bug #2 (Low) kann parallel oder nachgelagert gefixt werden.
+
+Nach dem Fix von Bug #1 bitte `/qa` erneut ausführen.
 
 ## Deployment
 _To be added by /deploy_
