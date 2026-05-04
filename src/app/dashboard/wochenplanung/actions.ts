@@ -13,10 +13,19 @@ export type DayEntry = {
   block_index: number
 }
 
+const QUARTER_MINUTES = new Set([0, 15, 30, 45])
+
+const QuarterHourTime = z
+  .string()
+  .regex(/^\d{2}:\d{2}$/)
+  .refine((t) => QUARTER_MINUTES.has(parseInt(t.split(':')[1], 10)), {
+    message: 'Zeiten müssen auf Viertelstunden fallen (0, 15, 30 oder 45 Minuten)',
+  })
+
 const DayEntrySchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  planned_start: z.string().regex(/^\d{2}:\d{2}$/).nullable(),
-  planned_end: z.string().regex(/^\d{2}:\d{2}$/).nullable(),
+  planned_start: QuarterHourTime.nullable(),
+  planned_end: QuarterHourTime.nullable(),
   block_index: z.number().int().min(1).max(3),
 })
 
@@ -84,8 +93,11 @@ export async function saveWeekPlan(
     if (errors.length > 0) return { error: errors[0].message }
   }
 
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const editableDates = weekDates.filter((d) => d >= todayStr)
+
   const toInsert = parsed.data
-    .filter((e) => e.planned_start && e.planned_end)
+    .filter((e) => e.planned_start && e.planned_end && e.date >= todayStr)
     .map((e) => ({
       user_id: user.id,
       date: e.date,
@@ -95,12 +107,14 @@ export async function saveWeekPlan(
       updated_at: new Date().toISOString(),
     }))
 
-  // Delete all entries for the week, then re-insert active blocks
+  if (editableDates.length === 0) return {}
+
+  // Only delete/re-insert entries for non-past dates (preserve history)
   const { error: deleteError } = await supabase
     .from('planned_entries')
     .delete()
     .eq('user_id', user.id)
-    .in('date', weekDates)
+    .in('date', editableDates)
   if (deleteError) return { error: deleteError.message }
 
   if (toInsert.length > 0) {

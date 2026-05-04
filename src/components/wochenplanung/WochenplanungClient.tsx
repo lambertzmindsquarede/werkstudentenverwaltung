@@ -1,12 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
@@ -26,8 +32,34 @@ import {
   getCalendarWeekNumber,
 } from '@/lib/week-utils'
 import { validateBlocks, type BlockValidationError } from '@/lib/time-block-utils'
+import { usePublicHolidays } from '@/hooks/usePublicHolidays'
 
 const DAY_NAMES = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag']
+
+function generateTimeOptions(): string[] {
+  const options: string[] = []
+  for (let h = 6; h <= 22; h++) {
+    const maxMinute = h === 22 ? 0 : 45
+    for (let m = 0; m <= maxMinute; m += 15) {
+      options.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`)
+    }
+  }
+  return options
+}
+
+const TIME_OPTIONS = generateTimeOptions()
+
+function roundToQuarterHour(time: string): string {
+  if (!time) return ''
+  const [h, m] = time.split(':').map(Number)
+  const roundedM = Math.round(m / 15) * 15
+  const finalH = roundedM === 60 ? h + 1 : h
+  const finalM = roundedM === 60 ? 0 : roundedM
+  const result = `${String(finalH).padStart(2, '0')}:${String(finalM).padStart(2, '0')}`
+  if (result < '06:00') return '06:00'
+  if (result > '22:00') return '22:00'
+  return result
+}
 
 interface TimeBlock {
   start: string
@@ -43,6 +75,7 @@ interface Props {
   weekStr: string
   initialEntries: DayEntry[]
   weeklyHourLimit: number
+  bundesland: string
 }
 
 function calcHours(start: string, end: string): number {
@@ -72,7 +105,10 @@ function buildInitialState(entries: DayEntry[], weekDates: Date[]): Record<strin
       )
       const blocks: TimeBlock[] =
         dayEntries.length > 0
-          ? dayEntries.map((e) => ({ start: e.planned_start ?? '', end: e.planned_end ?? '' }))
+          ? dayEntries.map((e) => ({
+              start: e.planned_start ? roundToQuarterHour(e.planned_start) : '',
+              end: e.planned_end ? roundToQuarterHour(e.planned_end) : '',
+            }))
           : [{ start: '', end: '' }]
       return [dateStr, { keinArbeitstag: false, blocks }]
     })
@@ -94,9 +130,30 @@ export default function WochenplanungClient({
   weekStr,
   initialEntries,
   weeklyHourLimit,
+  bundesland,
 }: Props) {
   const router = useRouter()
   const weekDates = getWeekDates(weekStr)
+  const today = useMemo(() => new Date().toLocaleDateString('sv'), [])
+  const isPast = (dateStr: string) => dateStr < today
+  const hasAnyPastDay = weekDates.some((d) => isPast(dateToString(d)))
+  const allDaysPast = weekDates.every((d) => isPast(dateToString(d)))
+
+  const weekYear = parseInt(weekStr.slice(0, 4), 10)
+  const lastDateYear = parseInt(dateToString(weekDates[4]).slice(0, 4), 10)
+  const needsBothYears = lastDateYear !== weekYear
+  const { isHoliday: isHolidayA, getHolidayName: getHolidayNameA } = usePublicHolidays(bundesland, weekYear)
+  const { isHoliday: isHolidayB, getHolidayName: getHolidayNameB } = usePublicHolidays(
+    bundesland,
+    needsBothYears ? lastDateYear : weekYear
+  )
+
+  function isHoliday(date: string): boolean {
+    return isHolidayA(date) || isHolidayB(date)
+  }
+  function getHolidayName(date: string): string | null {
+    return getHolidayNameA(date) ?? getHolidayNameB(date)
+  }
 
   const [dayStates, setDayStates] = useState<Record<string, DayState>>(() =>
     buildInitialState(initialEntries, weekDates)
@@ -168,10 +225,17 @@ export default function WochenplanungClient({
     setSaveError(null)
 
     const entries: DayEntry[] = []
+    let blockedByHoliday = false
     weekDates.forEach((date) => {
       const dateStr = dateToString(date)
+      if (isPast(dateStr)) return
       const day = dayStates[dateStr]
       if (!day || day.keinArbeitstag) return
+      const hasNewBlocks = day.blocks.some((b) => b.start && b.end)
+      if (hasNewBlocks && isHoliday(dateStr)) {
+        blockedByHoliday = true
+        return
+      }
       day.blocks.forEach((block, i) => {
         if (block.start && block.end) {
           entries.push({
@@ -183,6 +247,12 @@ export default function WochenplanungClient({
         }
       })
     })
+
+    if (blockedByHoliday) {
+      setSaveError('Planung nicht möglich: Mindestens ein ausgewählter Tag ist ein gesetzlicher Feiertag.')
+      setSaving(false)
+      return
+    }
 
     const result = await saveWeekPlan(weekStr, entries)
     setSaving(false)
@@ -223,11 +293,15 @@ export default function WochenplanungClient({
       const next = { ...prev }
       weekDates.forEach((date, i) => {
         const dateStr = dateToString(date)
+        if (isPast(dateStr)) return
         const dayEntries = templateByDayIndex.get(i)
         if (dayEntries && dayEntries.length > 0) {
           const blocks = dayEntries
             .sort((a, b) => a.block_index - b.block_index)
-            .map((e) => ({ start: e.planned_start ?? '', end: e.planned_end ?? '' }))
+            .map((e) => ({
+              start: e.planned_start ? roundToQuarterHour(e.planned_start) : '',
+              end: e.planned_end ? roundToQuarterHour(e.planned_end) : '',
+            }))
           next[dateStr] = { keinArbeitstag: false, blocks }
         }
       })
@@ -320,8 +394,17 @@ export default function WochenplanungClient({
           </Button>
         </div>
 
+        {/* Past-days info banner */}
+        {hasAnyPastDay && (
+          <Alert className="mb-5 bg-slate-50 border-slate-300">
+            <AlertDescription className="text-sm text-slate-600">
+              Vergangene Tage können nicht bearbeitet werden.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Template banner */}
-        {!templateLoaded && (
+        {!templateLoaded && !allDaysPast && (
           <Alert className="mb-5 bg-blue-50 border-blue-200">
             <AlertDescription className="flex items-center justify-between">
               <span className="text-sm text-blue-800">Vorwoche als Vorlage übernehmen?</span>
@@ -347,17 +430,23 @@ export default function WochenplanungClient({
                 const day = dayStates[dateStr] ?? { keinArbeitstag: false, blocks: [{ start: '', end: '' }] }
                 const dayErrors = validationErrors[dateStr] ?? []
                 const dayHours = calcDayHours(day)
+                const holidayName = getHolidayName(dateStr)
+                const isHolidayDay = !!holidayName
+                const isPastDay = isPast(dateStr)
 
                 return (
                   <div
                     key={dateStr}
-                    className={`p-4 ${day.keinArbeitstag ? 'bg-slate-50/60' : ''}`}
+                    className={`p-4 ${isPastDay ? 'bg-slate-50/80 opacity-70' : day.keinArbeitstag ? 'bg-slate-50/60' : isHolidayDay ? 'bg-slate-100/70' : ''}`}
                   >
                     <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
                       {/* Day label */}
                       <div className="w-28 flex-shrink-0 pt-1">
                         <div className="font-medium text-slate-900 text-sm">{DAY_NAMES[i]}</div>
                         <div className="text-xs text-slate-500">{formatDate(date)}</div>
+                        {isHolidayDay && (
+                          <div className="text-xs text-slate-500 italic mt-0.5">{holidayName}</div>
+                        )}
                       </div>
 
                       {/* Checkbox */}
@@ -366,6 +455,7 @@ export default function WochenplanungClient({
                           id={`nowork-${dateStr}`}
                           checked={day.keinArbeitstag}
                           onCheckedChange={(checked) => updateDayFlag(dateStr, !!checked)}
+                          disabled={isPastDay}
                         />
                         <label
                           htmlFor={`nowork-${dateStr}`}
@@ -380,6 +470,12 @@ export default function WochenplanungClient({
                         <div className="flex-1 flex items-center pt-1">
                           <span className="text-sm text-slate-400 italic">—</span>
                         </div>
+                      ) : isHolidayDay ? (
+                        <div className="flex-1 flex items-center pt-1">
+                          <span className="text-xs text-slate-500 italic">
+                            Gesetzlicher Feiertag ({holidayName}) – Planung nicht möglich.
+                          </span>
+                        </div>
                       ) : (
                         <div className="flex-1 space-y-2 min-w-0">
                           {day.blocks.map((block, blockIdx) => {
@@ -390,30 +486,46 @@ export default function WochenplanungClient({
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <div className="flex items-center gap-1.5">
                                     <span className="text-xs text-slate-500">Von</span>
-                                    <Input
-                                      type="time"
+                                    <Select
                                       value={block.start}
-                                      onChange={(e) =>
-                                        updateBlock(dateStr, blockIdx, 'start', e.target.value)
-                                      }
-                                      className={`w-28 text-sm ${blockError ? 'border-red-400 focus-visible:ring-red-300' : ''}`}
-                                    />
+                                      onValueChange={(v) => updateBlock(dateStr, blockIdx, 'start', v)}
+                                      disabled={isPastDay}
+                                    >
+                                      <SelectTrigger
+                                        className={`w-24 text-sm h-9 ${blockError ? 'border-red-400 focus:ring-red-300' : ''}`}
+                                      >
+                                        <SelectValue placeholder="--:--" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {TIME_OPTIONS.map((t) => (
+                                          <SelectItem key={t} value={t}>{t}</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
                                   </div>
                                   <div className="flex items-center gap-1.5">
                                     <span className="text-xs text-slate-500">Bis</span>
-                                    <Input
-                                      type="time"
+                                    <Select
                                       value={block.end}
-                                      onChange={(e) =>
-                                        updateBlock(dateStr, blockIdx, 'end', e.target.value)
-                                      }
-                                      className={`w-28 text-sm ${blockError ? 'border-red-400 focus-visible:ring-red-300' : ''}`}
-                                    />
+                                      onValueChange={(v) => updateBlock(dateStr, blockIdx, 'end', v)}
+                                      disabled={isPastDay}
+                                    >
+                                      <SelectTrigger
+                                        className={`w-24 text-sm h-9 ${blockError ? 'border-red-400 focus:ring-red-300' : ''}`}
+                                      >
+                                        <SelectValue placeholder="--:--" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {TIME_OPTIONS.map((t) => (
+                                          <SelectItem key={t} value={t}>{t}</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
                                   </div>
                                   <span className="text-xs text-slate-500 tabular-nums min-w-[44px]">
                                     {blockHours > 0 ? formatHours(blockHours) : '–'}
                                   </span>
-                                  {day.blocks.length > 1 && (
+                                  {day.blocks.length > 1 && !isPastDay && (
                                     <Button
                                       variant="ghost"
                                       size="sm"
@@ -434,7 +546,7 @@ export default function WochenplanungClient({
                             )
                           })}
 
-                          {day.blocks.length < 3 && (
+                          {day.blocks.length < 3 && !isPastDay && (
                             <button
                               type="button"
                               onClick={() => addBlock(dateStr)}
@@ -500,7 +612,7 @@ export default function WochenplanungClient({
         <div className="flex justify-end">
           <Button
             onClick={handleSave}
-            disabled={saving || hasValidationErrors}
+            disabled={saving || hasValidationErrors || allDaysPast}
             className="px-8"
           >
             {saving ? 'Speichern…' : 'Plan speichern'}
