@@ -23,8 +23,8 @@ export async function GET(req: NextRequest) {
     }
 
     const json = await res.json()
-    const stateKey = bundesland.toUpperCase()
-    const raw: Array<{ date: string; fname: string }> = json[stateKey] ?? json[bundesland] ?? []
+    const allFeiertage: Array<{ date: string; fname: string; [key: string]: string | null }> = json.feiertage ?? []
+    const raw = allFeiertage.filter((h) => h[bundesland] === '1' && h.date.startsWith(year))
 
     const holidays: Feiertag[] = raw.map((h) => ({
       date: h.date,

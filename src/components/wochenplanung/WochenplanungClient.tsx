@@ -437,7 +437,7 @@ export default function WochenplanungClient({
                 return (
                   <div
                     key={dateStr}
-                    className={`p-4 ${isPastDay ? 'bg-slate-50/80 opacity-70' : day.keinArbeitstag ? 'bg-slate-50/60' : isHolidayDay ? 'bg-slate-100/70' : ''}`}
+                    className={`p-4 ${isPastDay ? 'bg-slate-50/80 opacity-70' : day.keinArbeitstag ? 'bg-slate-50/60' : isHolidayDay ? 'bg-amber-50' : ''}`}
                   >
                     <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
                       {/* Day label */}
@@ -445,7 +445,9 @@ export default function WochenplanungClient({
                         <div className="font-medium text-slate-900 text-sm">{DAY_NAMES[i]}</div>
                         <div className="text-xs text-slate-500">{formatDate(date)}</div>
                         {isHolidayDay && (
-                          <div className="text-xs text-slate-500 italic mt-0.5">{holidayName}</div>
+                          <div className="text-xs text-amber-700 font-medium mt-1 bg-amber-100 rounded px-1 py-0.5 inline-block">
+                            🗓 {holidayName}
+                          </div>
                         )}
                       </div>
 

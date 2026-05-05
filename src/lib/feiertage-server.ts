@@ -8,9 +8,8 @@ export async function getHolidayDates(bundesland: string, years: number[]): Prom
       )
       if (!res.ok) return [] as string[]
       const json = await res.json()
-      const stateKey = bl.toUpperCase()
-      const raw: Array<{ date: string }> = json[stateKey] ?? json[bl] ?? []
-      return raw.map((h) => h.date)
+      const allFeiertage: Array<{ date: string; [key: string]: string | null }> = json.feiertage ?? []
+      return allFeiertage.filter((h) => h[bl] === '1').map((h) => h.date)
     })
   )
   const dates = new Set<string>()

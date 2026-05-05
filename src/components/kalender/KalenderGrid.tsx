@@ -81,6 +81,14 @@ export default function KalenderGrid({
     const bl = (bundesland ?? DEFAULT_BUNDESLAND).toUpperCase()
     return holidayMaps.get(bl)?.get(date) ?? null
   }
+
+  function getHolidayNameForAny(date: string): string | null {
+    for (const [, map] of holidayMaps) {
+      const name = map.get(date)
+      if (name) return name
+    }
+    return null
+  }
   const kwNumber = getCalendarWeekNumber(weekStr)
   const dateRange = getWeekDateRange(weekStr)
 
@@ -178,6 +186,12 @@ export default function KalenderGrid({
             className="px-4 py-3 text-sm font-medium text-slate-900 border-b-2 border-blue-600"
           >
             Kalenderansicht
+          </a>
+          <a
+            href="/manager/settings"
+            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
+          >
+            Einstellungen
           </a>
         </div>
       </nav>
@@ -299,21 +313,22 @@ export default function KalenderGrid({
                 {weekDates.map((date, i) => {
                   const dateStr = weekDayStrings[i]
                   const isToday = dateStr === today
+                  const holidayInHeader = getHolidayNameForAny(dateStr)
                   return (
                     <div
                       key={dateStr}
-                      className={`px-2 py-3 text-center ${isToday ? 'bg-blue-50' : ''}`}
+                      className={`px-2 py-3 text-center ${isToday ? 'bg-blue-50' : holidayInHeader ? 'bg-amber-50' : ''}`}
                     >
                       <div
                         className={`text-xs font-semibold uppercase tracking-wide ${
-                          isToday ? 'text-blue-600' : 'text-slate-500'
+                          isToday ? 'text-blue-600' : holidayInHeader ? 'text-amber-700' : 'text-slate-500'
                         }`}
                       >
                         {DAY_LABELS[i]}
                       </div>
                       <div
                         className={`text-xs mt-0.5 ${
-                          isToday ? 'text-blue-500 font-medium' : 'text-slate-400'
+                          isToday ? 'text-blue-500 font-medium' : holidayInHeader ? 'text-amber-600' : 'text-slate-400'
                         }`}
                       >
                         {date.toLocaleDateString('de-DE', {
@@ -324,6 +339,11 @@ export default function KalenderGrid({
                       </div>
                       {isToday && (
                         <div className="mt-1 h-1 w-1 rounded-full bg-blue-500 mx-auto" />
+                      )}
+                      {holidayInHeader && (
+                        <div className="mt-1 text-xs text-amber-600 font-medium leading-tight truncate px-1" title={holidayInHeader}>
+                          {holidayInHeader}
+                        </div>
                       )}
                     </div>
                   )

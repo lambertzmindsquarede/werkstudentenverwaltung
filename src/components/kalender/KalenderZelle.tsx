@@ -128,7 +128,9 @@ export default function KalenderZelle({ plans, actuals, date, today, holidayName
       )}
 
       {holidayName && (
-        <div className="mt-1 text-xs italic text-slate-400 truncate">{holidayName}</div>
+        <div className="mt-1 text-xs bg-amber-100 text-amber-700 rounded px-1 py-0.5 truncate font-medium">
+          🗓 {holidayName}
+        </div>
       )}
     </button>
   )
