@@ -205,9 +205,8 @@ Keine — alle benötigten shadcn/ui-Komponenten (`Input`, `Checkbox`, `Button`,
 **~~LOW-1: Feiertagscheck nur client-seitig~~** — **BEHOBEN**
 - Fix: `getHolidayDates()` in `src/lib/feiertage-server.ts` extrahiert. `saveWeekPlan` lädt das Bundesland des Users aus `profiles` und prüft Feiertage serverseitig vor dem Insert. Bei Treffer wird `{ error: '...' }` zurückgegeben (fail-open: wenn die externe API nicht erreichbar ist, wird der Save nicht blockiert).
 
-**LOW-2: todayStr in saveWeekPlan verwendet UTC**
-- Beschreibung: `new Date().toISOString().slice(0, 10)` liefert UTC-Datum. Nutzer in UTC+-Zeitzonen könnten kurz nach Mitternacht lokal noch Einträge für den aktuellen Tag als "vergangen" erleben.
-- Severity: Low (Edge-Case, betrifft nur Zeitzonen UTC+1 und höher zwischen 00:00 und UTC-Mitternacht)
+**~~LOW-2: todayStr in saveWeekPlan verwendet UTC~~** — **BEHOBEN**
+- Fix: Beide Stellen (`saveWeekPlan` in `actions.ts` und `WochenplanungClient.tsx`) verwenden jetzt `new Date().toLocaleDateString('sv', { timeZone: 'Europe/Berlin' })`. Server und Client liefern konsistent das Berliner Datum.
 
 ### Production-Ready Decision
 **✅ READY** — Keine Critical oder High Bugs. Zwei Low-Findings akzeptabel für Deployment.

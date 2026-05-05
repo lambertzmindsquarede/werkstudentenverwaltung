@@ -134,7 +134,7 @@ export default function WochenplanungClient({
 }: Props) {
   const router = useRouter()
   const weekDates = getWeekDates(weekStr)
-  const today = useMemo(() => new Date().toLocaleDateString('sv'), [])
+  const today = useMemo(() => new Date().toLocaleDateString('sv', { timeZone: 'Europe/Berlin' }), [])
   const isPast = (dateStr: string) => dateStr < today
   const hasAnyPastDay = weekDates.some((d) => isPast(dateToString(d)))
   const allDaysPast = weekDates.every((d) => isPast(dateToString(d)))

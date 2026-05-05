@@ -94,7 +94,7 @@ export async function saveWeekPlan(
     if (errors.length > 0) return { error: errors[0].message }
   }
 
-  const todayStr = new Date().toISOString().slice(0, 10)
+  const todayStr = new Date().toLocaleDateString('sv', { timeZone: 'Europe/Berlin' })
   const editableDates = weekDates.filter((d) => d >= todayStr)
 
   const toInsert = parsed.data
