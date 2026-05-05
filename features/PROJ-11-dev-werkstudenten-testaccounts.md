@@ -1,8 +1,8 @@
 # PROJ-11: Dev-Login Werkstudenten Test-Accounts
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-04-30
-**Last Updated:** 2026-04-30
+**Last Updated:** 2026-05-05
 
 ## Dependencies
 - Requires: PROJ-7 (Lokaler Dev-Login) — baut direkt auf der bestehenden Dev-Login-Infrastruktur auf; ersetzt/erweitert `DevLoginButton.tsx` und `/api/auth/dev-login`
@@ -215,4 +215,6 @@ Werkstudent → /dashboard   |   Manager → /manager
 - Vitest + Playwright: alle grün
 
 ## Deployment
-_To be added by /deploy_
+**Deployed:** 2026-05-05
+**Branch:** main (commit `094c365`)
+**Triggered by:** Push to main → Vercel auto-deploy

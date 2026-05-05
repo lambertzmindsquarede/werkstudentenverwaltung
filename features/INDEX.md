@@ -24,7 +24,7 @@
 | PROJ-8 | Mehrere Zeitblöcke pro Tag | Deployed | [PROJ-8-mehrere-zeitbloecke-pro-tag.md](PROJ-8-mehrere-zeitbloecke-pro-tag.md) | 2026-04-29 |
 | PROJ-9 | Pausenerfassung | Deployed | [PROJ-9-pausenerfassung.md](PROJ-9-pausenerfassung.md) | 2026-04-30 |
 | PROJ-10 | Feiertagsanzeige & Bundesland-Kalender | Deployed | [PROJ-10-feiertagsanzeige.md](PROJ-10-feiertagsanzeige.md) | 2026-04-30 |
-| PROJ-11 | Dev-Login Werkstudenten Test-Accounts | Approved | [PROJ-11-dev-werkstudenten-testaccounts.md](PROJ-11-dev-werkstudenten-testaccounts.md) | 2026-04-30 |
+| PROJ-11 | Dev-Login Werkstudenten Test-Accounts | Deployed | [PROJ-11-dev-werkstudenten-testaccounts.md](PROJ-11-dev-werkstudenten-testaccounts.md) | 2026-04-30 |
 | PROJ-12 | Planung für vergangene Tage sperren | Deployed | [PROJ-12-planung-vergangenheit-sperren.md](PROJ-12-planung-vergangenheit-sperren.md) | 2026-05-01 |
 | PROJ-13 | Viertelstunden-Genauigkeit für Planungszeiten | Deployed | [PROJ-13-viertelstunden-planung.md](PROJ-13-viertelstunden-planung.md) | 2026-05-01 |
 | PROJ-14 | Bearbeitungsfrist für Zeiterfassung | Deployed | [PROJ-14-zeiterfassung-bearbeitungsfrist.md](PROJ-14-zeiterfassung-bearbeitungsfrist.md) | 2026-05-02 |
