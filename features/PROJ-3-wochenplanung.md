@@ -212,4 +212,13 @@ Keine — alle benötigten shadcn/ui-Komponenten (`Input`, `Checkbox`, `Button`,
 **✅ READY** — Keine Critical oder High Bugs. Zwei Low-Findings akzeptabel für Deployment.
 
 ## Deployment
-_To be added by /deploy_
+
+**Deployed:** 2026-05-05
+**Production URL:** https://werkstudentenverwaltung.vercel.app/dashboard/wochenplanung
+**Git Tag:** v1.3.0-PROJ-3
+**Deployed by:** /deploy skill
+
+All 3 pending commits pushed to origin/main; Vercel auto-deploy triggered:
+- `fix(PROJ-3)`: Europe/Berlin timezone for today's date calculation
+- `fix(PROJ-3)`: Holiday check enforced server-side in saveWeekPlan
+- `test(PROJ-3)`: QA test results added to feature spec
