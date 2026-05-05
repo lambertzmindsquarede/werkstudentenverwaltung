@@ -28,7 +28,8 @@
 | PROJ-12 | Planung für vergangene Tage sperren | Deployed | [PROJ-12-planung-vergangenheit-sperren.md](PROJ-12-planung-vergangenheit-sperren.md) | 2026-05-01 |
 | PROJ-13 | Viertelstunden-Genauigkeit für Planungszeiten | Deployed | [PROJ-13-viertelstunden-planung.md](PROJ-13-viertelstunden-planung.md) | 2026-05-01 |
 | PROJ-14 | Bearbeitungsfrist für Zeiterfassung | Deployed | [PROJ-14-zeiterfassung-bearbeitungsfrist.md](PROJ-14-zeiterfassung-bearbeitungsfrist.md) | 2026-05-02 |
+| PROJ-15 | Änderungsbenachrichtigung für Manager | Architected | [PROJ-15-aenderungsbenachrichtigung-manager.md](PROJ-15-aenderungsbenachrichtigung-manager.md) | 2026-05-05 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-15
+## Next Available ID: PROJ-16
