@@ -1,29 +1,28 @@
 import { test, expect } from '@playwright/test'
 
-// AC 1: Button visible when NEXT_PUBLIC_DEV_LOGIN_ENABLED=true (set in .env.local)
-test('Dev Login button is visible on login page', async ({ page }) => {
+// AC 1: Dev login section visible when NEXT_PUBLIC_DEV_LOGIN_ENABLED=true (set in .env.local)
+test('Dev login section is visible on login page', async ({ page }) => {
   await page.goto('/login')
-  await expect(page.getByText('Als Admin einloggen')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Als gewählten User einloggen' })).toBeVisible()
 })
 
-// AC 2: Button distinguishable from Azure-AD button (amber badge + "Dev only" label)
-test('Dev Login button has "Dev only" badge and warning label', async ({ page }) => {
+// AC 2: Dev login section distinguishable from Azure-AD button (amber badge + "Dev only" label)
+test('Dev login section has "Dev only" badge and warning label', async ({ page }) => {
   await page.goto('/login')
   await expect(page.getByText('Dev only')).toBeVisible()
   await expect(page.getByText('Nur lokal sichtbar')).toBeVisible()
 })
 
-// AC 2 (coexistence): Both Azure-AD and Dev Login buttons visible simultaneously in dev mode
-test('Microsoft and Dev Login buttons coexist on login page', async ({ page }) => {
+// AC 2 (coexistence): Both Azure-AD and Dev Login visible simultaneously in dev mode
+test('Microsoft and Dev Login section coexist on login page', async ({ page }) => {
   await page.goto('/login')
   await page.waitForLoadState('networkidle')
   await expect(page.getByText('Mit Microsoft anmelden')).toBeVisible({ timeout: 10000 })
-  await expect(page.getByText('Als Admin einloggen')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Als gewählten User einloggen' })).toBeVisible()
 })
 
 // AC 3: Button triggers POST request to /api/auth/dev-login
 test('Dev Login button triggers POST to /api/auth/dev-login', async ({ page }) => {
-  // Set up request watcher before everything so no request is missed
   const requestPromise = page.waitForRequest(
     req => req.url().includes('/api/auth/dev-login') && req.method() === 'POST'
   )
@@ -35,7 +34,7 @@ test('Dev Login button triggers POST to /api/auth/dev-login', async ({ page }) =
     })
   )
   await page.goto('/login')
-  await page.getByText('Als Admin einloggen').click()
+  await page.getByRole('button', { name: 'Als gewählten User einloggen' }).click()
   const request = await requestPromise
   expect(request.method()).toBe('POST')
 })
@@ -51,26 +50,22 @@ test('Dev Login button shows loading state while logging in', async ({ page }) =
     })
   })
   await page.goto('/login')
-  await page.getByText('Als Admin einloggen').click()
+  await page.getByRole('button', { name: 'Als gewählten User einloggen' }).click()
   await expect(page.getByText('Einloggen…')).toBeVisible()
 })
 
 // AC 4: API endpoint guard — in dev mode the endpoint processes requests (not 403)
-// NOTE: Direct API calls return HTML (proxy redirects unauthenticated requests to /login)
-// This is BUG-1 — tracked in QA results. The test verifies current (broken) behavior.
-test('API /api/auth/dev-login is intercepted by proxy for unauthenticated requests', async ({ request }) => {
+// Direct API calls reach the route handler and return JSON (proxy no longer intercepts).
+test('API /api/auth/dev-login responds with JSON in dev mode', async ({ request }) => {
   const response = await request.post('/api/auth/dev-login')
-  // Proxy redirects unauthenticated requests to /login (HTML). Status 200 from /login page.
-  // BUG-1: should reach the route handler (200/404/500 with JSON), not return HTML.
-  const text = await response.text()
-  // Verify proxy intercept by checking response is not JSON
-  expect(text).toContain('<!DOCTYPE')
+  const contentType = response.headers()['content-type'] ?? ''
+  expect(contentType).toContain('application/json')
 })
 
 // AC 9: Missing seed user — API returns 404, frontend shows toast (mocked)
 test('Dev Login shows error toast when seed user is missing (404 response)', async ({ page }) => {
   await page.goto('/login')
-  await expect(page.getByText('Als Admin einloggen')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Als gewählten User einloggen' })).toBeVisible()
   await page.route('**/api/auth/dev-login', route => {
     if (route.request().method() !== 'POST') return route.continue()
     return route.fulfill({
@@ -79,16 +74,16 @@ test('Dev Login shows error toast when seed user is missing (404 response)', asy
       body: JSON.stringify({ error: 'Dev-Admin-User nicht gefunden' }),
     })
   })
-  await page.getByText('Als Admin einloggen').click()
+  await page.getByRole('button', { name: 'Als gewählten User einloggen' }).click()
   await expect(
-    page.getByText('Dev-Admin-User nicht gefunden – bitte Seed-Script ausführen (docs/dev-seed.sql)')
+    page.getByText('User nicht gefunden — bitte Seed-Script ausführen (docs/dev-seed.sql)')
   ).toBeVisible()
 })
 
 // AC 9: Non-200 non-404 response — generic error toast
 test('Dev Login shows generic error toast on server error (500 response)', async ({ page }) => {
   await page.goto('/login')
-  await expect(page.getByText('Als Admin einloggen')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Als gewählten User einloggen' })).toBeVisible()
   await page.route('**/api/auth/dev-login', route => {
     if (route.request().method() !== 'POST') return route.continue()
     return route.fulfill({
@@ -97,8 +92,8 @@ test('Dev Login shows generic error toast on server error (500 response)', async
       body: JSON.stringify({ error: 'Session-Erzeugung fehlgeschlagen' }),
     })
   })
-  await page.getByText('Als Admin einloggen').click()
-  await expect(page.getByText('Dev-Login fehlgeschlagen.')).toBeVisible()
+  await page.getByRole('button', { name: 'Als gewählten User einloggen' }).click()
+  await expect(page.getByText('Session-Erzeugung fehlgeschlagen')).toBeVisible()
 })
 
 // AC 6: Redirect to /manager on success (manager role)
@@ -107,26 +102,34 @@ test('Dev Login redirects to /manager on successful manager login', async ({ pag
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ redirectTo: '/manager' }),
+      body: JSON.stringify({ tokenHash: 'fake-token', redirectTo: '/manager' }),
+    })
+  )
+  // Mock supabase verifyOtp so it succeeds without a real token
+  await page.route('**/auth/v1/verify**', route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ access_token: 'fake', token_type: 'bearer', user: {} }),
     })
   )
   await page.route('/manager', route => route.fulfill({ status: 200, body: '<html>manager</html>' }))
   await page.goto('/login')
-  await page.getByText('Als Admin einloggen').click()
+  await page.getByRole('button', { name: 'Als gewählten User einloggen' }).click()
   await expect(page).toHaveURL(/\/manager/)
 })
 
-// Responsive: Dev Login button visible on mobile (375px)
-test('Dev Login button visible on mobile (375px)', async ({ page }) => {
+// Responsive: Dev Login section visible on mobile (375px)
+test('Dev Login section visible on mobile (375px)', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 })
   await page.goto('/login')
-  await expect(page.getByText('Als Admin einloggen')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Als gewählten User einloggen' })).toBeVisible()
   await expect(page.getByText('Dev only')).toBeVisible()
 })
 
-// Responsive: Dev Login button visible on tablet (768px)
-test('Dev Login button visible on tablet (768px)', async ({ page }) => {
+// Responsive: Dev Login section visible on tablet (768px)
+test('Dev Login section visible on tablet (768px)', async ({ page }) => {
   await page.setViewportSize({ width: 768, height: 1024 })
   await page.goto('/login')
-  await expect(page.getByText('Als Admin einloggen')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Als gewählten User einloggen' })).toBeVisible()
 })

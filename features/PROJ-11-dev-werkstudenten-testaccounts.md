@@ -1,6 +1,6 @@
 # PROJ-11: Dev-Login Werkstudenten Test-Accounts
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-04-30
 **Last Updated:** 2026-04-30
 
@@ -139,7 +139,80 @@ Werkstudent → /dashboard   |   Manager → /manager
 - Keine
 
 ## QA Test Results
-_To be added by /qa_
+
+**QA Date:** 2026-05-05
+**QA Engineer:** /qa skill
+**Overall Result:** APPROVED — production-ready
+
+### Acceptance Criteria
+
+#### UI
+| # | Criterion | Result |
+|---|-----------|--------|
+| 1 | PROJ-7 Einzelbutton ersetzt durch Dropdown mit allen Dev-Usern | ✅ Pass |
+| 2 | Dropdown zeigt Name + Rolle jedes Eintrags | ✅ Pass |
+| 3 | Button „Als gewählten User einloggen" löst Login aus | ✅ Pass |
+| 4 | Dev Admin standardmäßig vorausgewählt | ✅ Pass |
+| 5 | Amber-Badge „Dev only" sichtbar | ✅ Pass |
+| 6 | Im Production-Build nicht im DOM (return null guard) | ✅ Pass (NEXT_PUBLIC_ env var baked at build time) |
+
+#### API
+| # | Criterion | Result |
+|---|-----------|--------|
+| 7 | POST /api/auth/dev-login akzeptiert optionalen userId-Parameter | ✅ Pass |
+| 8 | Ohne userId → Fallback auf ersten aktiven Manager | ✅ Pass |
+| 9 | Mit userId → genau dieser User eingeloggt | ✅ Pass |
+| 10 | Unbekannte userId → HTTP 404 + Toast | ✅ Pass |
+| 11 | PROJ-7-Sicherheitsgarantien erhalten (NODE_ENV + DEV_LOGIN_ENABLED) | ✅ Pass |
+
+#### Seed-Daten
+| # | Criterion | Result |
+|---|-----------|--------|
+| 12 | docs/dev-seed.sql vorhanden mit allen 3 Werkstudenten-Accounts | ✅ Pass |
+| 13 | Anna Müller: planned_entries Mo–Fr + actual_entries Mo–Mi | ✅ Pass |
+| 14 | Ben Schneider: laufender Stempel (actual_end null, is_complete false) | ✅ Pass |
+| 15 | Clara Fischer: keine Einträge | ✅ Pass |
+| 16 | Seed-Script idempotent (ON CONFLICT DO UPDATE/NOTHING) | ✅ Pass |
+
+### Edge Cases
+| Edge Case | Result |
+|-----------|--------|
+| User fehlt in DB → 404 + Toast mit Seed-Script-Hinweis | ✅ Pass |
+| is_active=false → 403 + Inaktiver-User-Toast | ✅ Pass |
+| Ungültiges UUID-Format → 400 (no Supabase call) | ✅ Pass (unit-tested) |
+| PROJ-7-E2E-Tests auf neues Dropdown angepasst | ✅ Pass |
+| Werkstudent → /dashboard Redirect | ✅ Pass |
+| Manager → /manager Redirect | ✅ Pass |
+
+### Cross-Browser & Responsive
+| Environment | Result |
+|-------------|--------|
+| Chrome Desktop (1440px) | ✅ Pass |
+| Safari Mobile (375px) | ✅ Pass |
+| Tablet (768px) | ✅ Pass |
+
+### Security Audit
+- Doppelte Absicherung (NODE_ENV=development + DEV_LOGIN_ENABLED=true) auf API-Ebene ✅
+- userId wird nie an den Client zurückgegeben ✅
+- UUID-Format wird vor Supabase-Aufruf validiert (verhindert Injection) ✅
+- NEXT_PUBLIC_DEV_LOGIN_ENABLED guard rendert null in Production (kein DOM-Element) ✅
+
+### Bugs Found
+| # | Severity | Description | Status |
+|---|----------|-------------|--------|
+| 1 | High | PROJ-7 E2E-Tests prüften alten Button-Text „Als Admin einloggen" → 20/22 Tests fehlgeschlagen | **Fixed** (Tests in diesem QA-Lauf aktualisiert) |
+| 2 | Info | BUG-1 aus PROJ-7 (Proxy-Intercept) ist nicht mehr reproduzierbar — API antwortet jetzt direkt mit JSON | Resolved (Proxy-Verhalten geändert, Test angepasst) |
+
+### Automated Tests Written
+- **Unit:** `src/app/api/auth/dev-login/route.test.ts` — UUID-Validierungslogik (9 Test-Cases), alle ✅
+- **E2E:** `tests/PROJ-11-dev-werkstudenten-testaccounts.spec.ts` — 11 Acceptance Criteria Tests (22 inkl. Browser-Varianten), alle ✅
+- **E2E (aktualisiert):** `tests/PROJ-7-dev-login.spec.ts` — auf neues Dropdown-UI angepasst, alle 22 ✅
+
+### Test Summary
+- Unit tests: 235/235 ✅
+- PROJ-7 E2E: 22/22 ✅ (aktualisiert)
+- PROJ-11 E2E: 22/22 ✅
+- Vitest + Playwright: alle grün
 
 ## Deployment
 _To be added by /deploy_
