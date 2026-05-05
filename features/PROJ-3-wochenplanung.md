@@ -1,6 +1,6 @@
 # PROJ-3: Wochenplanung
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-04-28
 **Last Updated:** 2026-04-28
 **Architected:** 2026-04-28
@@ -148,7 +148,71 @@ Keine — alle benötigten shadcn/ui-Komponenten (`Input`, `Checkbox`, `Button`,
 - All 45 tests pass (`npm test`)
 
 ## QA Test Results
-_To be added by /qa_
+
+**QA Date:** 2026-05-05
+**QA Status:** APPROVED — Production-ready
+
+### Test Suites
+- **Unit tests:** 235/235 passed (`npm test`)
+- **E2E tests:** 64/64 passed (`npm run test:e2e`) — Chromium + Mobile Safari
+
+### Acceptance Criteria
+
+| # | Criterion | Result |
+|---|-----------|--------|
+| AC1 | Werkstudent kann Mo–Fr Startzeit + Endzeit eingeben | ✅ Pass |
+| AC2 | Keine separaten Pausenfelder (Bruttozeiten) | ✅ Pass |
+| AC3 | Geplante Stunden pro Tag und Wochensumme in Echtzeit | ✅ Pass |
+| AC4 | Warnung bei Überschreitung des Wochenstundenlimits (kein Block) | ✅ Pass |
+| AC5 | Wochenplan speichern und bearbeiten | ✅ Pass |
+| AC6 | Vorwoche als Vorlage laden (Ein-Klick) | ✅ Pass |
+| AC7 | Tag als „kein Arbeitstag" markieren | ✅ Pass |
+| AC8 | Wochenpläne in Kalenderansicht für Manager sichtbar | ✅ Pass (via PROJ-5, deployed) |
+| AC9 | Wochennavigation Vor/Zurück-Buttons | ✅ Pass |
+
+### Edge Cases
+
+| Case | Result |
+|------|--------|
+| Startzeit nach Endzeit → Validierungsfehler, Speichern gesperrt | ✅ Pass |
+| Gleiche Start- und Endzeit → Fehler | ✅ Pass |
+| Vergangene Woche → Speichern deaktiviert, Hinweis-Banner | ✅ Pass |
+| Alle Tage vergangen → Vorlage-Banner nicht sichtbar | ✅ Pass |
+| Vorwoche ohne Einträge → Toast "Keine Einträge in der Vorwoche gefunden" | ✅ Pass |
+
+### Security Audit
+
+| Check | Result |
+|-------|--------|
+| Unauthenticated Zugriff → Redirect /login | ✅ Pass |
+| RLS: Werkstudenten lesen/schreiben nur eigene Einträge | ✅ Pass |
+| RLS: Manager lesen alle Einträge | ✅ Pass |
+| Server-side Zod-Validierung (DayEntrySchema + QuarterHourTime) | ✅ Pass |
+| Past-date-Filter im Server Action (PROJ-12) | ✅ Pass |
+| SQL Injection (Supabase parametrierte Queries) | ✅ Pass |
+| XSS (React/Next.js Escaping) | ✅ Pass |
+
+### Responsive
+
+| Breakpoint | Result |
+|------------|--------|
+| Mobile 375px | ✅ Pass |
+| Tablet 768px | ✅ Pass |
+| Desktop 1440px | ✅ Pass |
+
+### Bugs Found
+
+**LOW-1: Feiertagscheck nur client-seitig**
+- Beschreibung: `handleSave` in `WochenplanungClient.tsx` prüft Feiertage und blockiert den Save. Der Server Action `saveWeekPlan` prüft Feiertage nicht. Ein direkter Aufruf des Server Actions umgeht die Feiertagsregel.
+- Severity: Low (kein Sicherheitsproblem, nur Planungsdaten)
+- Reproduktion: Server Action `saveWeekPlan` direkt mit einem Feiertagsdatum aufrufen
+
+**LOW-2: todayStr in saveWeekPlan verwendet UTC**
+- Beschreibung: `new Date().toISOString().slice(0, 10)` liefert UTC-Datum. Nutzer in UTC+-Zeitzonen könnten kurz nach Mitternacht lokal noch Einträge für den aktuellen Tag als "vergangen" erleben.
+- Severity: Low (Edge-Case, betrifft nur Zeitzonen UTC+1 und höher zwischen 00:00 und UTC-Mitternacht)
+
+### Production-Ready Decision
+**✅ READY** — Keine Critical oder High Bugs. Zwei Low-Findings akzeptabel für Deployment.
 
 ## Deployment
 _To be added by /deploy_
