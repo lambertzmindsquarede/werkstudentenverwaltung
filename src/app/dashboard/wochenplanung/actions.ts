@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { getWeekDates, getPreviousWeek, dateToString } from '@/lib/week-utils'
 import { validateBlocks } from '@/lib/time-block-utils'
+import { getHolidayDates } from '@/lib/feiertage-server'
 
 export type DayEntry = {
   date: string
@@ -108,6 +109,22 @@ export async function saveWeekPlan(
     }))
 
   if (editableDates.length === 0) return {}
+
+  // Server-side holiday check
+  if (toInsert.length > 0) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('bundesland')
+      .eq('id', user.id)
+      .single()
+    const bl = profile?.bundesland ?? 'NW'
+    const years = [...new Set(toInsert.map((e) => parseInt(e.date.slice(0, 4), 10)))]
+    const holidayDates = await getHolidayDates(bl, years)
+    const blocked = toInsert.find((e) => holidayDates.has(e.date))
+    if (blocked) {
+      return { error: 'Planung nicht möglich: Mindestens ein ausgewählter Tag ist ein gesetzlicher Feiertag.' }
+    }
+  }
 
   // Only delete/re-insert entries for non-past dates (preserve history)
   const { error: deleteError } = await supabase

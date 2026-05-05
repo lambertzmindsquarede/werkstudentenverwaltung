@@ -202,10 +202,8 @@ Keine — alle benötigten shadcn/ui-Komponenten (`Input`, `Checkbox`, `Button`,
 
 ### Bugs Found
 
-**LOW-1: Feiertagscheck nur client-seitig**
-- Beschreibung: `handleSave` in `WochenplanungClient.tsx` prüft Feiertage und blockiert den Save. Der Server Action `saveWeekPlan` prüft Feiertage nicht. Ein direkter Aufruf des Server Actions umgeht die Feiertagsregel.
-- Severity: Low (kein Sicherheitsproblem, nur Planungsdaten)
-- Reproduktion: Server Action `saveWeekPlan` direkt mit einem Feiertagsdatum aufrufen
+**~~LOW-1: Feiertagscheck nur client-seitig~~** — **BEHOBEN**
+- Fix: `getHolidayDates()` in `src/lib/feiertage-server.ts` extrahiert. `saveWeekPlan` lädt das Bundesland des Users aus `profiles` und prüft Feiertage serverseitig vor dem Insert. Bei Treffer wird `{ error: '...' }` zurückgegeben (fail-open: wenn die externe API nicht erreichbar ist, wird der Save nicht blockiert).
 
 **LOW-2: todayStr in saveWeekPlan verwendet UTC**
 - Beschreibung: `new Date().toISOString().slice(0, 10)` liefert UTC-Datum. Nutzer in UTC+-Zeitzonen könnten kurz nach Mitternacht lokal noch Einträge für den aktuellen Tag als "vergangen" erleben.
