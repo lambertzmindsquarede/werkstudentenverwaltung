@@ -1,14 +1,11 @@
-// DEV-ONLY: Double-guarded by NODE_ENV=development AND DEV_LOGIN_ENABLED=true
+// DEV-ONLY: Guarded by DEV_LOGIN_ENABLED=true (set in Vercel env vars to enable on production)
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export async function POST(req: NextRequest) {
-  if (
-    process.env.NODE_ENV !== 'development' ||
-    process.env.DEV_LOGIN_ENABLED !== 'true'
-  ) {
+  if (process.env.DEV_LOGIN_ENABLED !== 'true') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
