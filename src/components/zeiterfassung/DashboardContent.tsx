@@ -19,6 +19,7 @@ interface Props {
   weeklyHourLimit: number
   bundesland: string
   maxEditDaysPast: number | null
+  hasManager: boolean
   initialTodayEntries: ActualEntry[]
   initialWeekEntries: ActualEntry[]
   initialPlannedEntries: PlannedEntry[]
@@ -33,6 +34,7 @@ export default function DashboardContent({
   weeklyHourLimit,
   bundesland,
   maxEditDaysPast,
+  hasManager,
   initialTodayEntries,
   initialWeekEntries,
   initialPlannedEntries,
@@ -208,6 +210,7 @@ export default function DashboardContent({
               today={today}
               weeklyHourLimit={weeklyHourLimit}
               maxEditDaysPast={maxEditDaysPast}
+              hasManager={hasManager}
               actualEntries={actualEntries}
               plannedEntries={plannedEntries}
               onWeekChange={setCurrentWeekStr}
@@ -224,6 +227,7 @@ export default function DashboardContent({
           open
           date={openEntryEditDate}
           entry={openEntry}
+          showManagerNotice={hasManager && openEntryEditDate < today}
           onClose={() => setOpenEntryEditDate(null)}
           onSaved={(entry) => {
             handleEntryChange(entry)

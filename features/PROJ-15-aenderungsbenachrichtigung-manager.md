@@ -242,7 +242,7 @@ Keine neuen npm-Pakete. SMTP-Zugangsdaten werden als Supabase Secrets konfigurie
 
 ### Bugs Found
 
-#### Bug #1 — Medium: Kein Manager-Hinweis beim Bearbeiten über OffenerEintragBanner
+#### Bug #1 — Medium ✅ BEHOBEN: Kein Manager-Hinweis beim Bearbeiten über OffenerEintragBanner
 
 **Beschreibung:** Wenn ein Werkstudent eine vergangene Buchung (die er offen gelassen hat, d.h. ohne Stempelausgang) über den `OffenerEintragBanner` bearbeitet, wird kein Hinweis „Dein Vorgesetzter wird über diese Änderung informiert" angezeigt — obwohl der DB-Trigger die Änderung korrekt protokolliert.
 
