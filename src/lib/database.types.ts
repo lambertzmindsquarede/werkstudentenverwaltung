@@ -9,6 +9,41 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      booking_change_log: {
+        Row: {
+          id: string
+          entry_id: string | null
+          user_id: string
+          date: string
+          field_changed: 'actual_start' | 'actual_end' | 'break_minutes'
+          old_value: string | null
+          new_value: string | null
+          changed_at: string
+          notified_at: string | null
+        }
+        Insert: {
+          id?: string
+          entry_id?: string | null
+          user_id: string
+          date: string
+          field_changed: 'actual_start' | 'actual_end' | 'break_minutes'
+          old_value?: string | null
+          new_value?: string | null
+          changed_at?: string
+          notified_at?: string | null
+        }
+        Update: {
+          id?: string
+          entry_id?: string | null
+          user_id?: string
+          date?: string
+          field_changed?: 'actual_start' | 'actual_end' | 'break_minutes'
+          old_value?: string | null
+          new_value?: string | null
+          changed_at?: string
+          notified_at?: string | null
+        }
+      }
       app_settings: {
         Row: {
           key: string
@@ -108,6 +143,7 @@ export type Database = {
           weekly_hour_limit: number | null
           is_active: boolean | null
           bundesland: string
+          manager_id: string | null
           created_at: string
           updated_at: string
         }
@@ -119,6 +155,7 @@ export type Database = {
           weekly_hour_limit?: number | null
           is_active?: boolean | null
           bundesland?: string
+          manager_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -130,6 +167,7 @@ export type Database = {
           weekly_hour_limit?: number | null
           is_active?: boolean | null
           bundesland?: string
+          manager_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -142,6 +180,7 @@ export type Database = {
 }
 
 export type Profile = Database['public']['Tables']['profiles']['Row']
+export type ProfileWithManager = Profile & { manager?: Pick<Profile, 'id' | 'full_name'> | null }
 export const DEFAULT_BUNDESLAND = 'NW'
 export type UserRole = 'werkstudent' | 'manager'
 export type ProfileUpdate = Database['public']['Tables']['profiles']['Update']
@@ -160,6 +199,8 @@ export type ActualEntry = {
 }
 
 export const DEFAULT_MAX_EDIT_DAYS_PAST = 14
+
+export type BookingChangeLog = Database['public']['Tables']['booking_change_log']['Row']
 
 export type AppSetting = Database['public']['Tables']['app_settings']['Row']
 

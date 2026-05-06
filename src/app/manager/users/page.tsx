@@ -91,14 +91,16 @@ function RoleBadge({ role }: { role: UserRole | null }) {
 
 interface EditDialogProps {
   user: Profile | null
+  managers: Profile[]
   onClose: () => void
   onSaved: () => void
 }
 
-function EditUserDialog({ user, onClose, onSaved }: EditDialogProps) {
+function EditUserDialog({ user, managers, onClose, onSaved }: EditDialogProps) {
   const [editRole, setEditRole] = useState<UserRole | 'none'>('none')
   const [editHourLimit, setEditHourLimit] = useState<string>('20')
   const [editBundesland, setEditBundesland] = useState<string>(DEFAULT_BUNDESLAND)
+  const [editManagerId, setEditManagerId] = useState<string>('none')
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
@@ -106,8 +108,11 @@ function EditUserDialog({ user, onClose, onSaved }: EditDialogProps) {
       setEditRole(user.role ?? 'none')
       setEditHourLimit(String(user.weekly_hour_limit ?? 20))
       setEditBundesland(user.bundesland ?? DEFAULT_BUNDESLAND)
+      setEditManagerId(user.manager_id ?? 'none')
     }
   }, [user])
+
+  const effectiveRole = editRole === 'none' ? null : editRole
 
   function handleSave() {
     if (!user) return
@@ -118,9 +123,10 @@ function EditUserDialog({ user, onClose, onSaved }: EditDialogProps) {
     }
     startTransition(async () => {
       const result = await updateUserProfile(user.id, {
-        role: editRole === 'none' ? null : editRole,
+        role: effectiveRole,
         weekly_hour_limit: limit,
         bundesland: editBundesland,
+        manager_id: effectiveRole === 'werkstudent' ? (editManagerId === 'none' ? null : editManagerId) : null,
       })
       if (result.error) {
         toast.error(result.error)
@@ -168,6 +174,28 @@ function EditUserDialog({ user, onClose, onSaved }: EditDialogProps) {
                 </SelectContent>
               </Select>
             </div>
+
+            {effectiveRole === 'werkstudent' && (
+              <div className="space-y-2">
+                <Label htmlFor="manager-select">Vorgesetzter</Label>
+                <Select value={editManagerId} onValueChange={setEditManagerId}>
+                  <SelectTrigger id="manager-select">
+                    <SelectValue placeholder="Vorgesetzten auswählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Kein Vorgesetzter</SelectItem>
+                    {managers.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.full_name ?? m.email ?? m.id}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-slate-400">
+                  Erhält E-Mail-Benachrichtigungen bei nachträglichen Buchungsänderungen
+                </p>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="hour-limit">Max. Wochenstunden</Label>
@@ -256,6 +284,8 @@ export default function UsersPage() {
       await fetchUsers()
     }
   }
+
+  const managers = users.filter((u) => u.role === 'manager' && u.is_active !== false)
 
   const pendingCount = users.filter((u) => !u.role).length
   const activeCount = users.filter((u) => u.role && u.is_active !== false).length
@@ -399,6 +429,9 @@ export default function UsersPage() {
                   Rolle
                 </TableHead>
                 <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  Vorgesetzter
+                </TableHead>
+                <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
                   Stunden/Woche
                 </TableHead>
                 <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
@@ -422,6 +455,7 @@ export default function UsersPage() {
                     </TableCell>
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-9" /></TableCell>
                     <TableCell><Skeleton className="h-8 w-16" /></TableCell>
@@ -429,12 +463,16 @@ export default function UsersPage() {
                 ))
               ) : filteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-slate-400 text-sm">
+                  <TableCell colSpan={7} className="text-center py-12 text-slate-400 text-sm">
                     Keine Nutzer gefunden.
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredUsers.map((user) => (
+                filteredUsers.map((user) => {
+                  const assignedManager = user.manager_id
+                    ? users.find((u) => u.id === user.manager_id)
+                    : null
+                  return (
                   <TableRow key={user.id} className="hover:bg-slate-50/50">
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -456,6 +494,15 @@ export default function UsersPage() {
                     </TableCell>
                     <TableCell>
                       <RoleBadge role={user.role} />
+                    </TableCell>
+                    <TableCell>
+                      {user.role === 'werkstudent' ? (
+                        <span className="text-sm text-slate-700">
+                          {assignedManager?.full_name ?? <span className="text-slate-400">—</span>}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-sm">—</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <span className="text-sm text-slate-700">
@@ -481,7 +528,8 @@ export default function UsersPage() {
                       </Button>
                     </TableCell>
                   </TableRow>
-                ))
+                  )
+                })
               )}
             </TableBody>
           </Table>
@@ -490,6 +538,7 @@ export default function UsersPage() {
 
       <EditUserDialog
         user={editingUser}
+        managers={managers}
         onClose={() => setEditingUser(null)}
         onSaved={fetchUsers}
       />

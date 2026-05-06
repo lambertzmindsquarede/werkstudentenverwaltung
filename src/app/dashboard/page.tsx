@@ -27,7 +27,7 @@ export default async function DashboardPage() {
 
   const [profileResult, todayEntriesResult, weekEntriesResult, plannedEntriesResult, openEntryResult, settingResult] =
     await Promise.all([
-      supabase.from('profiles').select('weekly_hour_limit, bundesland, role').eq('id', user.id).single(),
+      supabase.from('profiles').select('weekly_hour_limit, bundesland, role, manager_id').eq('id', user.id).single(),
       supabase
         .from('actual_entries')
         .select('*')
@@ -71,6 +71,7 @@ export default async function DashboardPage() {
       weeklyHourLimit={profileResult.data?.weekly_hour_limit ?? 20}
       bundesland={profileResult.data?.bundesland ?? 'NW'}
       maxEditDaysPast={maxEditDaysPast}
+      hasManager={!!profileResult.data?.manager_id}
       initialTodayEntries={(todayEntriesResult.data as ActualEntry[] | null) ?? []}
       initialWeekEntries={(weekEntriesResult.data as ActualEntry[] | null) ?? []}
       initialPlannedEntries={(plannedEntriesResult.data as PlannedEntry[] | null) ?? []}

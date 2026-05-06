@@ -30,6 +30,7 @@ interface Props {
   today: string
   weeklyHourLimit: number
   maxEditDaysPast: number | null
+  hasManager: boolean
   actualEntries: ActualEntry[]
   plannedEntries: PlannedEntry[]
   onWeekChange: (newWeek: string) => void
@@ -61,6 +62,7 @@ export default function WochenIstübersicht({
   today,
   weeklyHourLimit,
   maxEditDaysPast,
+  hasManager,
   actualEntries,
   plannedEntries,
   onWeekChange,
@@ -362,6 +364,7 @@ export default function WochenIstübersicht({
           otherEntries={(actualByDate.get(blockEditEntry.date) ?? []).filter(
             (e) => e.id !== blockEditEntry.id
           )}
+          showManagerNotice={hasManager && blockEditEntry.date < today}
           onClose={() => setBlockEditEntry(null)}
           onSaved={handleEditSaved}
           onDeleted={handleEditDeleted}

@@ -28,6 +28,7 @@ Teamleiter oder HR-Verantwortliche, die einen Überblick über die Verfügbarkei
 | P1 | PROJ-12: Planung für vergangene Tage sperren | Planned |
 | P1 | PROJ-13: Viertelstunden-Genauigkeit für Planungszeiten | Planned |
 | P1 | PROJ-14: Bearbeitungsfrist für Zeiterfassung | Planned |
+| P1 | PROJ-15: Änderungsbenachrichtigung für Manager | Planned |
 
 ## Success Metrics
 - Alle Werkstudenten nutzen die App täglich zum Einstempeln (100% Adoption)

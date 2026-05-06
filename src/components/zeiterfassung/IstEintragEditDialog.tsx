@@ -25,6 +25,7 @@ interface Props {
   date: string
   entry: ActualEntry | null
   otherEntries?: ActualEntry[]
+  showManagerNotice?: boolean
   onClose: () => void
   onSaved: (entry: ActualEntry) => void
   onDeleted?: (entryId: string) => void
@@ -40,6 +41,7 @@ export default function IstEintragEditDialog({
   date,
   entry,
   otherEntries = [],
+  showManagerNotice = false,
   onClose,
   onSaved,
   onDeleted,
@@ -281,6 +283,14 @@ export default function IstEintragEditDialog({
             <Alert className="border-amber-300 bg-amber-50">
               <AlertDescription className="text-amber-700 text-sm">
                 {arbZGWarning}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {showManagerNotice && (
+            <Alert className="border-blue-200 bg-blue-50">
+              <AlertDescription className="text-blue-700 text-sm">
+                Dein Vorgesetzter wird über diese Änderung informiert.
               </AlertDescription>
             </Alert>
           )}
