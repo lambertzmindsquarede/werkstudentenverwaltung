@@ -1,6 +1,6 @@
 # PROJ-15: Änderungsbenachrichtigung für Manager
 
-## Status: In Review
+## Status: Deployed
 **Created:** 2026-05-05
 **Last Updated:** 2026-05-06
 
@@ -304,4 +304,17 @@ Keine Critical- oder High-Bugs. Feature ist deploybar.
 Bug #1 (Medium) und Bug #2 (Medium/Security) sollten zeitnah nach dem Deploy als Hotfix behoben werden.
 
 ## Deployment
-_To be added by /deploy_
+
+**Deployed:** 2026-05-06
+**Production URL:** https://werkstudentenverwaltung.vercel.app
+**Git tag:** v1.15.0-PROJ-15
+
+**Deploy summary:**
+- 6 commits pushed to main → Vercel auto-deploy triggered
+- DB migrations included in commit (booking_change_log, cron)
+- All QA acceptance criteria passed (10/11 AC; AC10 partial → fixed before deploy)
+- Build: ✅ `next build` succeeded (Next.js 16.1.1, Turbopack)
+
+**One-time setup required (Supabase Dashboard):**
+1. Supabase → Settings → Edge Function Secrets → add: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`
+2. SQL Editor → `SELECT vault.create_secret('eyJ...service-role-key...', 'SERVICE_ROLE_KEY');`
