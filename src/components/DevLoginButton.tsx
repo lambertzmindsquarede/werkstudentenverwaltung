@@ -21,11 +21,11 @@ const DEV_USERS = [
   { userId: '00000000-0000-0000-0000-000000000004', label: 'Clara Fischer (Werkstudentin)' },
 ]
 
-export function DevLoginButton() {
+export function DevLoginButton({ enabled }: { enabled?: boolean }) {
   const [loading, setLoading] = useState(false)
   const [selectedUserId, setSelectedUserId] = useState(DEV_USERS[0].userId)
 
-  if (process.env.NEXT_PUBLIC_DEV_LOGIN_ENABLED !== 'true') {
+  if (!enabled) {
     return null
   }
 

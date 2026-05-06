@@ -17,6 +17,7 @@ export default async function LoginPage({
 }) {
   const { error } = await searchParams
   const errorMessage = error ? (ERROR_MESSAGES[error] ?? 'Ein unbekannter Fehler ist aufgetreten.') : null
+  const devLoginEnabled = process.env.DEV_LOGIN_ENABLED === 'true'
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 p-4">
@@ -57,7 +58,7 @@ export default async function LoginPage({
               </Alert>
             )}
             <MicrosoftSignInButton />
-            <DevLoginButton />
+            <DevLoginButton enabled={devLoginEnabled} />
             <p className="text-xs text-slate-500 text-center mt-6">
               Nur für mindsquare-Mitarbeiter zugänglich.
               <br />
