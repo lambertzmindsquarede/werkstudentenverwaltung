@@ -18,7 +18,6 @@ export default async function LoginPage({
   const { error } = await searchParams
   const errorMessage = error ? (ERROR_MESSAGES[error] ?? 'Ein unbekannter Fehler ist aufgetreten.') : null
   const devLoginEnabled = process.env.DEV_LOGIN_ENABLED === 'true'
-  console.log('[login] DEV_LOGIN_ENABLED =', process.env.DEV_LOGIN_ENABLED, '| devLoginEnabled =', devLoginEnabled)
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 p-4">
