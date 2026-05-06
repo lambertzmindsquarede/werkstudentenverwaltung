@@ -100,6 +100,7 @@ export type Database = {
           is_complete: boolean
           block_index: number | null
           break_minutes: number
+          mood_emoji: string | null
           created_at: string
           updated_at: string
         }
@@ -112,6 +113,7 @@ export type Database = {
           is_complete?: boolean
           block_index?: number | null
           break_minutes?: number
+          mood_emoji?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -124,6 +126,7 @@ export type Database = {
           is_complete?: boolean
           block_index?: number | null
           break_minutes?: number
+          mood_emoji?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -280,6 +283,7 @@ export type ActualEntry = {
   is_complete: boolean
   block_index: number | null
   break_minutes: number
+  mood_emoji: string | null
   created_at: string
   updated_at: string
 }

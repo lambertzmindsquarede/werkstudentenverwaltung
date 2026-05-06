@@ -35,7 +35,8 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { createClient } from '@/lib/supabase-browser'
 import { updateUserProfile } from './actions'
-import type { Profile, UserRole } from '@/lib/database.types'
+import { assignWerkstudentToBereich } from '@/app/admin/bereiche/actions'
+import type { Profile, UserRole, Bereich } from '@/lib/database.types'
 import { BUNDESLAENDER, DEFAULT_BUNDESLAND } from '@/lib/bundesland-utils'
 
 type FilterStatus = 'all' | 'pending' | 'active' | 'inactive'
@@ -92,15 +93,17 @@ function RoleBadge({ role }: { role: UserRole | null }) {
 interface EditDialogProps {
   user: Profile | null
   managers: Profile[]
+  bereiche: Bereich[]
   onClose: () => void
   onSaved: () => void
 }
 
-function EditUserDialog({ user, managers, onClose, onSaved }: EditDialogProps) {
+function EditUserDialog({ user, managers, bereiche, onClose, onSaved }: EditDialogProps) {
   const [editRole, setEditRole] = useState<UserRole | 'none'>('none')
   const [editHourLimit, setEditHourLimit] = useState<string>('20')
   const [editBundesland, setEditBundesland] = useState<string>(DEFAULT_BUNDESLAND)
   const [editManagerId, setEditManagerId] = useState<string>('none')
+  const [editBereichId, setEditBereichId] = useState<string>('none')
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
@@ -109,6 +112,7 @@ function EditUserDialog({ user, managers, onClose, onSaved }: EditDialogProps) {
       setEditHourLimit(String(user.weekly_hour_limit ?? 20))
       setEditBundesland(user.bundesland ?? DEFAULT_BUNDESLAND)
       setEditManagerId(user.manager_id ?? 'none')
+      setEditBereichId(user.bereich_id ?? 'none')
     }
   }, [user])
 
@@ -130,11 +134,21 @@ function EditUserDialog({ user, managers, onClose, onSaved }: EditDialogProps) {
       })
       if (result.error) {
         toast.error(result.error)
-      } else {
-        toast.success('Gespeichert')
-        onSaved()
-        onClose()
+        return
       }
+      if (effectiveRole === 'werkstudent') {
+        const bereichResult = await assignWerkstudentToBereich(
+          user.id,
+          editBereichId === 'none' ? null : editBereichId
+        )
+        if (bereichResult.error) {
+          toast.error(bereichResult.error)
+          return
+        }
+      }
+      toast.success('Gespeichert')
+      onSaved()
+      onClose()
     })
   }
 
@@ -176,25 +190,43 @@ function EditUserDialog({ user, managers, onClose, onSaved }: EditDialogProps) {
             </div>
 
             {effectiveRole === 'werkstudent' && (
-              <div className="space-y-2">
-                <Label htmlFor="manager-select">Vorgesetzter</Label>
-                <Select value={editManagerId} onValueChange={setEditManagerId}>
-                  <SelectTrigger id="manager-select">
-                    <SelectValue placeholder="Vorgesetzten auswählen" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Kein Vorgesetzter</SelectItem>
-                    {managers.map((m) => (
-                      <SelectItem key={m.id} value={m.id}>
-                        {m.full_name ?? m.email ?? m.id}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-slate-400">
-                  Erhält E-Mail-Benachrichtigungen bei nachträglichen Buchungsänderungen
-                </p>
-              </div>
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="manager-select">Vorgesetzter</Label>
+                  <Select value={editManagerId} onValueChange={setEditManagerId}>
+                    <SelectTrigger id="manager-select">
+                      <SelectValue placeholder="Vorgesetzten auswählen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Kein Vorgesetzter</SelectItem>
+                      {managers.map((m) => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.full_name ?? m.email ?? m.id}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-slate-400">
+                    Erhält E-Mail-Benachrichtigungen bei nachträglichen Buchungsänderungen
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bereich-select">Bereich</Label>
+                  <Select value={editBereichId} onValueChange={setEditBereichId}>
+                    <SelectTrigger id="bereich-select">
+                      <SelectValue placeholder="Bereich auswählen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Kein Bereich</SelectItem>
+                      {bereiche.map((b) => (
+                        <SelectItem key={b.id} value={b.id}>
+                          {b.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
             )}
 
             <div className="space-y-2">
@@ -243,7 +275,7 @@ function EditUserDialog({ user, managers, onClose, onSaved }: EditDialogProps) {
   )
 }
 
-export default function UsersClient() {
+export default function UsersClient({ bereiche }: { bereiche: Bereich[] }) {
   const [users, setUsers] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
@@ -536,6 +568,7 @@ export default function UsersClient() {
       <EditUserDialog
         user={editingUser}
         managers={managers}
+        bereiche={bereiche}
         onClose={() => setEditingUser(null)}
         onSaved={fetchUsers}
       />

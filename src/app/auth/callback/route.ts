@@ -3,6 +3,17 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+// Decode a JWT payload without verifying the signature.
+// The signature was already verified by Azure AD during code exchange.
+function decodeJwtPayload(token: string): Record<string, unknown> {
+  try {
+    const base64 = token.split('.')[1]
+    return JSON.parse(Buffer.from(base64, 'base64url').toString('utf-8'))
+  } catch {
+    return {}
+  }
+}
+
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
@@ -38,33 +49,49 @@ export async function GET(request: NextRequest) {
 
   const user = data.session.user
 
-  // Create profile if it doesn't exist yet (first login)
+  // Determine admin status from the Azure AD access token groups claim.
+  // Azure AD includes group object IDs in the `groups` claim when configured.
+  const adminGroupId = process.env.ENTRA_ADMIN_GROUP_ID
+  let isAdmin = false
+
+  if (adminGroupId && data.session.provider_token) {
+    const payload = decodeJwtPayload(data.session.provider_token)
+    const groups = Array.isArray(payload.groups) ? payload.groups : []
+    isAdmin = groups.includes(adminGroupId)
+  }
+
+  // Upsert profile on every login so name/email stays fresh and is_admin is re-evaluated.
   await supabase.from('profiles').upsert(
     {
       id: user.id,
       email: user.email,
       full_name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? null,
+      is_admin: isAdmin,
     },
     { onConflict: 'id' }
   )
 
-  // Read role and redirect accordingly
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, is_admin')
     .eq('id', user.id)
     .single()
 
   const role = profile?.role
+  const admin = profile?.is_admin ?? false
 
+  // Manager role takes priority over admin-only redirect
   if (role === 'manager') {
     return NextResponse.redirect(`${origin}/manager`)
+  }
+
+  if (admin) {
+    return NextResponse.redirect(`${origin}/admin`)
   }
 
   if (role === 'werkstudent') {
     return NextResponse.redirect(`${origin}/dashboard`)
   }
 
-  // No role assigned yet
   return NextResponse.redirect(`${origin}/pending`)
 }

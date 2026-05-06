@@ -22,6 +22,7 @@ function getInitials(name: string | null): string {
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [bereichName, setBereichName] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [signingOut, setSigningOut] = useState(false)
 
@@ -35,6 +36,16 @@ export default function ProfilePage() {
 
       const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
       setProfile(data)
+
+      if (data?.bereich_id) {
+        const { data: bereich } = await supabase
+          .from('bereiche')
+          .select('name')
+          .eq('id', data.bereich_id)
+          .single()
+        setBereichName(bereich?.name ?? null)
+      }
+
       setLoading(false)
     }
     fetchProfile()
@@ -154,6 +165,16 @@ export default function ProfilePage() {
                       {profile?.weekly_hour_limit != null
                         ? `${profile.weekly_hour_limit}h / Woche`
                         : '20h / Woche'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">
+                      Bereich
+                    </p>
+                    <p className="text-sm font-medium text-slate-800">
+                      {bereichName ?? (
+                        <span className="text-slate-400 font-normal">Kein Bereich zugeordnet</span>
+                      )}
                     </p>
                   </div>
                 </div>

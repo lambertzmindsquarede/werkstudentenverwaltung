@@ -38,24 +38,25 @@ export async function proxy(request: NextRequest) {
 
   if (!user) {
     if (isPublicRoute) return supabaseResponse
-    // API routes handle their own auth; return 401 instead of a browser redirect
     if (pathname.startsWith('/api')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // User is authenticated — check role for protected routes
+  // Already logged in — redirect away from /login
   if (isPublicRoute && pathname.startsWith('/login')) {
-    // Already logged in, redirect away from login
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, is_admin')
       .eq('id', user.id)
       .single()
 
     const role = profile?.role
+    const admin = profile?.is_admin ?? false
+
     if (role === 'manager') return NextResponse.redirect(new URL('/manager', request.url))
+    if (admin) return NextResponse.redirect(new URL('/admin', request.url))
     if (role === 'werkstudent') return NextResponse.redirect(new URL('/dashboard', request.url))
     return NextResponse.redirect(new URL('/pending', request.url))
   }
@@ -66,37 +67,51 @@ export async function proxy(request: NextRequest) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, is_active')
+    .select('role, is_active, is_admin')
     .eq('id', user.id)
     .single()
 
   const role = profile?.role
   const isActive = profile?.is_active !== false && profile?.is_active !== null
+  const isAdmin = profile?.is_admin ?? false
 
-  // Deactivated users can only see /deactivated
+  // Deactivated users
   if (!isActive) {
     if (pathname === '/deactivated') return supabaseResponse
     return NextResponse.redirect(new URL('/deactivated', request.url))
   }
 
-  // Active users should not visit /deactivated
   if (pathname === '/deactivated') {
     if (role === 'manager') return NextResponse.redirect(new URL('/manager', request.url))
+    if (isAdmin) return NextResponse.redirect(new URL('/admin', request.url))
     if (role === 'werkstudent') return NextResponse.redirect(new URL('/dashboard', request.url))
     return NextResponse.redirect(new URL('/pending', request.url))
   }
 
-  if (!role) {
+  // Guard /admin routes — only admins may access them
+  if (pathname.startsWith('/admin')) {
+    if (!isAdmin) {
+      if (role === 'manager') return NextResponse.redirect(new URL('/manager', request.url))
+      if (role === 'werkstudent') return NextResponse.redirect(new URL('/dashboard', request.url))
+      return NextResponse.redirect(new URL('/pending', request.url))
+    }
+    return supabaseResponse
+  }
+
+  // Users without a role go to /pending
+  if (!role && !isAdmin) {
     if (pathname === '/pending') return supabaseResponse
     return NextResponse.redirect(new URL('/pending', request.url))
   }
 
-  // User has a role — redirect away from /pending to their correct page
   if (pathname === '/pending') {
     if (role === 'manager') return NextResponse.redirect(new URL('/manager', request.url))
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+    if (isAdmin) return NextResponse.redirect(new URL('/admin', request.url))
+    if (role === 'werkstudent') return NextResponse.redirect(new URL('/dashboard', request.url))
+    return supabaseResponse
   }
 
+  // Cross-role route guards
   if (role === 'werkstudent' && pathname.startsWith('/manager')) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
