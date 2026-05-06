@@ -1,5 +1,11 @@
 import type { PlannedEntry, ActualEntry } from '@/lib/database.types'
 import { calcBlockHours } from '@/lib/time-block-utils'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 interface Props {
   plans: PlannedEntry[]
@@ -60,6 +66,8 @@ export default function KalenderZelle({ plans, actuals, date, today, holidayName
       : planHours > 0
       ? `${plans.length} Bl. · ${planHours % 1 === 0 ? planHours : planHours.toFixed(1)}h`
       : null
+
+  const arbeitsortName = plans[0]?.arbeitsort?.name ?? null
 
   const actLabel =
     actuals.length === 1 && actStart
@@ -130,6 +138,29 @@ export default function KalenderZelle({ plans, actuals, date, today, holidayName
       {holidayName && (
         <div className="mt-1 text-xs bg-amber-100 text-amber-700 rounded px-1 py-0.5 truncate font-medium">
           🗓 {holidayName}
+        </div>
+      )}
+
+      {arbeitsortName && status !== 'empty' && (
+        <div className="mt-1">
+          {arbeitsortName.length > 20 ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-xs bg-slate-100 text-slate-600 rounded px-1 py-0.5 block truncate max-w-full">
+                    {arbeitsortName.slice(0, 18)}…
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">{arbeitsortName}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : (
+            <span className="text-xs bg-slate-100 text-slate-600 rounded px-1 py-0.5 truncate">
+              {arbeitsortName}
+            </span>
+          )}
         </div>
       )}
     </button>

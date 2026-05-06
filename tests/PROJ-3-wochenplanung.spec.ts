@@ -53,7 +53,11 @@ function daySection(page: Page, name: string) {
 }
 
 async function selectTime(page: Page, comboboxIndex: number, value: string) {
-  await page.locator('[role="combobox"]').nth(comboboxIndex).click()
+  // Use label anchors (Von/Bis) to stay robust against Arbeitsort dropdown index shift
+  const blockIndex = Math.floor(comboboxIndex / 2)
+  const label = comboboxIndex % 2 === 0 ? 'Von' : 'Bis'
+  const container = page.locator(`div:has(> span:has-text("${label}")):has([role="combobox"])`)
+  await container.nth(blockIndex).locator('[role="combobox"]').click()
   await page.getByRole('option', { name: value }).click()
 }
 
@@ -208,6 +212,13 @@ test.describe('AC4: Überschreitungswarnung (nicht blockierend)', () => {
       await selectTime(page, i * 2, '08:00')
       await selectTime(page, i * 2 + 1, '13:00')
     }
+    // If PROJ-16 Arbeitsorte are configured, select one per day so save isn't blocked by that
+    const unsetOrtCount = await page.locator('[role="combobox"]').filter({ hasText: 'Arbeitsort wählen…' }).count()
+    for (let i = 0; i < unsetOrtCount; i++) {
+      const trigger = page.locator('[role="combobox"]').filter({ hasText: 'Arbeitsort wählen…' }).first()
+      await trigger.click()
+      await page.getByRole('option').first().click()
+    }
     await expect(page.getByText('Limit überschritten')).toBeVisible()
     await expect(page.getByRole('button', { name: /plan speichern/i })).toBeEnabled()
   })
@@ -299,6 +310,12 @@ test.describe('AC5: Plan speichern und bearbeiten', () => {
     await gotoWoche(page, SAVE_WEEK)
     await selectTime(page, 0, '09:00')
     await selectTime(page, 1, '13:00')
+    // If PROJ-16 Arbeitsorte are configured and not pre-filled, select one
+    const unsetOrt = await page.locator('[role="combobox"]').filter({ hasText: 'Arbeitsort wählen…' }).count()
+    for (let i = 0; i < unsetOrt; i++) {
+      await page.locator('[role="combobox"]').filter({ hasText: 'Arbeitsort wählen…' }).first().click()
+      await page.getByRole('option').first().click()
+    }
     await page.getByRole('button', { name: /plan speichern/i }).click()
     await expect(page.getByText('Plan gespeichert')).toBeVisible({ timeout: 10000 })
   })
@@ -307,24 +324,38 @@ test.describe('AC5: Plan speichern und bearbeiten', () => {
     await gotoWoche(page, SAVE_WEEK)
     await selectTime(page, 0, '09:00')
     await selectTime(page, 1, '13:00')
+    const unsetOrt = await page.locator('[role="combobox"]').filter({ hasText: 'Arbeitsort wählen…' }).count()
+    for (let i = 0; i < unsetOrt; i++) {
+      await page.locator('[role="combobox"]').filter({ hasText: 'Arbeitsort wählen…' }).first().click()
+      await page.getByRole('option').first().click()
+    }
     await page.getByRole('button', { name: /plan speichern/i }).click()
     await expect(page.getByText('Plan gespeichert')).toBeVisible({ timeout: 10000 })
     await page.reload()
     await page.waitForSelector('.divide-y', { timeout: 10000 })
-    await expect(page.locator('[role="combobox"]').nth(0)).toHaveText('09:00')
-    await expect(page.locator('[role="combobox"]').nth(1)).toHaveText('13:00')
+    const vonEl = page.locator('div:has(> span:has-text("Von")):has([role="combobox"])').nth(0).locator('[role="combobox"]')
+    const bisEl = page.locator('div:has(> span:has-text("Bis")):has([role="combobox"])').nth(0).locator('[role="combobox"]')
+    await expect(vonEl).toHaveText('09:00')
+    await expect(bisEl).toHaveText('13:00')
   })
 
   test('Gespeicherter Plan kann bearbeitet und erneut gespeichert werden', async ({ page }) => {
     await gotoWoche(page, SAVE_WEEK)
     await selectTime(page, 0, '10:00')
     await selectTime(page, 1, '14:00')
+    const unsetOrt = await page.locator('[role="combobox"]').filter({ hasText: 'Arbeitsort wählen…' }).count()
+    for (let i = 0; i < unsetOrt; i++) {
+      await page.locator('[role="combobox"]').filter({ hasText: 'Arbeitsort wählen…' }).first().click()
+      await page.getByRole('option').first().click()
+    }
     await page.getByRole('button', { name: /plan speichern/i }).click()
     await expect(page.getByText('Plan gespeichert')).toBeVisible({ timeout: 10000 })
     await page.reload()
     await page.waitForSelector('.divide-y', { timeout: 10000 })
-    await expect(page.locator('[role="combobox"]').nth(0)).toHaveText('10:00')
-    await expect(page.locator('[role="combobox"]').nth(1)).toHaveText('14:00')
+    const vonEl = page.locator('div:has(> span:has-text("Von")):has([role="combobox"])').nth(0).locator('[role="combobox"]')
+    const bisEl = page.locator('div:has(> span:has-text("Bis")):has([role="combobox"])').nth(0).locator('[role="combobox"]')
+    await expect(vonEl).toHaveText('10:00')
+    await expect(bisEl).toHaveText('14:00')
   })
 })
 
@@ -346,6 +377,11 @@ test.describe('AC6: Vorwoche als Vorlage', () => {
     await gotoWoche(page, SAVE_WEEK)
     await selectTime(page, 0, '08:00')
     await selectTime(page, 1, '12:00')
+    const unsetOrt = await page.locator('[role="combobox"]').filter({ hasText: 'Arbeitsort wählen…' }).count()
+    for (let i = 0; i < unsetOrt; i++) {
+      await page.locator('[role="combobox"]').filter({ hasText: 'Arbeitsort wählen…' }).first().click()
+      await page.getByRole('option').first().click()
+    }
     await page.getByRole('button', { name: /plan speichern/i }).click()
     await expect(page.getByText('Plan gespeichert')).toBeVisible({ timeout: 10000 })
 
@@ -354,9 +390,11 @@ test.describe('AC6: Vorwoche als Vorlage', () => {
     await page.getByRole('button', { name: /übernehmen/i }).click()
     await expect(page.getByText('Vorlage der Vorwoche übernommen')).toBeVisible({ timeout: 10000 })
 
-    // Montag-Zeiten aus W41 sind übernommen
-    await expect(page.locator('[role="combobox"]').nth(0)).toHaveText('08:00')
-    await expect(page.locator('[role="combobox"]').nth(1)).toHaveText('12:00')
+    // Montag-Zeiten aus W41 sind übernommen (use label anchors to skip Arbeitsort dropdown)
+    const vonEl = page.locator('div:has(> span:has-text("Von")):has([role="combobox"])').nth(0).locator('[role="combobox"]')
+    const bisEl = page.locator('div:has(> span:has-text("Bis")):has([role="combobox"])').nth(0).locator('[role="combobox"]')
+    await expect(vonEl).toHaveText('08:00')
+    await expect(bisEl).toHaveText('12:00')
   })
 
   test('Vorlage-Banner verschwindet nach dem Übernehmen', async ({ page }) => {

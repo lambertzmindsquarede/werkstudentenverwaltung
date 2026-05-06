@@ -64,8 +64,8 @@ test.describe('Dropdown-UI (zukünftige Woche 2030-W20)', () => {
 
   // AC2 + AC3: Dropdown zeigt nur :00/:15/:30/:45, Bereich 06:00–22:00, 65 Optionen
   test('AC2+AC3: Dropdown enthält nur Viertelstunden-Zeiten von 06:00 bis 22:00 (65 Optionen)', async ({ page }) => {
-    // Open the first "Von" Select
-    const firstSelect = page.locator('[role="combobox"]').first()
+    // Open the first "Von" time Select (use label anchor to skip Arbeitsort dropdown if present)
+    const firstSelect = page.locator('div:has(> span:has-text("Von")):has([role="combobox"])').first().locator('[role="combobox"]')
     await firstSelect.click()
 
     const options = page.locator('[role="option"]')
@@ -94,7 +94,7 @@ test.describe('Dropdown-UI (zukünftige Woche 2030-W20)', () => {
 
   // AC3: 22:15 existiert nicht im Dropdown
   test('AC3 (Grenzfall): 22:00 ist letzte Option, 22:15 existiert nicht', async ({ page }) => {
-    const firstSelect = page.locator('[role="combobox"]').first()
+    const firstSelect = page.locator('div:has(> span:has-text("Von")):has([role="combobox"])').first().locator('[role="combobox"]')
     await firstSelect.click()
 
     await expect(page.getByRole('option', { name: '22:00' })).toBeVisible()
@@ -105,10 +105,9 @@ test.describe('Dropdown-UI (zukünftige Woche 2030-W20)', () => {
 
   // AC6: Startzeit == Endzeit → Validierungsfehler
   test('AC6: Gleiche Start- und Endzeit erzeugt Validierungsfehler', async ({ page }) => {
-    // Set Monday Von to 10:00
-    const vonSelects = page.locator('[role="combobox"]').filter({ hasNot: page.locator('[role="option"]') })
-    const monVon = page.locator('[role="combobox"]').nth(0)
-    const monBis = page.locator('[role="combobox"]').nth(1)
+    // Use label anchors to stay robust against Arbeitsort dropdown index shift
+    const monVon = page.locator('div:has(> span:has-text("Von")):has([role="combobox"])').nth(0).locator('[role="combobox"]')
+    const monBis = page.locator('div:has(> span:has-text("Bis")):has([role="combobox"])').nth(0).locator('[role="combobox"]')
 
     await monVon.click()
     await page.getByRole('option', { name: '10:00' }).click()
@@ -122,8 +121,8 @@ test.describe('Dropdown-UI (zukünftige Woche 2030-W20)', () => {
 
   // AC7: Stundensummen werden korrekt berechnet
   test('AC7: Stundensumme wird korrekt berechnet (08:00–09:45 = 1,8 Std)', async ({ page }) => {
-    const monVon = page.locator('[role="combobox"]').nth(0)
-    const monBis = page.locator('[role="combobox"]').nth(1)
+    const monVon = page.locator('div:has(> span:has-text("Von")):has([role="combobox"])').nth(0).locator('[role="combobox"]')
+    const monBis = page.locator('div:has(> span:has-text("Bis")):has([role="combobox"])').nth(0).locator('[role="combobox"]')
 
     await monVon.click()
     await page.getByRole('option', { name: '08:00' }).click()

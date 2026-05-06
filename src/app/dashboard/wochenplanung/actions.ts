@@ -6,12 +6,14 @@ import { z } from 'zod'
 import { getWeekDates, getPreviousWeek, dateToString } from '@/lib/week-utils'
 import { validateBlocks } from '@/lib/time-block-utils'
 import { getHolidayDates } from '@/lib/feiertage-server'
+import type { Arbeitsort } from '@/lib/database.types'
 
 export type DayEntry = {
   date: string
   planned_start: string | null
   planned_end: string | null
   block_index: number
+  arbeitsort_id?: string | null
 }
 
 const QUARTER_MINUTES = new Set([0, 15, 30, 45])
@@ -28,6 +30,7 @@ const DayEntrySchema = z.object({
   planned_start: QuarterHourTime.nullable(),
   planned_end: QuarterHourTime.nullable(),
   block_index: z.number().int().min(1).max(3),
+  arbeitsort_id: z.string().uuid().nullable().optional(),
 })
 
 function normalizeTime(time: string): string {
@@ -47,7 +50,7 @@ export async function loadWeekEntries(
 
   const { data, error } = await supabase
     .from('planned_entries')
-    .select('date, planned_start, planned_end, block_index')
+    .select('date, planned_start, planned_end, block_index, arbeitsort_id')
     .eq('user_id', user.id)
     .in('date', dates)
     .order('date', { ascending: true })
@@ -62,6 +65,8 @@ export async function loadWeekEntries(
     planned_end: row.planned_end ? normalizeTime(row.planned_end) : null,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     block_index: (row as any).block_index ?? 1,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    arbeitsort_id: (row as any).arbeitsort_id ?? null,
   }))
 
   return { data: normalized }
@@ -105,6 +110,7 @@ export async function saveWeekPlan(
       planned_start: e.planned_start!,
       planned_end: e.planned_end!,
       block_index: e.block_index,
+      arbeitsort_id: e.arbeitsort_id ?? null,
       updated_at: new Date().toISOString(),
     }))
 
@@ -147,4 +153,46 @@ export async function loadPreviousWeekTemplate(
   weekStr: string
 ): Promise<{ data?: DayEntry[]; error?: string }> {
   return loadWeekEntries(getPreviousWeek(weekStr))
+}
+
+export async function getArbeitsorteForWerkstudent(): Promise<{ data?: Arbeitsort[]; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Nicht authentifiziert' }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('manager_id')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile?.manager_id) return { data: [] }
+
+  const { data, error } = await supabase
+    .from('arbeitsorte')
+    .select('*')
+    .eq('manager_id', profile.manager_id)
+    .eq('is_active', true)
+    .order('name', { ascending: true })
+
+  if (error) return { error: error.message }
+  return { data: (data ?? []) as Arbeitsort[] }
+}
+
+export async function getLastUsedArbeitsortId(): Promise<string | null> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const { data } = await supabase
+    .from('planned_entries')
+    .select('arbeitsort_id')
+    .eq('user_id', user.id)
+    .not('arbeitsort_id', 'is', null)
+    .order('date', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data as any)?.arbeitsort_id ?? null
 }

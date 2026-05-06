@@ -9,6 +9,30 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      arbeitsorte: {
+        Row: {
+          id: string
+          manager_id: string
+          name: string
+          is_active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          manager_id: string
+          name: string
+          is_active?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          manager_id?: string
+          name?: string
+          is_active?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
       booking_change_log: {
         Row: {
           id: string
@@ -43,6 +67,7 @@ export type Database = {
           changed_at?: string
           notified_at?: string | null
         }
+        Relationships: []
       }
       app_settings: {
         Row: {
@@ -63,6 +88,7 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
         }
+        Relationships: []
       }
       actual_entries: {
         Row: {
@@ -101,6 +127,7 @@ export type Database = {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       planned_entries: {
         Row: {
@@ -110,6 +137,7 @@ export type Database = {
           planned_start: string
           planned_end: string
           block_index: number | null
+          arbeitsort_id: string | null
           created_at: string
           updated_at: string
         }
@@ -120,6 +148,7 @@ export type Database = {
           planned_start: string
           planned_end: string
           block_index?: number | null
+          arbeitsort_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -130,9 +159,59 @@ export type Database = {
           planned_start?: string
           planned_end?: string
           block_index?: number | null
+          arbeitsort_id?: string | null
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
+      }
+      bereiche: {
+        Row: {
+          id: string
+          name: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      bereich_manager: {
+        Row: {
+          bereich_id: string
+          user_id: string
+        }
+        Insert: {
+          bereich_id: string
+          user_id: string
+        }
+        Update: {
+          bereich_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'bereich_manager_bereich_id_fkey'
+            columns: ['bereich_id']
+            isOneToOne: false
+            referencedRelation: 'bereiche'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'bereich_manager_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -144,6 +223,8 @@ export type Database = {
           is_active: boolean | null
           bundesland: string
           manager_id: string | null
+          is_admin: boolean
+          bereich_id: string | null
           created_at: string
           updated_at: string
         }
@@ -156,6 +237,8 @@ export type Database = {
           is_active?: boolean | null
           bundesland?: string
           manager_id?: string | null
+          is_admin?: boolean
+          bereich_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -168,9 +251,12 @@ export type Database = {
           is_active?: boolean | null
           bundesland?: string
           manager_id?: string | null
+          is_admin?: boolean
+          bereich_id?: string | null
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
     }
     Views: Record<never, never>
@@ -211,6 +297,24 @@ export type PlannedEntry = {
   planned_start: string
   planned_end: string
   block_index: number | null
+  arbeitsort_id: string | null
+  arbeitsort?: { id: string; name: string; is_active: boolean } | null
   created_at: string
   updated_at: string
+}
+
+export type Arbeitsort = {
+  id: string
+  manager_id: string
+  name: string
+  is_active: boolean
+  created_at: string
+}
+
+export type Bereich = Database['public']['Tables']['bereiche']['Row']
+export type BereichManager = Database['public']['Tables']['bereich_manager']['Row']
+
+export type BereichWithCounts = Bereich & {
+  managerCount: number
+  werkstudentCount: number
 }

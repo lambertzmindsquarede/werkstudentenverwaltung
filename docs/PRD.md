@@ -11,6 +11,9 @@ Studenten, die in Teilzeit arbeiten (max. 20h/Woche). Sie müssen ihre Anwesenhe
 ### Manager / Vorgesetzte
 Teamleiter oder HR-Verantwortliche, die einen Überblick über die Verfügbarkeit und Anwesenheit aller Werkstudenten im Team benötigen. Ihr Schmerz: Keine zentrale Übersicht, Abweichungen zwischen Plan und Realität schwer nachvollziehbar.
 
+### Globale Admins
+Übergeordnete Administratoren (Mitglieder der konfigurierten Entra-Gruppe), die die organisatorische Struktur der App verwalten. Sie erstellen Bereiche, ordnen Manager den Bereichen zu und haben vollständigen Überblick über alle Daten. Ein Admin kann gleichzeitig Manager/Vorgesetzter für einen Bereich sein.
+
 ## Core Features (Roadmap)
 
 | Priority | Feature | Status |
@@ -29,6 +32,12 @@ Teamleiter oder HR-Verantwortliche, die einen Überblick über die Verfügbarkei
 | P1 | PROJ-13: Viertelstunden-Genauigkeit für Planungszeiten | Planned |
 | P1 | PROJ-14: Bearbeitungsfrist für Zeiterfassung | Planned |
 | P1 | PROJ-15: Änderungsbenachrichtigung für Manager | Planned |
+| P1 | PROJ-16: Arbeitsort-Auswahl | Planned |
+| P1 | PROJ-17: Abwesenheitsverwaltung | Planned |
+| P0 (MVP) | PROJ-18: Admin-Rolle & Bereichsverwaltung | Planned |
+| P0 (MVP) | PROJ-19: Bereichs-Datenisolation für Manager | Planned |
+| P1 | PROJ-20: Team-Anwesenheitsübersicht | Planned |
+| P2 | PROJ-21: Stimmungs-Emoji beim Einstempeln | Planned |
 
 ## Success Metrics
 - Alle Werkstudenten nutzen die App täglich zum Einstempeln (100% Adoption)

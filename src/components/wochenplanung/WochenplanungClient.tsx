@@ -22,6 +22,7 @@ import {
   saveWeekPlan,
   loadPreviousWeekTemplate,
 } from '@/app/dashboard/wochenplanung/actions'
+import type { Arbeitsort } from '@/lib/database.types'
 import {
   getWeekDates,
   getPreviousWeek,
@@ -69,6 +70,7 @@ interface TimeBlock {
 interface DayState {
   keinArbeitstag: boolean
   blocks: TimeBlock[]
+  arbeitsortId: string | null
 }
 
 interface Props {
@@ -76,6 +78,8 @@ interface Props {
   initialEntries: DayEntry[]
   weeklyHourLimit: number
   bundesland: string
+  arbeitsorte: Arbeitsort[]
+  lastUsedArbeitsortId: string | null
 }
 
 function calcHours(start: string, end: string): number {
@@ -90,12 +94,23 @@ function formatHours(h: number): string {
   return h.toFixed(1).replace('.', ',') + ' Std'
 }
 
-function buildInitialState(entries: DayEntry[], weekDates: Date[]): Record<string, DayState> {
+function buildInitialState(
+  entries: DayEntry[],
+  weekDates: Date[],
+  lastUsedArbeitsortId: string | null,
+  activeArbeitsortIds: Set<string>
+): Record<string, DayState> {
   const entriesByDate = new Map<string, DayEntry[]>()
   for (const e of entries) {
     if (!entriesByDate.has(e.date)) entriesByDate.set(e.date, [])
     entriesByDate.get(e.date)!.push(e)
   }
+
+  // Only use lastUsedArbeitsortId if it still refers to an active Arbeitsort
+  const resolvedLastUsed =
+    lastUsedArbeitsortId && activeArbeitsortIds.has(lastUsedArbeitsortId)
+      ? lastUsedArbeitsortId
+      : null
 
   return Object.fromEntries(
     weekDates.map((date) => {
@@ -110,7 +125,8 @@ function buildInitialState(entries: DayEntry[], weekDates: Date[]): Record<strin
               end: e.planned_end ? roundToQuarterHour(e.planned_end) : '',
             }))
           : [{ start: '', end: '' }]
-      return [dateStr, { keinArbeitstag: false, blocks }]
+      const arbeitsortId = dayEntries[0]?.arbeitsort_id ?? resolvedLastUsed ?? null
+      return [dateStr, { keinArbeitstag: false, blocks, arbeitsortId }]
     })
   )
 }
@@ -131,6 +147,8 @@ export default function WochenplanungClient({
   initialEntries,
   weeklyHourLimit,
   bundesland,
+  arbeitsorte,
+  lastUsedArbeitsortId,
 }: Props) {
   const router = useRouter()
   const weekDates = getWeekDates(weekStr)
@@ -156,7 +174,7 @@ export default function WochenplanungClient({
   }
 
   const [dayStates, setDayStates] = useState<Record<string, DayState>>(() =>
-    buildInitialState(initialEntries, weekDates)
+    buildInitialState(initialEntries, weekDates, lastUsedArbeitsortId, new Set(arbeitsorte.map((a) => a.id)))
   )
   const [templateLoaded, setTemplateLoaded] = useState(false)
   const [loadingTemplate, setLoadingTemplate] = useState(false)
@@ -183,6 +201,19 @@ export default function WochenplanungClient({
     if (errors.length > 0) validationErrors[dateStr] = errors
   })
   const hasValidationErrors = Object.keys(validationErrors).length > 0
+
+  const activeArbeitsortIds = new Set(arbeitsorte.map((a) => a.id))
+  const arbeitsortMissingDays = arbeitsorte.length > 0
+    ? weekDates.filter((date) => {
+        const dateStr = dateToString(date)
+        if (isPast(dateStr)) return false
+        const day = dayStates[dateStr]
+        if (!day || day.keinArbeitstag) return false
+        const hasBlocks = day.blocks.some((b) => b.start && b.end)
+        return hasBlocks && (!day.arbeitsortId || day.arbeitsortId.startsWith('__deactivated__'))
+      }).map(dateToString)
+    : []
+  const hasArbeitsortMissing = arbeitsortMissingDays.length > 0
 
   function updateBlock(dateStr: string, blockIdx: number, field: 'start' | 'end', value: string) {
     setDayStates((prev) => ({
@@ -220,6 +251,10 @@ export default function WochenplanungClient({
     setDayStates((prev) => ({ ...prev, [dateStr]: { ...prev[dateStr], keinArbeitstag } }))
   }
 
+  function updateArbeitsortId(dateStr: string, arbeitsortId: string) {
+    setDayStates((prev) => ({ ...prev, [dateStr]: { ...prev[dateStr], arbeitsortId } }))
+  }
+
   async function handleSave() {
     setSaving(true)
     setSaveError(null)
@@ -243,6 +278,7 @@ export default function WochenplanungClient({
             planned_start: block.start,
             planned_end: block.end,
             block_index: i + 1,
+            arbeitsort_id: day.arbeitsortId ?? null,
           })
         }
       })
@@ -252,6 +288,22 @@ export default function WochenplanungClient({
       setSaveError('Planung nicht möglich: Mindestens ein ausgewählter Tag ist ein gesetzlicher Feiertag.')
       setSaving(false)
       return
+    }
+
+    if (arbeitsorte.length > 0) {
+      const missingArbeitsort = weekDates.some((date) => {
+        const dateStr = dateToString(date)
+        if (isPast(dateStr)) return false
+        const day = dayStates[dateStr]
+        if (!day || day.keinArbeitstag) return false
+        const hasBlocks = day.blocks.some((b) => b.start && b.end)
+        return hasBlocks && !day.arbeitsortId
+      })
+      if (missingArbeitsort) {
+        setSaveError('Bitte für jeden Arbeitstag einen Arbeitsort auswählen.')
+        setSaving(false)
+        return
+      }
     }
 
     const result = await saveWeekPlan(weekStr, entries)
@@ -296,13 +348,20 @@ export default function WochenplanungClient({
         if (isPast(dateStr)) return
         const dayEntries = templateByDayIndex.get(i)
         if (dayEntries && dayEntries.length > 0) {
-          const blocks = dayEntries
-            .sort((a, b) => a.block_index - b.block_index)
-            .map((e) => ({
-              start: e.planned_start ? roundToQuarterHour(e.planned_start) : '',
-              end: e.planned_end ? roundToQuarterHour(e.planned_end) : '',
-            }))
-          next[dateStr] = { keinArbeitstag: false, blocks }
+          const sorted = dayEntries.sort((a, b) => a.block_index - b.block_index)
+          const blocks = sorted.map((e) => ({
+            start: e.planned_start ? roundToQuarterHour(e.planned_start) : '',
+            end: e.planned_end ? roundToQuarterHour(e.planned_end) : '',
+          }))
+          const templateArbeitsortId = sorted[0]?.arbeitsort_id ?? null
+          const activeIds = new Set(arbeitsorte.map((a) => a.id))
+          const arbeitsortId =
+            templateArbeitsortId && activeIds.has(templateArbeitsortId)
+              ? templateArbeitsortId
+              : templateArbeitsortId
+              ? `__deactivated__${templateArbeitsortId}`
+              : null
+          next[dateStr] = { keinArbeitstag: false, blocks, arbeitsortId }
         }
       })
       return next
@@ -480,6 +539,51 @@ export default function WochenplanungClient({
                         </div>
                       ) : (
                         <div className="flex-1 space-y-2 min-w-0">
+                          {/* Arbeitsort dropdown */}
+                          {arbeitsorte.length > 0 && !isPastDay && (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs text-slate-500 flex-shrink-0">Ort</span>
+                              <Select
+                                value={
+                                  day.arbeitsortId?.startsWith('__deactivated__')
+                                    ? day.arbeitsortId
+                                    : (day.arbeitsortId ?? '')
+                                }
+                                onValueChange={(v) => updateArbeitsortId(dateStr, v)}
+                              >
+                                <SelectTrigger
+                                  className={`h-8 text-xs flex-1 max-w-[200px] ${
+                                    arbeitsortMissingDays.includes(dateStr)
+                                      ? 'border-red-400 focus:ring-red-300'
+                                      : ''
+                                  }`}
+                                >
+                                  <SelectValue placeholder="Arbeitsort wählen…" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {arbeitsorte.map((ort) => (
+                                    <SelectItem key={ort.id} value={ort.id}>
+                                      {ort.name}
+                                    </SelectItem>
+                                  ))}
+                                  {day.arbeitsortId?.startsWith('__deactivated__') && (
+                                    <SelectItem
+                                      value={day.arbeitsortId}
+                                      disabled
+                                      className="text-red-500"
+                                    >
+                                      (deaktiviert – bitte neu wählen)
+                                    </SelectItem>
+                                  )}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                          {arbeitsorte.length === 0 && !isPastDay && (
+                            <p className="text-xs text-amber-600">
+                              Ihr Manager hat noch keine Arbeitsorte hinterlegt.
+                            </p>
+                          )}
                           {day.blocks.map((block, blockIdx) => {
                             const blockError = dayErrors.find((e) => e.blockIndex === blockIdx)
                             const blockHours = calcHours(block.start, block.end)
@@ -614,7 +718,7 @@ export default function WochenplanungClient({
         <div className="flex justify-end">
           <Button
             onClick={handleSave}
-            disabled={saving || hasValidationErrors || allDaysPast}
+            disabled={saving || hasValidationErrors || allDaysPast || hasArbeitsortMissing}
             className="px-8"
           >
             {saving ? 'Speichern…' : 'Plan speichern'}

@@ -95,6 +95,16 @@ export default function ZellDetailDialog({ cell, onClose }: Props) {
                     </p>
                   )
                 })}
+                {cell.plans[0]?.arbeitsort?.name && (
+                  <div className="mt-1.5">
+                    <Badge
+                      variant="outline"
+                      className="text-xs text-slate-600 border-slate-200 bg-slate-50"
+                    >
+                      {cell.plans[0].arbeitsort.name}
+                    </Badge>
+                  </div>
+                )}
               </div>
             )}
           </div>

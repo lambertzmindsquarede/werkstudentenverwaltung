@@ -36,7 +36,10 @@ export async function loadKalenderWeek(
       .eq('role', 'werkstudent')
       .eq('is_active', true)
       .order('full_name'),
-    supabase.from('planned_entries').select('*').in('date', dates),
+    supabase
+      .from('planned_entries')
+      .select('*, arbeitsort:arbeitsorte(id, name, is_active)')
+      .in('date', dates),
     supabase.from('actual_entries').select('*').in('date', dates),
   ])
 
