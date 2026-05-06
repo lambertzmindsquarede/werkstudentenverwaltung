@@ -259,7 +259,7 @@ Keine neuen npm-Pakete. SMTP-Zugangsdaten werden als Supabase Secrets konfigurie
 
 ---
 
-#### Bug #2 — Medium (Security): Keine serverseitige Validierung, dass `manager_id` auf eine Manager-Rolle zeigt
+#### Bug #2 — Medium (Security) ✅ BEHOBEN: Keine serverseitige Validierung, dass `manager_id` auf eine Manager-Rolle zeigt
 
 **Beschreibung:** Die Server Action `updateUserProfile` nimmt jeden beliebigen UUID-Wert als `manager_id` an, ohne zu prüfen, ob der referenzierte Nutzer tatsächlich die Rolle `manager` hat. Ein Manager könnte technisch einen Werkstudenten als „Vorgesetzten" eines anderen Werkstudenten eintragen. Die Benachrichtigungs-E-Mail würde dann an eine nicht-Manager-Adresse gesendet.
 

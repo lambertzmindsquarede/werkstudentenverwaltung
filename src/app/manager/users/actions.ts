@@ -13,6 +13,7 @@ export async function updateUserProfile(
     weekly_hour_limit?: number
     is_active?: boolean
     bundesland?: string
+    manager_id?: string | null
   }
 ): Promise<ActionResult> {
   const supabase = await createClient()
@@ -54,6 +55,15 @@ export async function updateUserProfile(
         return { error: 'Mindestens ein aktiver Manager muss verbleiben.' }
       }
     }
+  }
+
+  if (updates.manager_id) {
+    const { data: mgr } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', updates.manager_id)
+      .single()
+    if (mgr?.role !== 'manager') return { error: 'Ungültiger Vorgesetzter.' }
   }
 
   const { error } = await supabase.from('profiles').update(updates).eq('id', userId)
