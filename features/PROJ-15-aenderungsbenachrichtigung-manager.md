@@ -269,7 +269,7 @@ Keine neuen npm-Pakete. SMTP-Zugangsdaten werden als Supabase Secrets konfigurie
 
 ---
 
-#### Bug #3 — Low: Kein DB-Constraint gegen Selbstzuweisung (`manager_id = id`)
+#### Bug #3 — Low ✅ BEHOBEN: Kein DB-Constraint gegen Selbstzuweisung (`manager_id = id`)
 
 **Beschreibung:** Die DB-Migration enthält keinen `CHECK (manager_id != id)`-Constraint. Ein Werkstudent könnte theoretisch sich selbst als Vorgesetzten bekommen.
 
