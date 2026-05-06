@@ -14,12 +14,21 @@ function getBerlinDateTime(): { date: string; time: string } {
   return { date, time }
 }
 
-export async function POST() {
+export async function POST(request: Request) {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const body = await request.json().catch(() => ({}))
+  const emoji =
+    typeof body.emoji === 'string' &&
+    body.emoji.length >= 1 &&
+    body.emoji.length <= 10 &&
+    /\P{ASCII}/u.test(body.emoji)
+      ? body.emoji
+      : null
 
   const { date, time } = getBerlinDateTime()
 
@@ -60,6 +69,7 @@ export async function POST() {
       actual_start: time,
       is_complete: false,
       block_index: blockIndex,
+      mood_emoji: emoji,
     })
     .select()
     .single()
@@ -79,7 +89,7 @@ export async function PATCH() {
 
   const { data, error } = await supabase
     .from('actual_entries')
-    .update({ actual_end: time, is_complete: true })
+    .update({ actual_end: time, is_complete: true, mood_emoji: null })
     .eq('user_id', user.id)
     .eq('date', date)
     .eq('is_complete', false)

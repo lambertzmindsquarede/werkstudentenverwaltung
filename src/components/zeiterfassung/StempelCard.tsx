@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import IstEintragEditDialog from './IstEintragEditDialog'
+import EmojiPickerPopover from './EmojiPickerPopover'
 import type { ActualEntry } from '@/lib/database.types'
 import { calcNetHours, checkArbZGWarning, timeToMinutes } from '@/lib/time-block-utils'
 import { updateBreakMinutes } from '@/app/dashboard/actions'
@@ -57,6 +58,7 @@ export default function StempelCard({
   const [breakInput, setBreakInput] = useState('')
   const [breakSaving, setBreakSaving] = useState(false)
   const [showHolidayDialog, setShowHolidayDialog] = useState(false)
+  const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null)
 
   const year = parseInt(today.slice(0, 4), 10)
   const { isHoliday, getHolidayName } = usePublicHolidays(bundesland, year)
@@ -86,17 +88,40 @@ export default function StempelCard({
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/time-entries/stamp', { method: 'POST' })
+      const res = await fetch('/api/time-entries/stamp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emoji: selectedEmoji }),
+      })
       const json = await res.json()
       if (!res.ok) {
         setError(json.error ?? 'Fehler beim Einstempeln.')
       } else {
+        setSelectedEmoji(null)
         onEntryChange(json.data as ActualEntry)
       }
     } catch {
       setError('Netzwerkfehler – bitte erneut versuchen.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function updateMoodEmoji(emoji: string | null) {
+    try {
+      const res = await fetch('/api/time-entries/mood-emoji', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emoji }),
+      })
+      const json = await res.json()
+      if (res.ok) {
+        onEntryChange(json.data as ActualEntry)
+      } else {
+        setError('Stimmung konnte nicht gespeichert werden.')
+      }
+    } catch {
+      setError('Stimmung konnte nicht gespeichert werden.')
     }
   }
 
@@ -235,6 +260,29 @@ export default function StempelCard({
             </div>
           )}
 
+          {/* Active emoji display while stamped in */}
+          {openBlock && (
+            <div className="flex items-center gap-2">
+              <EmojiPickerPopover
+                selected={openBlock.mood_emoji ?? null}
+                onSelect={updateMoodEmoji}
+                trigger={
+                  openBlock.mood_emoji ? (
+                    <button className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-sm hover:bg-slate-100 transition-colors">
+                      <span className="text-xl leading-none">{openBlock.mood_emoji}</span>
+                      <span className="text-slate-500 text-xs">Stimmung ändern</span>
+                    </button>
+                  ) : (
+                    <button className="flex items-center gap-1.5 rounded-lg border border-dashed border-slate-300 px-2.5 py-1.5 text-sm text-slate-400 hover:border-slate-400 hover:text-slate-600 transition-colors">
+                      <span className="text-base leading-none">🙂</span>
+                      <span className="text-xs">Stimmung setzen</span>
+                    </button>
+                  )
+                }
+              />
+            </div>
+          )}
+
           {/* ArbZG warning */}
           {arbZGWarning && !openBlock && !breakQueryEntry && (
             <Alert className="border-amber-300 bg-amber-50">
@@ -312,14 +360,37 @@ export default function StempelCard({
               {loading ? '…' : 'Ausstempeln'}
             </Button>
           ) : canStampIn ? (
-            <Button
-              onClick={handleStampIn}
-              disabled={loading}
-              size="lg"
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              {loading ? '…' : 'Einstempeln'}
-            </Button>
+            <div className="flex items-center gap-2">
+              <EmojiPickerPopover
+                selected={selectedEmoji}
+                onSelect={setSelectedEmoji}
+                trigger={
+                  selectedEmoji ? (
+                    <button
+                      className="flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-2 text-sm hover:bg-blue-100 transition-colors"
+                      title="Stimmung ändern"
+                    >
+                      <span className="text-xl leading-none">{selectedEmoji}</span>
+                    </button>
+                  ) : (
+                    <button
+                      className="flex items-center gap-1 rounded-lg border border-dashed border-slate-300 px-2.5 py-2 text-slate-400 hover:border-slate-400 hover:text-slate-600 transition-colors"
+                      title="Stimmung auswählen (optional)"
+                    >
+                      <span className="text-xl leading-none">🙂</span>
+                    </button>
+                  )
+                }
+              />
+              <Button
+                onClick={handleStampIn}
+                disabled={loading}
+                size="lg"
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {loading ? '…' : 'Einstempeln'}
+              </Button>
+            </div>
           ) : null}
         </CardContent>
       </Card>
