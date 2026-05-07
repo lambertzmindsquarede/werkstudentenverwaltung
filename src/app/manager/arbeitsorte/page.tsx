@@ -26,5 +26,5 @@ export default async function ArbeitsorteVerwaltungPage() {
     )
   }
 
-  return <ArbeitsortVerwaltungClient initialArbeitsorte={arbeitsorte ?? []} />
+  return <ArbeitsortVerwaltungClient initialArbeitsorte={arbeitsorte ?? []} isAdmin={profile?.is_admin ?? false} />
 }

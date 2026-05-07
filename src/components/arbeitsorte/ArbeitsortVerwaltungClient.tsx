@@ -25,9 +25,10 @@ import type { Arbeitsort } from '@/lib/database.types'
 
 interface Props {
   initialArbeitsorte: Arbeitsort[]
+  isAdmin?: boolean
 }
 
-export default function ArbeitsortVerwaltungClient({ initialArbeitsorte }: Props) {
+export default function ArbeitsortVerwaltungClient({ initialArbeitsorte, isAdmin = false }: Props) {
   const [arbeitsorte, setArbeitsorte] = useState<Arbeitsort[]>(initialArbeitsorte)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -163,6 +164,11 @@ export default function ArbeitsortVerwaltungClient({ initialArbeitsorte }: Props
           <a href="/manager/settings" className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors">
             Einstellungen
           </a>
+          {isAdmin && (
+            <a href="/admin" className="px-4 py-3 text-sm font-medium text-purple-600 hover:text-purple-700 border-b-2 border-transparent hover:border-purple-300 transition-colors">
+              Admin-Bereich
+            </a>
+          )}
         </div>
       </nav>
 
