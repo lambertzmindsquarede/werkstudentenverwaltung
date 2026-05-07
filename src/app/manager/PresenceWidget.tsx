@@ -38,6 +38,9 @@ function MemberCard({ person }: { person: PersonPresence }) {
         {getInitials(person.full_name)}
       </div>
       <p className="text-sm font-medium text-slate-800 truncate flex-1">{person.full_name ?? 'Unbekannt'}</p>
+      {person.mood_emoji && (
+        <span className="text-base leading-none flex-shrink-0">{person.mood_emoji}</span>
+      )}
       {person.sub_location_name && (
         <span className="text-xs font-mono bg-slate-100 text-slate-600 border border-slate-200 rounded px-1.5 py-0.5 flex-shrink-0">
           {person.sub_location_name}

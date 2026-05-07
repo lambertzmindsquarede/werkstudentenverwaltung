@@ -20,6 +20,8 @@ export type PersonPresence = {
   // sub-location
   sub_location_id: string | null
   sub_location_name: string | null
+  // mood emoji from current open time entry
+  mood_emoji: string | null
 }
 
 export type TeamPresenceData = {
@@ -120,6 +122,17 @@ export async function getTeamPresence(date: string): Promise<{ data: TeamPresenc
         .limit(500)
     : { data: [] }
 
+  // Load mood emoji from open time entries
+  const { data: openEntries } = memberIds.length > 0
+    ? await supabase
+        .from('actual_entries')
+        .select('user_id, mood_emoji')
+        .in('user_id', memberIds)
+        .eq('date', date)
+        .eq('is_complete', false)
+        .limit(500)
+    : { data: [] }
+
   // Load sub_location names if any are set
   const subLocationIds = (presences ?? [])
     .map((p) => p.sub_location_id)
@@ -143,6 +156,7 @@ export async function getTeamPresence(date: string): Promise<{ data: TeamPresenc
   const presenceMap = new Map((presences ?? []).map((p) => [p.user_id, p.sub_location_id]))
   const subLocationMap = new Map((subLocations ?? []).map((s) => [s.id, s.name]))
   const arbeitsortMap = new Map((arbeitsorte ?? []).map((a) => [a.id, a.name]))
+  const moodEmojiMap = new Map((openEntries ?? []).map((e) => [e.user_id, e.mood_emoji as string | null]))
 
   // Deduplicate planned entries: pick any arbeitsort per user for today
   const plannedArbeitsortMap = new Map<string, string | null>()
@@ -167,6 +181,7 @@ export async function getTeamPresence(date: string): Promise<{ data: TeamPresenc
     const absence = absenceMap.get(userId)
     const subLocationId = presenceMap.get(userId) ?? null
     const subLocationName = subLocationId ? subLocationMap.get(subLocationId) ?? null : null
+    const moodEmoji = moodEmojiMap.get(userId) ?? null
 
     if (absence) {
       const label = absence.overrideId
@@ -182,6 +197,7 @@ export async function getTeamPresence(date: string): Promise<{ data: TeamPresenc
         arbeitsort_id: null,
         sub_location_id: subLocationId,
         sub_location_name: subLocationName,
+        mood_emoji: moodEmoji,
       }
     }
 
@@ -196,6 +212,7 @@ export async function getTeamPresence(date: string): Promise<{ data: TeamPresenc
         arbeitsort_id: arbeitsortId,
         sub_location_id: subLocationId,
         sub_location_name: subLocationName,
+        mood_emoji: moodEmoji,
       }
     }
 
@@ -207,6 +224,7 @@ export async function getTeamPresence(date: string): Promise<{ data: TeamPresenc
       arbeitsort_id: null,
       sub_location_id: subLocationId,
       sub_location_name: subLocationName,
+      mood_emoji: moodEmoji,
     }
   }
 
@@ -234,10 +252,11 @@ export async function getTeamPresence(date: string): Promise<{ data: TeamPresenc
 
   // BUG-20-2: werkstudent without bereich still gets an "Ich"-section
   if (!me && selfProfile?.role === 'werkstudent') {
-    const [profileRes, absenceRes, presenceRes] = await Promise.all([
+    const [profileRes, absenceRes, presenceRes, openEntryRes] = await Promise.all([
       supabase.from('profiles').select('full_name').eq('id', user.id).single(),
       supabase.from('absences').select('absence_type_id, absence_type_override_id').eq('user_id', user.id).eq('date', date).maybeSingle(),
       supabase.from('daily_presence').select('sub_location_id').eq('user_id', user.id).eq('date', date).maybeSingle(),
+      supabase.from('actual_entries').select('mood_emoji').eq('user_id', user.id).eq('date', date).eq('is_complete', false).maybeSingle(),
     ])
     const ownSubLocId = presenceRes.data?.sub_location_id ?? null
     let ownSubLocName: string | null = null
@@ -254,6 +273,7 @@ export async function getTeamPresence(date: string): Promise<{ data: TeamPresenc
       arbeitsort_id: null,
       sub_location_id: ownSubLocId,
       sub_location_name: ownSubLocName,
+      mood_emoji: openEntryRes.data?.mood_emoji ?? null,
     }
   }
 

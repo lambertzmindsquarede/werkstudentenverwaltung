@@ -67,6 +67,11 @@ export default function PersonenKarte({
         )}
       </div>
 
+      {/* Mood emoji */}
+      {!isMe && person.mood_emoji && (
+        <span className="text-lg leading-none flex-shrink-0">{person.mood_emoji}</span>
+      )}
+
       {/* Sub-location indicator — hidden when absent (absence takes precedence) */}
       {!isAbsent && person.sub_location_name ? (
         <button
