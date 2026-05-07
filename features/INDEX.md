@@ -36,7 +36,7 @@
 | PROJ-20 | Team-Anwesenheitsübersicht | Deployed | [PROJ-20-team-anwesenheitsuebersicht.md](PROJ-20-team-anwesenheitsuebersicht.md) | 2026-05-06 |
 | PROJ-21 | Stimmungs-Emoji beim Einstempeln | Deployed | [PROJ-21-stimmungs-emoji.md](PROJ-21-stimmungs-emoji.md) | 2026-05-07 |
 | PROJ-22 | Excel-Stundenzettel-Export (HR-Vorlage) | Deployed | [PROJ-22-excel-stundenzettel-export.md](PROJ-22-excel-stundenzettel-export.md) | 2026-05-07 |
-| PROJ-23 | Deckungsübersicht für Manager | Approved | [PROJ-23-deckungsuebersicht.md](PROJ-23-deckungsuebersicht.md) | 2026-05-07 |
+| PROJ-23 | Deckungsübersicht für Manager | Deployed | [PROJ-23-deckungsuebersicht.md](PROJ-23-deckungsuebersicht.md) | 2026-05-07 |
 | PROJ-24 | Abwesenheiten pro Bereich deaktivierbar | Deployed | [PROJ-24-abwesenheiten-bereich-toggle.md](PROJ-24-abwesenheiten-bereich-toggle.md) | 2026-05-07 |
 | PROJ-25 | Manager-Zeitkorrektur | Deployed | [PROJ-25-manager-zeitkorrektur.md](PROJ-25-manager-zeitkorrektur.md) | 2026-05-07 |
 

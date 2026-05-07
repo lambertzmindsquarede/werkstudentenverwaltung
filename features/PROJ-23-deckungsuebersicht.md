@@ -1,6 +1,6 @@
 # PROJ-23: Deckungsübersicht für Manager
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-05-07
 **Last Updated:** 2026-05-07
 
@@ -206,4 +206,6 @@ Alle anderen Deployed-Features wurden nicht negativ beeinflusst. Die neue Manage
 **READY** — Keine Critical oder High Bugs. Alle Acceptance Criteria erfüllt.
 
 ## Deployment
-_To be added by /deploy_
+**Deployed:** 2026-05-07
+**Commit:** 8842d31 (test(PROJ-23): Add QA results for Deckungsübersicht — all 23 AC pass)
+**Route:** `/manager/deckung`
