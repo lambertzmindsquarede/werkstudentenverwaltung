@@ -1,8 +1,8 @@
 # PROJ-20: Team-Anwesenheitsübersicht
 
-## Status: Architected
+## Status: In Progress
 **Created:** 2026-05-06
-**Last Updated:** 2026-05-06
+**Last Updated:** 2026-05-08
 
 ## Dependencies
 - Requires: PROJ-1 (Authentication) — Nutzer muss eingeloggt sein
@@ -215,6 +215,43 @@ Neues Feld `visibility` (Enum: `team` | `global`) in der Manager/Team-Konfigurat
 Muss erst deployed sein:
 - **PROJ-16** (Arbeitsorte) — liefert `arbeitsorte`-Tabelle als FK-Basis für `sub_locations`
 - **PROJ-17** (Abwesenheitsverwaltung) — liefert Abwesenheitstypen für die Gruppenlogik
+
+## Implementation Notes (Frontend)
+
+### Files Created
+- `supabase/migrations/20260508_proj20_team_anwesenheit.sql` — New tables `sub_locations` + `daily_presence`, `visibility` column on `bereiche`, RLS policies
+- `src/app/dashboard/team/actions.ts` — Server actions: `getTeamPresence`, `setSubLocation`, `getSubLocationsForArbeitsort`, `getTodayPlannedArbeitsort`
+- `src/app/dashboard/team/page.tsx` — New `/dashboard/team` page (server component)
+- `src/components/team/TeamAnwesenheitClient.tsx` — Main client component with Supabase Realtime subscription
+- `src/components/team/PersonenKarte.tsx` — Person card (interactive for own card, read-only for others)
+- `src/components/team/SubOrtDialog.tsx` — Dialog to select/clear sub-location
+- `src/components/team/GruppenSection.tsx` — Group header + card grid
+- `src/app/manager/settings/sublocation-actions.ts` — Manager actions for sub-location CRUD + team visibility
+- `src/app/manager/settings/SubLocationVerwaltung.tsx` — Accordion UI for sub-location management per Arbeitsort
+- `src/app/manager/settings/TeamSichtbarkeitToggle.tsx` — Toggle for team/global visibility
+
+### Files Updated
+- `src/components/zeiterfassung/DashboardContent.tsx` — Added "Team" nav link
+- `src/components/wochenplanung/WochenplanungClient.tsx` — Added "Team" nav link
+- `src/app/manager/settings/page.tsx` — Added SubLocationVerwaltung + TeamSichtbarkeitToggle
+
+### Deviations from Spec
+- Backend (Supabase Realtime, RLS policies) included in the migration file for completeness
+
+## Implementation Notes (Backend)
+
+### Migration Applied
+- `supabase/migrations/20260508_proj20_team_anwesenheit.sql` — Applied to production Supabase project (`spadppptimolstufuzca`)
+  - `bereiche.visibility` column added (`'team' | 'global'`, default `'team'`)
+  - `sub_locations` table created with RLS (manager full access, werkstudent read own manager's)
+  - `daily_presence` table created with RLS (own write, team read + global read)
+
+### Database Types Updated
+- `src/lib/database.types.ts` — Added `sub_locations`, `daily_presence` table types; added `visibility` field to `bereiche`; exported `SubLocation` and `DailyPresence` convenience types
+
+### Verification
+- `npm run build` passes with all 24 routes including `/dashboard/team`
+- DB confirmed: `sub_locations`, `daily_presence` tables present; `bereiche.visibility` column with default `'team'`
 
 ## QA Test Results
 _To be added by /qa_

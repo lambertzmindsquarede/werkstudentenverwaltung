@@ -271,19 +271,93 @@ export type Database = {
         Row: {
           id: string
           name: string
+          visibility: 'team' | 'global'
           created_at: string
         }
         Insert: {
           id?: string
           name: string
+          visibility?: 'team' | 'global'
           created_at?: string
         }
         Update: {
           id?: string
           name?: string
+          visibility?: 'team' | 'global'
           created_at?: string
         }
         Relationships: []
+      }
+      sub_locations: {
+        Row: {
+          id: string
+          arbeitsort_id: string
+          name: string
+          is_active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          arbeitsort_id: string
+          name: string
+          is_active?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          arbeitsort_id?: string
+          name?: string
+          is_active?: boolean
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'sub_locations_arbeitsort_id_fkey'
+            columns: ['arbeitsort_id']
+            isOneToOne: false
+            referencedRelation: 'arbeitsorte'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+      daily_presence: {
+        Row: {
+          id: string
+          user_id: string
+          date: string
+          sub_location_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          date: string
+          sub_location_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          date?: string
+          sub_location_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'daily_presence_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'daily_presence_sub_location_id_fkey'
+            columns: ['sub_location_id']
+            isOneToOne: false
+            referencedRelation: 'sub_locations'
+            referencedColumns: ['id']
+          }
+        ]
       }
       bereich_manager: {
         Row: {
@@ -415,6 +489,8 @@ export type Arbeitsort = {
 }
 
 export type Bereich = Database['public']['Tables']['bereiche']['Row']
+export type SubLocation = Database['public']['Tables']['sub_locations']['Row']
+export type DailyPresence = Database['public']['Tables']['daily_presence']['Row']
 export type BereichManager = Database['public']['Tables']['bereich_manager']['Row']
 
 export type BereichWithCounts = Bereich & {

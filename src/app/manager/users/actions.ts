@@ -116,15 +116,14 @@ export async function updateUserProfile(
       .eq('id', userId)
       .single()
 
-    if (target?.role === 'werkstudent') {
-      if (!target.bereich_id) return { error: 'Kein Zugriff auf diesen Werkstudenten.' }
-      const { count } = await supabase
-        .from('bereich_manager')
-        .select('*', { count: 'exact', head: true })
-        .eq('bereich_id', target.bereich_id)
-        .eq('user_id', user.id)
-      if ((count ?? 0) === 0) return { error: 'Kein Zugriff auf diesen Werkstudenten.' }
-    }
+    if (target?.role !== 'werkstudent') return { error: 'Kein Zugriff auf diesen Nutzer.' }
+    if (!target.bereich_id) return { error: 'Kein Zugriff auf diesen Werkstudenten.' }
+    const { count } = await supabase
+      .from('bereich_manager')
+      .select('*', { count: 'exact', head: true })
+      .eq('bereich_id', target.bereich_id)
+      .eq('user_id', user.id)
+    if ((count ?? 0) === 0) return { error: 'Kein Zugriff auf diesen Werkstudenten.' }
   }
 
   // Last-manager protection: block if this action would leave zero active managers

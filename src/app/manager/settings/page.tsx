@@ -6,7 +6,10 @@ import { ManagerSignOutButton } from '@/components/ManagerSignOutButton'
 import { DEFAULT_MAX_EDIT_DAYS_PAST } from '@/lib/database.types'
 import SettingsForm from './SettingsForm'
 import AbwesenheitstypenKonfiguration from './AbwesenheitstypenKonfiguration'
+import SubLocationVerwaltung from './SubLocationVerwaltung'
+import TeamSichtbarkeitToggle from './TeamSichtbarkeitToggle'
 import { loadManagerBereiche, loadBereichConfig } from './absence-type-override-actions'
+import { getManagerArbeitsorte, getSubLocations, getTeamVisibility } from './sublocation-actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,6 +42,24 @@ export default async function ManagerSettingsPage() {
     ? await loadBereichConfig(initialBereichId)
     : null
   const initialConfig = initialConfigResult?.data ?? null
+
+  // Sub-location management data
+  const { data: arbeitsorte } = await getManagerArbeitsorte()
+  const initialSubLocations: Record<string, import('./sublocation-actions').SubLocation[]> = {}
+  if (arbeitsorte) {
+    await Promise.all(
+      arbeitsorte.map(async (a) => {
+        const res = await getSubLocations(a.id)
+        if (res.data) initialSubLocations[a.id] = res.data
+      })
+    )
+  }
+
+  // Team visibility (first bereich managed by this manager)
+  const managerBereichId = bereiche[0]?.id ?? null
+  const managerBereichName = bereiche[0]?.name ?? ''
+  const visibilityRes = managerBereichId ? await getTeamVisibility(managerBereichId) : null
+  const teamVisibility = visibilityRes?.data ?? 'team'
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -98,6 +119,19 @@ export default async function ManagerSettingsPage() {
           initialBereichId={initialBereichId}
           initialConfig={initialConfig}
         />
+
+        <SubLocationVerwaltung
+          arbeitsorte={arbeitsorte ?? []}
+          initialSubLocations={initialSubLocations}
+        />
+
+        {managerBereichId && (
+          <TeamSichtbarkeitToggle
+            bereichId={managerBereichId}
+            bereichName={managerBereichName}
+            initialVisibility={teamVisibility}
+          />
+        )}
       </main>
     </div>
   )

@@ -32,8 +32,8 @@
 | PROJ-16 | Arbeitsort-Auswahl | Deployed | [PROJ-16-arbeitsort-auswahl.md](PROJ-16-arbeitsort-auswahl.md) | 2026-05-06 |
 | PROJ-17 | Abwesenheitsverwaltung | In Review | [PROJ-17-abwesenheitsverwaltung.md](PROJ-17-abwesenheitsverwaltung.md) | 2026-05-06 |
 | PROJ-18 | Admin-Rolle & Bereichsverwaltung | Deployed | [PROJ-18-admin-rolle-bereichsverwaltung.md](PROJ-18-admin-rolle-bereichsverwaltung.md) | 2026-05-06 |
-| PROJ-19 | Bereichs-Datenisolation für Manager | In Review | [PROJ-19-bereichs-datenisolation.md](PROJ-19-bereichs-datenisolation.md) | 2026-05-06 |
-| PROJ-20 | Team-Anwesenheitsübersicht | Architected | [PROJ-20-team-anwesenheitsuebersicht.md](PROJ-20-team-anwesenheitsuebersicht.md) | 2026-05-06 |
+| PROJ-19 | Bereichs-Datenisolation für Manager | Approved | [PROJ-19-bereichs-datenisolation.md](PROJ-19-bereichs-datenisolation.md) | 2026-05-06 |
+| PROJ-20 | Team-Anwesenheitsübersicht | In Progress | [PROJ-20-team-anwesenheitsuebersicht.md](PROJ-20-team-anwesenheitsuebersicht.md) | 2026-05-06 |
 | PROJ-21 | Stimmungs-Emoji beim Einstempeln | Deployed | [PROJ-21-stimmungs-emoji.md](PROJ-21-stimmungs-emoji.md) | 2026-05-07 |
 
 <!-- Add features above this line -->
