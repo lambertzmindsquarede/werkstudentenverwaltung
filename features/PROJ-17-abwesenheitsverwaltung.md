@@ -1,6 +1,6 @@
 # PROJ-17: Abwesenheitsverwaltung
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-05-06
 **Last Updated:** 2026-05-07
 
@@ -353,4 +353,7 @@ Keine neuen npm-Pakete notwendig — alle benötigten UI-Komponenten (Dialog, Se
 Alle Acceptance Criteria erfüllt. Feature kann deployed werden.
 
 ## Deployment
-_To be added by /deploy_
+
+**Deployed:** 2026-05-07
+**Trigger:** git push to main → Vercel auto-deploy
+**Commits:** b955feb (fix QA bugs), 471f9d2 (bug #1), aa550b2 (QA results), a52dfcd (QA results), 9310df9 (backend), and prior frontend commits

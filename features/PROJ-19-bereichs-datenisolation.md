@@ -1,6 +1,6 @@
 # PROJ-19: Bereichs-Datenisolation für Manager
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-05-06
 **Last Updated:** 2026-05-07
 
@@ -267,4 +267,8 @@ Getestete Szenarien:
 - Responsive: Mobile (375px), Tablet (768px)
 
 ## Deployment
-_To be added by /deploy_
+
+**Deployed:** 2026-05-07
+**Trigger:** git push to main → Vercel auto-deploy
+**Commits:** b955feb (fix QA bugs + migration), 100450c (QA results), and prior frontend/backend commits
+**Note:** BUG-4 (Auswertung /manager/export Bereichsfilter) bleibt offen bis PROJ-6 implementiert ist.
