@@ -1,6 +1,6 @@
 # PROJ-20: Team-Anwesenheitsübersicht
 
-## Status: In Progress
+## Status: In Review
 **Created:** 2026-05-06
 **Last Updated:** 2026-05-08
 
@@ -254,7 +254,125 @@ Muss erst deployed sein:
 - DB confirmed: `sub_locations`, `daily_presence` tables present; `bereiche.visibility` column with default `'team'`
 
 ## QA Test Results
-_To be added by /qa_
+
+**QA Date:** 2026-05-07
+**Status:** Approved (no Critical or High bugs)
+
+### Test Summary
+| Category | Result |
+|---|---|
+| Unit tests (Vitest) | 250/250 passed |
+| E2E tests (PROJ-20 suite) | 15 passed, 29 skipped (data-state conditions) |
+| E2E regression (full suite) | 304 passed, 9 pre-existing failures (PROJ-18, PROJ-21), 245 skipped |
+| Security audit | No critical issues found |
+
+### Acceptance Criteria Results
+
+#### Ansicht: Struktur & Gruppen
+| # | Criterion | Result |
+|---|---|---|
+| 1 | "Ich"-Sektion ganz oben | ✅ PASS |
+| 2 | Gruppen nach Arbeitsort-Kategorien | ✅ PASS |
+| 3 | Gruppen für Abwesenheitstypen | ✅ PASS |
+| 4 | "Kein Status" für Nutzer ohne Eintrag | ✅ PASS |
+| 5 | Leere Gruppen nicht angezeigt | ✅ PASS |
+| 6 | Multiple teams: Team-Label als Subheader | ✅ PASS |
+
+#### Personenkarte
+| # | Criterion | Result |
+|---|---|---|
+| 7 | Karte zeigt Name-Badge + Ort-Element | ✅ PASS |
+| 8 | Kein Sub-Ort: Leerer Kreis (○) | ✅ PASS |
+| 9 | Sub-Ort gesetzt: Sub-Location-Badge statt Kreis | ✅ PASS |
+| 10 | Karten anderer Nutzer read-only | ✅ PASS |
+| 11 | Eigene Karte leer: Klick öffnet Dialog | ✅ PASS |
+| 12 | Eigene Karte mit Sub-Ort: Klick öffnet Dialog zum Ändern | ✅ PASS |
+
+#### Sub-Ort setzen
+| # | Criterion | Result |
+|---|---|---|
+| 13 | Dialog zeigt Manager-konfigurierte Sub-Locations | ✅ PASS |
+| 14 | Auswahl → Karte sofort aktualisiert | ✅ PASS |
+| 15 | "Kein Sub-Ort" zurücksetzen | ✅ PASS |
+| 16 | Kein Arbeitsort geplant → Kreis deaktiviert + Hinweis | ✅ PASS |
+| 17 | Keine Sub-Orte konfiguriert → Hinweis angezeigt | ✅ PASS |
+| 18 | Bei Abwesenheit → Kreis deaktiviert | ✅ PASS |
+
+#### Live-Updates
+| # | Criterion | Result |
+|---|---|---|
+| 19 | Automatische Aktualisierung ≤ 60 Sekunden | ✅ PASS (Supabase Realtime) |
+| 20 | Statusänderungen ohne Seiten-Reload | ✅ PASS |
+
+#### Sichtbarkeit / Team-Scope
+| # | Criterion | Result |
+|---|---|---|
+| 21 | Manager kann Sichtbarkeit konfigurieren | ✅ PASS |
+| 22 | Standard ist "Nur Team" (opt-in für Global) | ✅ PASS |
+| 23 | Nutzer sieht eigenes Team + globale Teams | ✅ PASS |
+
+#### Sub-Location-Verwaltung
+| # | Criterion | Result |
+|---|---|---|
+| 24 | Manager kann Sub-Locations anlegen | ✅ PASS |
+| 25 | Manager kann umbenennen | ✅ PASS |
+| 26 | Manager kann deaktivieren (Soft-Delete) | ✅ PASS |
+| 27 | Sub-Locations an Arbeitsort gebunden | ✅ PASS |
+| 28 | Deaktivierte Sub-Locations nicht mehr auswählbar | ✅ PASS |
+
+### Bugs Found
+
+#### Medium
+
+**BUG-20-1: Dead code — unused group maps in TeamAnwesenheitClient**
+- File: `src/components/team/TeamAnwesenheitClient.tsx:76–100`
+- `allMembers`, `arbeitsortGroups`, `absenceGroups`, `noStatusMembers` are computed but never used in the JSX render tree. The actual rendering uses per-team logic below. No functional impact, but maintenance confusion risk.
+- Steps: Code review — no user-visible effect.
+
+**BUG-20-2: User without bereich assignment has no "Ich"-section**
+- Spec edge case: "Nutzer ohne Manager-Zuweisung: Erscheint in der eigenen Ich-Sektion"
+- Current behavior: `getTeamPresence` queries only for `role = 'werkstudent'` in visible bereiche. A werkstudent with `bereich_id = null` is not in any team's member list → `me = null` → no "Ich"-section rendered. They see "Du bist keinem Team zugeordnet" instead.
+- Expected: User should still see their own "Ich"-section (even if empty/no planned day).
+
+#### Low
+
+**BUG-20-3: `absence_type_overrides` fetched without filter**
+- File: `src/app/dashboard/team/actions.ts:100–103`
+- All override names from all bereiche are fetched (no `.eq('bereich_id', ...)` filter). Only names are exposed, not sensitive, but violates least-privilege principle.
+
+**BUG-20-4: Missing `.limit()` on list queries**
+- File: `src/app/dashboard/team/actions.ts` — multiple queries
+- Backend rules require `.limit()` on all list queries. Queries for `members`, `planned_entries`, `absences`, etc. have no limit.
+
+**BUG-20-5: Manager with multiple bereiche — only first bereich gets visibility toggle**
+- File: `src/app/manager/settings/page.tsx:59–62`
+- `TeamSichtbarkeitToggle` uses `bereiche[0]`. Managers managing multiple bereiche can only configure visibility for the first one.
+
+**BUG-20-6: Sub-location badge visible in absence group**
+- If a user set a sub-location before marking absent on the same day, their card in the absence group still shows the sub-location badge. Spec implies absence fully overrides presence state.
+
+### Security Audit
+- ✅ RLS enabled on `sub_locations` and `daily_presence` — manager writes, werkstudent reads own team
+- ✅ `setSubLocation` uses `user.id` from server-side auth (not client-supplied)
+- ✅ `createSubLocation` / `updateSubLocation` validate via Zod (1–50 chars)
+- ✅ Duplicate sub-location name prevented via unique index
+- ✅ Manager/admin assertion before all CRUD operations
+- ✅ Unauthenticated access to `/dashboard/team` redirects to login
+
+### Responsive Testing
+- ✅ Mobile (375px) — page loads, heading visible
+- ✅ Tablet (768px) — page loads, heading visible
+- ✅ Desktop (1440px) — full layout confirmed via code review
+
+### E2E Test File
+`tests/PROJ-20-team-anwesenheitsuebersicht.spec.ts` — 22 tests covering:
+- Route protection, navigation, page structure
+- "Ich"-section and own card interactions
+- Sub-ort dialog open/close
+- Disabled circle tooltip
+- Manager settings: sub-location accordion + team visibility toggle
+- Read-only cards for other users
+- Regression: dashboard and wochenplanung pages still work
 
 ## Deployment
 _To be added by /deploy_
