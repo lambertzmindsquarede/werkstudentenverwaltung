@@ -60,6 +60,15 @@ export async function GET(request: NextRequest) {
     isAdmin = groups.includes(adminGroupId)
   }
 
+  // Re-set the session without provider_token / provider_refresh_token.
+  // Azure AD tokens can be several KB; keeping them in cookies causes
+  // Vercel's 494 REQUEST_HEADER_TOO_LARGE error. The provider_token was
+  // only needed above to check group membership — it is not needed again.
+  await supabase.auth.setSession({
+    access_token: data.session.access_token,
+    refresh_token: data.session.refresh_token,
+  })
+
   // Upsert profile on every login so name/email stays fresh and is_admin is re-evaluated.
   await supabase.from('profiles').upsert(
     {
