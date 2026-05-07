@@ -49,11 +49,14 @@ export default function PersonenKarte({
       {/* Avatar */}
       <div
         className={`
-          w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0
-          ${isMe ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'}
+          w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0
+          ${person.mood_emoji ? '' : isMe ? 'bg-blue-100 text-blue-700 text-sm font-semibold' : 'bg-slate-100 text-slate-600 text-sm font-semibold'}
         `}
       >
-        {getInitials(person.full_name)}
+        {person.mood_emoji
+          ? <span className="text-2xl leading-none">{person.mood_emoji}</span>
+          : getInitials(person.full_name)
+        }
       </div>
 
       {/* Name */}
@@ -66,11 +69,6 @@ export default function PersonenKarte({
           <p className="text-xs text-slate-400 truncate">{person.group_label}</p>
         )}
       </div>
-
-      {/* Mood emoji */}
-      {!isMe && person.mood_emoji && (
-        <span className="text-lg leading-none flex-shrink-0">{person.mood_emoji}</span>
-      )}
 
       {/* Sub-location indicator — hidden when absent (absence takes precedence) */}
       {!isAbsent && person.sub_location_name ? (
