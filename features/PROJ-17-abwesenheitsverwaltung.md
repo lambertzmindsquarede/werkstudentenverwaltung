@@ -1,6 +1,6 @@
 # PROJ-17: Abwesenheitsverwaltung
 
-## Status: In Progress
+## Status: In Review
 **Created:** 2026-05-06
 **Last Updated:** 2026-05-07
 
@@ -258,7 +258,74 @@ Keine neuen npm-Pakete notwendig — alle benötigten UI-Komponenten (Dialog, Se
 - `src/app/manager/abwesenheiten/page.tsx` — Updated to load real `absence_types` from DB instead of `DEFAULT_ABSENCE_TYPES` fallback
 
 ## QA Test Results
-_To be added by /qa_
+
+**Tested:** 2026-05-07 | **Status:** In Review (bugs must be fixed before deploy)
+
+### Automated Tests
+- Unit tests: **250 passed** (15 new tests in `src/lib/absence-utils.test.ts`)
+- E2E tests: **31 passed, 7 skipped** (state-dependent), 0 failed (`tests/PROJ-17-abwesenheitsverwaltung.spec.ts`)
+- Previous test suite: 280 passed (10 pre-existing failures in PROJ-10/15/16/18/21 — unrelated to PROJ-17)
+
+### Acceptance Criteria
+
+| Criterion | Status | Notes |
+|-----------|--------|-------|
+| Admin: globale Abwesenheitstypen pflegen (create, toggle, edit) | ✅ PASS | `/admin/abwesenheitstypen` fully implemented |
+| Admin: Initial 4 Standardtypen (Krank/Urlaub/Frei/Sonstiges) | ✅ PASS | Seeded in migration |
+| Admin: Typ deaktivieren (nicht löschen) | ✅ PASS | Toggle Switch vorhanden |
+| Admin: Übersicht welche Bereiche abweichen | ❌ FAIL | **Bug #4** — Abschnitt fehlt in `/admin/abwesenheitstypen` |
+| Manager: Typenliste pro Bereich anpassen | ✅ PASS | `/manager/settings` — Toggle + eigene Typen |
+| Manager: Bereichs-Konfiguration auf Standard zurücksetzen | ✅ PASS | Reset-Button vorhanden |
+| Manager: Hinweisbanner bei neuen globalen Typen | ✅ PASS | `new_global_type_ids` Logik implementiert |
+| Werkstudent: Abwesenheit eintragen (Typ + optionale Notiz) | ✅ PASS | Dialog öffnet sich, Typ-Auswahl, Notiz bis 100 Zeichen |
+| Notiz max. 100 Zeichen | ✅ PASS | `maxLength={100}` + clientseitiger Zähler |
+| Pflichtfeld Abwesenheitstyp | ✅ PASS | Validierung vor Speichern |
+| Max. 7 Tage rückwirkend | ✅ PASS | Serverseitige Prüfung in `createAbsence` |
+| Tage > 7 Tage gesperrt mit Fehlermeldung | ✅ PASS | Korrekte Fehlermeldung im Dialog |
+| Abwesender Tag sperrt Planung (PROJ-3) | ✅ PASS | `isAbsentDay` flag → Felder deaktiviert |
+| Abwesender Tag sperrt Zeiterfassung (PROJ-4) | ❌ FAIL | **Bug #1** — StempelCard/Dashboard prüfen keine Abwesenheit für heute |
+| Vorhandene Zeitblöcke: Warndialog bei Abwesenheitseintrag | ❌ FAIL | **Bug #2** — Dialog fehlt komplett |
+| Doppelte Abwesenheit pro Tag: Fehlermeldung | ✅ PASS | Unique-Constraint + serverseitige Prüfung |
+| Abwesenheit löschen (innerhalb 7 Tage) | ✅ PASS | `canDelete` Logik korrekt |
+| Abwesenheit löschen nach Frist: Manager kann löschen | ❌ FAIL | **Bug #5** — Kein Admin/Manager-Override für Löschen nach Frist |
+| Manager erhält keine Benachrichtigung beim Löschen | ✅ PASS | Nur beim Erstellen (TODO-Kommentar) |
+| PROJ-15-Benachrichtigung beim Erstellen | ⚠️ PARTIAL | TODO-Kommentar — stille Degradation implementiert |
+| Kalenderansicht: Abwesenheitsmarker mit Farbe + Kürzel | ✅ PASS | `KalenderZelle` zeigt Marker |
+| Kalenderansicht: Hover/Klick zeigt Typ, Notiz, Datum | ✅ PASS | `ZellDetailDialog` erweitert |
+| Manager: Abwesenheitsübersicht `/manager/abwesenheiten` | ✅ PASS | Seite vorhanden + Tabelle |
+| Filteroptionen: Person, Zeitraum | ✅ PASS | Person-Dropdown + Von/Bis-Datumsfilter |
+| Filteroptionen: Abwesenheitstyp | ❌ FAIL | **Bug #3** — Typ-Filter fehlt in UI und Backend |
+| Tabelle sortierbar nach Datum und Person | ✅ PASS | Client-seitige Sortierung vorhanden |
+| Typ-Auflösung: bereichsspezifisch oder global-geerbt | ✅ PASS | `getResolvedAbsenceTypes` korrekt implementiert |
+| RLS: Werkstudent nur eigene Abwesenheiten | ✅ PASS | Server action prüft `user_id` |
+| RLS: Manager nur eigenen Bereich | ✅ PASS | Bereich-Filter in `loadManagerAbsences` |
+
+### Bugs gefunden
+
+| # | Schweregrad | Beschreibung | Schritte |
+|---|-------------|--------------|----------|
+| 1 | **High** | Zeiterfassung (Einstempeln) wird nicht für abwesende Tage gesperrt | 1. Abwesenheit für heute eintragen. 2. Zum Dashboard navigieren. 3. "Einstempeln" ist immer noch aktiv. — `StempelCard` und `DashboardContent` kennen keine Abwesenheiten. |
+| 2 | **Medium** | Kein Warndialog wenn Zeitblöcke für abwesenden Tag vorhanden | 1. Zeitblöcke für heute erfassen und ausstempeln. 2. Danach Abwesenheit für heute eintragen. 3. Kein Warndialog erscheint. Spec: „An diesem Tag sind bereits Zeitblöcke erfasst..." |
+| 3 | **Medium** | Typ-Filter fehlt in Manager-Abwesenheitsübersicht | `/manager/abwesenheiten` hat nur Person- und Datumsfilter. Spec: „Filteroptionen: Person, Zeitraum, **Abwesenheitstyp**". Interface-Feld `typeId` in `AbwesenheitFilter` vorhanden, aber weder UI noch Query implementiert. |
+| 4 | **Medium** | Admin-Seite zeigt keine Bereichskonfigurationsübersicht | `/admin/abwesenheitstypen` fehlt der Abschnitt „Welche Bereiche haben die globale Liste überschrieben". Spec: „Admin sieht eine Übersicht, welche Bereiche die globalen Typen durch eine eigene Konfiguration überschrieben haben." |
+| 5 | **Medium** | Manager kann Abwesenheiten nach Bearbeitungsfrist nicht löschen | `deleteAbsence` erzwingt 7-Tage-Frist für alle Rollen. Spec Edge Case: „Manager kann im Admin-Bereich dennoch löschen." |
+
+### Security Audit
+- ✅ `deleteAbsence` prüft `absence.user_id !== user.id` — Fremde Abwesenheiten können nicht gelöscht werden
+- ✅ `createAbsence` nutzt `user.id` aus der Session, nicht aus dem Request-Body
+- ✅ `loadManagerAbsences` filtert auf Bereich des Managers (kein Cross-Bereich-Zugriff)
+- ✅ Admin-Aktionen prüfen `is_admin` aus der DB, nicht aus dem Client
+- ✅ Zod-Validierung für alle Server Actions implementiert
+- ✅ Input-Längen begrenzt (Name: 50Z, Notiz: 100Z, Kürzel: 2Z)
+
+### Cross-Browser / Responsive
+- ✅ Chrome (Chromium): Tests bestanden
+- ✅ Mobile Safari: Tests bestanden (375px)
+
+### Production-Ready Entscheidung
+**NOT READY — Bug #1 (High) muss zuerst behoben werden.**
+
+Bug #1 ist ein Core-Acceptance-Criterion: Werkstudenten können trotz eingetragener Abwesenheit einstempeln. Bugs #2–5 sind Medium und sollten danach behoben werden.
 
 ## Deployment
 _To be added by /deploy_
