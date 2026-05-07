@@ -9,6 +9,7 @@ import type { TeamPresenceData, SubLocation, PersonPresence } from '@/app/dashbo
 import {
   getTeamPresence,
   setSubLocation,
+  setTeamMoodEmoji,
   getSubLocationsForArbeitsort,
 } from '@/app/dashboard/team/actions'
 
@@ -72,6 +73,14 @@ export default function TeamAnwesenheitClient({
     return result
   }
 
+  async function handleSetMoodEmoji(emoji: string | null) {
+    const result = await setTeamMoodEmoji(emoji)
+    if (!result.error) {
+      await refresh()
+    }
+    return result
+  }
+
   const multipleTeams = data.teams.length > 1
   const mePresence = data.me
 
@@ -80,6 +89,7 @@ export default function TeamAnwesenheitClient({
     subLocations,
     todayArbeitsortId,
     onSetSubLocation: handleSetSubLocation,
+    onSetMoodEmoji: handleSetMoodEmoji,
   }
 
   // Check if me is already in a team (normal case) — only show fallback "Ich" when not in any team
@@ -101,6 +111,7 @@ export default function TeamAnwesenheitClient({
               hasPlannedDay={todayArbeitsortId !== null}
               isAbsent={mePresence.group_type === 'absence'}
               onSetSubLocation={handleSetSubLocation}
+              onSetMoodEmoji={handleSetMoodEmoji}
             />
           </div>
         </div>

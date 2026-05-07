@@ -331,6 +331,26 @@ export async function setSubLocation(
   return {}
 }
 
+export async function setTeamMoodEmoji(emoji: string | null): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Nicht authentifiziert' }
+
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin' }).format(new Date())
+
+  const { error } = await supabase
+    .from('actual_entries')
+    .update({ mood_emoji: emoji })
+    .eq('user_id', user.id)
+    .eq('date', today)
+    .eq('is_complete', false)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/dashboard/team')
+  return {}
+}
+
 export async function getTodayPlannedArbeitsort(
   date: string
 ): Promise<{ data: { arbeitsort_id: string | null } | null; error?: string }> {

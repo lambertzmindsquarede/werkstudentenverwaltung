@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import SubOrtDialog from './SubOrtDialog'
+import EmojiPickerPopover from '@/components/zeiterfassung/EmojiPickerPopover'
 import type { SubLocation, PersonPresence } from '@/app/dashboard/team/actions'
 
 interface Props {
@@ -13,6 +14,7 @@ interface Props {
   hasPlannedDay: boolean
   isAbsent: boolean
   onSetSubLocation: (subLocationId: string | null) => Promise<{ error?: string }>
+  onSetMoodEmoji?: (emoji: string | null) => Promise<{ error?: string }>
 }
 
 function getInitials(name: string | null): string {
@@ -29,8 +31,10 @@ export default function PersonenKarte({
   hasPlannedDay,
   isAbsent,
   onSetSubLocation,
+  onSetMoodEmoji,
 }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false)
+  const canSetEmoji = isMe && onSetMoodEmoji !== undefined && person.group_type === 'arbeitsort'
 
   const canSetSubOrt = isMe && !isAbsent && hasPlannedDay
   const circleDisabled = isMe && (!hasPlannedDay || isAbsent)
@@ -46,18 +50,40 @@ export default function PersonenKarte({
         ${isMe ? 'border-blue-300 ring-1 ring-blue-200' : 'border-slate-200'}
       `}
     >
-      {/* Avatar */}
-      <div
-        className={`
-          w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0
-          ${person.mood_emoji ? '' : isMe ? 'bg-blue-100 text-blue-700 text-sm font-semibold' : 'bg-slate-100 text-slate-600 text-sm font-semibold'}
-        `}
-      >
-        {person.mood_emoji
-          ? <span className="text-2xl leading-none">{person.mood_emoji}</span>
-          : getInitials(person.full_name)
-        }
-      </div>
+      {/* Avatar — clickable emoji picker for own card when stamped in */}
+      {canSetEmoji ? (
+        <EmojiPickerPopover
+          selected={person.mood_emoji}
+          onSelect={(emoji) => onSetMoodEmoji!(emoji)}
+          trigger={
+            <button
+              className={`
+                w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0
+                ring-offset-1 hover:ring-2 hover:ring-blue-300 transition-all cursor-pointer
+                ${person.mood_emoji ? '' : 'bg-blue-100 text-blue-700 text-sm font-semibold'}
+              `}
+              title="Stimmung ändern"
+            >
+              {person.mood_emoji
+                ? <span className="text-2xl leading-none">{person.mood_emoji}</span>
+                : getInitials(person.full_name)
+              }
+            </button>
+          }
+        />
+      ) : (
+        <div
+          className={`
+            w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0
+            ${person.mood_emoji ? '' : isMe ? 'bg-blue-100 text-blue-700 text-sm font-semibold' : 'bg-slate-100 text-slate-600 text-sm font-semibold'}
+          `}
+        >
+          {person.mood_emoji
+            ? <span className="text-2xl leading-none">{person.mood_emoji}</span>
+            : getInitials(person.full_name)
+          }
+        </div>
+      )}
 
       {/* Name */}
       <div className="flex-1 min-w-0">

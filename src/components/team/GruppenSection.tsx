@@ -8,6 +8,7 @@ interface Props {
   subLocations: SubLocation[]
   todayArbeitsortId: string | null
   onSetSubLocation: (subLocationId: string | null) => Promise<{ error?: string }>
+  onSetMoodEmoji?: (emoji: string | null) => Promise<{ error?: string }>
 }
 
 export default function GruppenSection({
@@ -17,6 +18,7 @@ export default function GruppenSection({
   subLocations,
   todayArbeitsortId,
   onSetSubLocation,
+  onSetMoodEmoji,
 }: Props) {
   if (members.length === 0) return null
 
@@ -42,6 +44,7 @@ export default function GruppenSection({
               hasPlannedDay={hasPlannedDay}
               isAbsent={isAbsent}
               onSetSubLocation={onSetSubLocation}
+              onSetMoodEmoji={isMe ? onSetMoodEmoji : undefined}
             />
           )
         })}
