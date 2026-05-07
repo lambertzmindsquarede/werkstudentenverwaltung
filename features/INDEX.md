@@ -37,7 +37,7 @@
 | PROJ-21 | Stimmungs-Emoji beim Einstempeln | Deployed | [PROJ-21-stimmungs-emoji.md](PROJ-21-stimmungs-emoji.md) | 2026-05-07 |
 | PROJ-22 | Excel-Stundenzettel-Export (HR-Vorlage) | Approved | [PROJ-22-excel-stundenzettel-export.md](PROJ-22-excel-stundenzettel-export.md) | 2026-05-07 |
 | PROJ-23 | Deckungsübersicht für Manager | In Progress | [PROJ-23-deckungsuebersicht.md](PROJ-23-deckungsuebersicht.md) | 2026-05-07 |
-| PROJ-24 | Abwesenheiten pro Bereich deaktivierbar | In Review | [PROJ-24-abwesenheiten-bereich-toggle.md](PROJ-24-abwesenheiten-bereich-toggle.md) | 2026-05-07 |
+| PROJ-24 | Abwesenheiten pro Bereich deaktivierbar | Approved | [PROJ-24-abwesenheiten-bereich-toggle.md](PROJ-24-abwesenheiten-bereich-toggle.md) | 2026-05-07 |
 
 <!-- Add features above this line -->
 
