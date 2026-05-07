@@ -1,9 +1,7 @@
 import { redirect } from 'next/navigation'
-import Image from 'next/image'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase-server'
-import { ManagerSignOutButton } from '@/components/ManagerSignOutButton'
 import { DEFAULT_MAX_EDIT_DAYS_PAST } from '@/lib/database.types'
+import ManagerNav from '@/components/manager/ManagerNav'
 import SettingsForm from './SettingsForm'
 import AbwesenheitstypenKonfiguration from './AbwesenheitstypenKonfiguration'
 import SubLocationVerwaltung from './SubLocationVerwaltung'
@@ -65,74 +63,7 @@ export default async function ManagerSettingsPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-3">
-          <Image src="/mindsquare-logo.svg" alt="mindsquare" width={130} height={32} />
-          <span className="text-slate-300">|</span>
-          <span className="text-slate-600 text-sm font-medium">Werkstudentenverwaltung</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs bg-blue-100 text-blue-700 font-medium px-2.5 py-1 rounded-full">
-            Manager
-          </span>
-          <ManagerSignOutButton />
-        </div>
-      </header>
-
-      <nav className="bg-white border-b border-slate-200 px-6">
-        <div className="max-w-5xl mx-auto flex gap-1">
-          <Link
-            href="/manager"
-            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            Übersicht
-          </Link>
-          <Link
-            href="/manager/users"
-            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            Nutzerverwaltung
-          </Link>
-          <Link
-            href="/manager/kalender"
-            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            Kalenderansicht
-          </Link>
-          <Link
-            href="/manager/team"
-            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            Team
-          </Link>
-          <Link
-            href="/manager/abwesenheiten"
-            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            Abwesenheiten
-          </Link>
-          <Link
-            href="/manager/arbeitsorte"
-            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            Arbeitsorte
-          </Link>
-          <Link
-            href="/manager/settings"
-            className="px-4 py-3 text-sm font-medium text-slate-900 border-b-2 border-blue-600"
-          >
-            Einstellungen
-          </Link>
-          {profile?.is_admin && (
-            <Link
-              href="/admin"
-              className="px-4 py-3 text-sm font-medium text-purple-600 hover:text-purple-700 border-b-2 border-transparent hover:border-purple-300 transition-colors"
-            >
-              Admin-Bereich
-            </Link>
-          )}
-        </div>
-      </nav>
+      <ManagerNav isAdmin={profile?.is_admin ?? false} />
 
       <main className="max-w-5xl mx-auto px-6 py-10">
         <div className="mb-8">

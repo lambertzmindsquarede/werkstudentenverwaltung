@@ -1,9 +1,9 @@
 'use client'
 
-import Image from 'next/image'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import ManagerNav from '@/components/manager/ManagerNav'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -71,7 +71,6 @@ export default function KalenderGrid({
   absences = [],
 }: Props) {
   const router = useRouter()
-  const [signingOut, setSigningOut] = useState(false)
   const [hiddenUsers, setHiddenUsers] = useState<Set<string>>(new Set())
   const [selectedCell, setSelectedCell] = useState<SelectedCell | null>(null)
   // holidayMaps: bundesland → (date → holidayName)
@@ -142,13 +141,6 @@ export default function KalenderGrid({
     })
   }
 
-  async function handleSignOut() {
-    setSigningOut(true)
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    window.location.href = '/login'
-  }
-
   function navigateWeek(direction: 'prev' | 'next') {
     const target = direction === 'prev' ? getPreviousWeek(weekStr) : getNextWeek(weekStr)
     const params = new URLSearchParams({ week: target })
@@ -174,84 +166,7 @@ export default function KalenderGrid({
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-3">
-          <Image src="/mindsquare-logo.svg" alt="mindsquare" width={130} height={32} />
-          <span className="text-slate-300">|</span>
-          <span className="text-slate-600 text-sm font-medium">Werkstudentenverwaltung</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${isAdmin ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
-            {isAdmin ? 'Admin' : 'Manager'}
-          </span>
-          <Button
-            onClick={handleSignOut}
-            disabled={signingOut}
-            variant="ghost"
-            size="sm"
-            className="text-slate-500 hover:text-slate-700"
-          >
-            {signingOut ? 'Abmelden…' : 'Abmelden'}
-          </Button>
-        </div>
-      </header>
-
-      {/* Nav */}
-      <nav className="bg-white border-b border-slate-200 px-6">
-        <div className="max-w-6xl mx-auto flex gap-1">
-          <a
-            href="/manager"
-            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            Übersicht
-          </a>
-          <a
-            href="/manager/users"
-            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            Nutzerverwaltung
-          </a>
-          <a
-            href="/manager/kalender"
-            className="px-4 py-3 text-sm font-medium text-slate-900 border-b-2 border-blue-600"
-          >
-            Kalenderansicht
-          </a>
-          <a
-            href="/manager/team"
-            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            Team
-          </a>
-          <a
-            href="/manager/abwesenheiten"
-            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            Abwesenheiten
-          </a>
-          <a
-            href="/manager/arbeitsorte"
-            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            Arbeitsorte
-          </a>
-          <a
-            href="/manager/settings"
-            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            Einstellungen
-          </a>
-          {isAdmin && (
-            <a
-              href="/admin"
-              className="px-4 py-3 text-sm font-medium text-purple-600 hover:text-purple-700 border-b-2 border-transparent hover:border-purple-300 transition-colors"
-            >
-              Admin-Bereich
-            </a>
-          )}
-        </div>
-      </nav>
+      <ManagerNav isAdmin={isAdmin} />
 
       {/* Main */}
       <main className="max-w-6xl mx-auto px-6 py-8">

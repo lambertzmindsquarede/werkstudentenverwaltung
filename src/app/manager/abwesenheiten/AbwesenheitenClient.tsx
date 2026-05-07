@@ -1,10 +1,9 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase-browser'
 import { Button } from '@/components/ui/button'
+import ManagerNav from '@/components/manager/ManagerNav'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -57,12 +56,6 @@ export default function AbwesenheitenClient({ initialAbsences, werkstudenten, ab
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
-
-  async function handleSignOut() {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    window.location.href = '/login'
-  }
 
   function applyFilter() {
     startTransition(async () => {
@@ -124,53 +117,9 @@ export default function AbwesenheitenClient({ initialAbsences, werkstudenten, ab
     return sortDir === 'asc' ? cmp : -cmp
   })
 
-  const navItems = [
-    { href: '/manager', label: 'Übersicht' },
-    { href: '/manager/users', label: 'Nutzerverwaltung' },
-    { href: '/manager/kalender', label: 'Kalenderansicht' },
-    { href: '/manager/team', label: 'Team' },
-    { href: '/manager/abwesenheiten', label: 'Abwesenheiten', active: true },
-    { href: '/manager/arbeitsorte', label: 'Arbeitsorte' },
-    { href: '/manager/settings', label: 'Einstellungen' },
-    ...(isAdmin ? [{ href: '/admin', label: 'Admin-Bereich', adminLink: true }] : []),
-  ]
-
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-3">
-          <Image src="/mindsquare-logo.svg" alt="mindsquare" width={130} height={32} />
-          <span className="text-slate-300">|</span>
-          <span className="text-slate-600 text-sm font-medium">Werkstudentenverwaltung</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs bg-blue-100 text-blue-700 font-medium px-2.5 py-1 rounded-full">
-            {isAdmin ? 'Admin' : 'Manager'}
-          </span>
-          <Button onClick={handleSignOut} variant="ghost" size="sm" className="text-slate-500 hover:text-slate-700">
-            Abmelden
-          </Button>
-        </div>
-      </header>
-
-      <nav className="bg-white border-b border-slate-200 px-6">
-        <div className="max-w-6xl mx-auto flex gap-1 flex-wrap">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${'adminLink' in item && item.adminLink
-                  ? 'text-purple-600 hover:text-purple-700 border-transparent hover:border-purple-300'
-                  : item.active
-                    ? 'text-slate-900 border-blue-600'
-                    : 'text-slate-500 hover:text-slate-700 border-transparent hover:border-slate-300'
-              }`}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </div>
-      </nav>
+      <ManagerNav isAdmin={isAdmin} />
 
       <main className="max-w-6xl mx-auto px-6 py-8">
         <div className="mb-6">

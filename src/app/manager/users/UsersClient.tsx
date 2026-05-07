@@ -1,8 +1,8 @@
 'use client'
 
-import Image from 'next/image'
 import { useState, useEffect, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import ManagerNav from '@/components/manager/ManagerNav'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -342,7 +342,6 @@ export default function UsersClient({
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
   const [filterRole, setFilterRole] = useState<FilterRole>('all')
   const [editingUser, setEditingUser] = useState<Profile | null>(null)
-  const [signingOut, setSigningOut] = useState(false)
   const [togglingId, setTogglingId] = useState<string | null>(null)
 
   // Sync users state when SSR data changes (after router.refresh())
@@ -357,13 +356,6 @@ export default function UsersClient({
       setUsers(result.users)
     }
     setRefreshing(false)
-  }
-
-  async function handleSignOut() {
-    setSigningOut(true)
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    window.location.href = '/login'
   }
 
   async function handleToggleActive(user: Profile) {
@@ -403,87 +395,7 @@ export default function UsersClient({
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-3">
-          <Image src="/mindsquare-logo.svg" alt="mindsquare" width={130} height={32} />
-          <span className="text-slate-300">|</span>
-          <span className="text-slate-600 text-sm font-medium">Werkstudentenverwaltung</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${isAdmin ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
-            {isAdmin ? 'Admin' : 'Manager'}
-          </span>
-          <Button
-            onClick={handleSignOut}
-            disabled={signingOut}
-            variant="ghost"
-            size="sm"
-            className="text-slate-500 hover:text-slate-700"
-          >
-            {signingOut ? 'Abmelden…' : 'Abmelden'}
-          </Button>
-        </div>
-      </header>
-
-      <nav className="bg-white border-b border-slate-200 px-6">
-        <div className="max-w-5xl mx-auto flex gap-1">
-          <a
-            href="/manager"
-            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            Übersicht
-          </a>
-          <a
-            href="/manager/users"
-            className="px-4 py-3 text-sm font-medium text-slate-900 border-b-2 border-blue-600 flex items-center gap-1.5"
-          >
-            Nutzerverwaltung
-            {pendingCount > 0 && (
-              <span className="bg-yellow-100 text-yellow-700 text-xs font-semibold px-1.5 py-0.5 rounded-full">
-                {pendingCount}
-              </span>
-            )}
-          </a>
-          <a
-            href="/manager/kalender"
-            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            Kalenderansicht
-          </a>
-          <a
-            href="/manager/team"
-            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            Team
-          </a>
-          <a
-            href="/manager/abwesenheiten"
-            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            Abwesenheiten
-          </a>
-          <a
-            href="/manager/arbeitsorte"
-            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            Arbeitsorte
-          </a>
-          <a
-            href="/manager/settings"
-            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            Einstellungen
-          </a>
-          {isAdmin && (
-            <a
-              href="/admin"
-              className="px-4 py-3 text-sm font-medium text-purple-600 hover:text-purple-700 border-b-2 border-transparent hover:border-purple-300 transition-colors"
-            >
-              Admin-Bereich
-            </a>
-          )}
-        </div>
-      </nav>
+      <ManagerNav isAdmin={isAdmin} />
 
       <main className="max-w-5xl mx-auto px-6 py-8">
         <div className="mb-6 flex items-start justify-between">

@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import Image from 'next/image'
 import { toast } from 'sonner'
+import ManagerNav from '@/components/manager/ManagerNav'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -15,7 +15,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { createClient } from '@/lib/supabase-browser'
 import {
   createArbeitsort,
   updateArbeitsort,
@@ -36,12 +35,6 @@ export default function ArbeitsortVerwaltungClient({ initialArbeitsorte, isAdmin
   const [dialogError, setDialogError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [togglingId, setTogglingId] = useState<string | null>(null)
-
-  async function handleSignOut() {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    window.location.href = '/login'
-  }
 
   function openCreate() {
     setDialogName('')
@@ -120,59 +113,9 @@ export default function ArbeitsortVerwaltungClient({ initialArbeitsorte, isAdmin
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-3">
-          <Image src="/mindsquare-logo.svg" alt="mindsquare" width={130} height={32} />
-          <span className="text-slate-300">|</span>
-          <span className="text-slate-600 text-sm font-medium">Werkstudentenverwaltung</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs bg-blue-100 text-blue-700 font-medium px-2.5 py-1 rounded-full">
-            Manager
-          </span>
-          <Button
-            onClick={handleSignOut}
-            variant="ghost"
-            size="sm"
-            className="text-slate-500 hover:text-slate-700"
-          >
-            Abmelden
-          </Button>
-        </div>
-      </header>
+      <ManagerNav isAdmin={isAdmin} />
 
-      <nav className="bg-white border-b border-slate-200 px-6">
-        <div className="max-w-4xl mx-auto flex gap-1">
-          <a href="/manager" className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors">
-            Übersicht
-          </a>
-          <a href="/manager/users" className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors">
-            Nutzerverwaltung
-          </a>
-          <a href="/manager/kalender" className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors">
-            Kalenderansicht
-          </a>
-          <a href="/manager/team" className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors">
-            Team
-          </a>
-          <a href="/manager/abwesenheiten" className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors">
-            Abwesenheiten
-          </a>
-          <a href="/manager/arbeitsorte" className="px-4 py-3 text-sm font-medium text-slate-900 border-b-2 border-blue-600">
-            Arbeitsorte
-          </a>
-          <a href="/manager/settings" className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors">
-            Einstellungen
-          </a>
-          {isAdmin && (
-            <a href="/admin" className="px-4 py-3 text-sm font-medium text-purple-600 hover:text-purple-700 border-b-2 border-transparent hover:border-purple-300 transition-colors">
-              Admin-Bereich
-            </a>
-          )}
-        </div>
-      </nav>
-
-      <main className="max-w-4xl mx-auto px-6 py-8">
+      <main className="max-w-5xl mx-auto px-6 py-8">
         <div className="mb-6 flex items-start justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Arbeitsorte</h1>
