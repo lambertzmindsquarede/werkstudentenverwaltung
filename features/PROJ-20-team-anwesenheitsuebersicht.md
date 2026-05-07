@@ -1,6 +1,6 @@
 # PROJ-20: Team-Anwesenheitsübersicht
 
-## Status: In Review
+## Status: Deployed
 **Created:** 2026-05-06
 **Last Updated:** 2026-05-08
 
