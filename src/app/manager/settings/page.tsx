@@ -55,11 +55,13 @@ export default async function ManagerSettingsPage() {
     )
   }
 
-  // Team visibility (first bereich managed by this manager)
-  const managerBereichId = bereiche[0]?.id ?? null
-  const managerBereichName = bereiche[0]?.name ?? ''
-  const visibilityRes = managerBereichId ? await getTeamVisibility(managerBereichId) : null
-  const teamVisibility = visibilityRes?.data ?? 'team'
+  // Team visibility — one entry per managed bereich (BUG-20-5: support multiple bereiche)
+  const bereichVisibilities = await Promise.all(
+    bereiche.map(async (b) => {
+      const res = await getTeamVisibility(b.id)
+      return { bereichId: b.id, bereichName: b.name, visibility: (res?.data ?? 'team') as 'team' | 'global' }
+    })
+  )
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -125,13 +127,14 @@ export default async function ManagerSettingsPage() {
           initialSubLocations={initialSubLocations}
         />
 
-        {managerBereichId && (
+        {bereichVisibilities.map(({ bereichId, bereichName, visibility }) => (
           <TeamSichtbarkeitToggle
-            bereichId={managerBereichId}
-            bereichName={managerBereichName}
-            initialVisibility={teamVisibility}
+            key={bereichId}
+            bereichId={bereichId}
+            bereichName={bereichName}
+            initialVisibility={visibility}
           />
-        )}
+        ))}
       </main>
     </div>
   )

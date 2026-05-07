@@ -64,8 +64,8 @@ export default function PersonenKarte({
         </p>
       </div>
 
-      {/* Sub-location indicator */}
-      {person.sub_location_name ? (
+      {/* Sub-location indicator — hidden when absent (absence takes precedence) */}
+      {!isAbsent && person.sub_location_name ? (
         <button
           onClick={() => canSetSubOrt && setDialogOpen(true)}
           disabled={!canSetSubOrt}

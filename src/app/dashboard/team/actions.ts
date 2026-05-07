@@ -71,43 +71,54 @@ export async function getTeamPresence(date: string): Promise<{ data: TeamPresenc
     .in('bereich_id', visibleBereichIds)
     .eq('role', 'werkstudent')
     .eq('is_active', true)
+    .limit(500)
 
-  if (!members || members.length === 0) {
-    return { data: { me: null, teams: [] } }
-  }
-
-  const memberIds = members.map((m) => m.id)
+  const memberIds = (members ?? []).map((m) => m.id)
 
   // Load today's planned arbeitsort for each member
-  const { data: plannedEntries } = await supabase
-    .from('planned_entries')
-    .select('user_id, arbeitsort_id')
-    .in('user_id', memberIds)
-    .eq('date', date)
+  const { data: plannedEntries } = memberIds.length > 0
+    ? await supabase
+        .from('planned_entries')
+        .select('user_id, arbeitsort_id')
+        .in('user_id', memberIds)
+        .eq('date', date)
+        .limit(1000)
+    : { data: [] }
 
   // Load today's absences for each member
-  const { data: absences } = await supabase
-    .from('absences')
-    .select('user_id, absence_type_id, absence_type_override_id')
-    .in('user_id', memberIds)
-    .eq('date', date)
+  const { data: absences } = memberIds.length > 0
+    ? await supabase
+        .from('absences')
+        .select('user_id, absence_type_id, absence_type_override_id')
+        .in('user_id', memberIds)
+        .eq('date', date)
+        .limit(500)
+    : { data: [] }
 
   // Load absence type names
   const { data: absenceTypes } = await supabase
     .from('absence_types')
     .select('id, name')
+    .limit(100)
 
-  // Load absence type overrides for visible bereiche
-  const { data: absenceTypeOverrides } = await supabase
-    .from('absence_type_overrides')
-    .select('id, name')
+  // Load absence type overrides — filtered to visible bereiche only (BUG-20-3)
+  const { data: absenceTypeOverrides } = visibleBereichIds.length > 0
+    ? await supabase
+        .from('absence_type_overrides')
+        .select('id, name')
+        .in('bereich_id', visibleBereichIds)
+        .limit(500)
+    : { data: [] }
 
   // Load daily presence (sub-locations)
-  const { data: presences } = await supabase
-    .from('daily_presence')
-    .select('user_id, sub_location_id')
-    .in('user_id', memberIds)
-    .eq('date', date)
+  const { data: presences } = memberIds.length > 0
+    ? await supabase
+        .from('daily_presence')
+        .select('user_id, sub_location_id')
+        .in('user_id', memberIds)
+        .eq('date', date)
+        .limit(500)
+    : { data: [] }
 
   // Load sub_location names if any are set
   const subLocationIds = (presences ?? [])
@@ -201,7 +212,7 @@ export async function getTeamPresence(date: string): Promise<{ data: TeamPresenc
 
   // Build teams
   const teams = visibleBereiche.map((bereich) => {
-    const bereichMembers = members
+    const bereichMembers = (members ?? [])
       .filter((m) => m.bereich_id === bereich.id)
       .map(classifyMember)
     return {
@@ -218,6 +229,31 @@ export async function getTeamPresence(date: string): Promise<{ data: TeamPresenc
     if (myEntry) {
       me = myEntry
       break
+    }
+  }
+
+  // BUG-20-2: werkstudent without bereich still gets an "Ich"-section
+  if (!me && selfProfile?.role === 'werkstudent') {
+    const [profileRes, absenceRes, presenceRes] = await Promise.all([
+      supabase.from('profiles').select('full_name').eq('id', user.id).single(),
+      supabase.from('absences').select('absence_type_id, absence_type_override_id').eq('user_id', user.id).eq('date', date).maybeSingle(),
+      supabase.from('daily_presence').select('sub_location_id').eq('user_id', user.id).eq('date', date).maybeSingle(),
+    ])
+    const ownSubLocId = presenceRes.data?.sub_location_id ?? null
+    let ownSubLocName: string | null = null
+    if (ownSubLocId) {
+      const slRes = await supabase.from('sub_locations').select('name').eq('id', ownSubLocId).single()
+      ownSubLocName = slRes.data?.name ?? null
+    }
+    const ownAbsence = absenceRes.data
+    me = {
+      user_id: user.id,
+      full_name: profileRes.data?.full_name ?? null,
+      group_type: ownAbsence ? 'absence' : 'no_status',
+      group_label: ownAbsence ? 'Abwesend' : 'Kein Status',
+      arbeitsort_id: null,
+      sub_location_id: ownSubLocId,
+      sub_location_name: ownSubLocName,
     }
   }
 

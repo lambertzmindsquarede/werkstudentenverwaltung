@@ -72,32 +72,8 @@ export default function TeamAnwesenheitClient({
     return result
   }
 
-  // Build groups across all teams
-  const allMembers = data.teams.flatMap((t) => t.members)
   const multipleTeams = data.teams.length > 1
-
-  // Separate "me" section member
   const mePresence = data.me
-
-  // Build ordered groups: arbeitsort groups → absence groups → no_status
-  const arbeitsortGroups = new Map<string, PersonPresence[]>()
-  const absenceGroups = new Map<string, PersonPresence[]>()
-  const noStatusMembers: PersonPresence[] = []
-
-  for (const member of allMembers) {
-    if (member.user_id === userId) continue // shown separately in "Ich"-section
-    if (member.group_type === 'arbeitsort') {
-      const arr = arbeitsortGroups.get(member.group_label) ?? []
-      arr.push(member)
-      arbeitsortGroups.set(member.group_label, arr)
-    } else if (member.group_type === 'absence') {
-      const arr = absenceGroups.get(member.group_label) ?? []
-      arr.push(member)
-      absenceGroups.set(member.group_label, arr)
-    } else {
-      noStatusMembers.push(member)
-    }
-  }
 
   const sharedProps = {
     currentUserId: userId,
