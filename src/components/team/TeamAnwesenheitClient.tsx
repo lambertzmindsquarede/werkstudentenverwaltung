@@ -82,10 +82,13 @@ export default function TeamAnwesenheitClient({
     onSetSubLocation: handleSetSubLocation,
   }
 
+  // Check if me is already in a team (normal case) — only show fallback "Ich" when not in any team
+  const meInTeams = data.teams.some((t) => t.members.some((m) => m.user_id === userId))
+
   return (
     <div className="space-y-8">
-      {/* Ich-Sektion */}
-      {mePresence && (
+      {/* Fallback: Ich-Sektion nur wenn kein Bereich zugeordnet */}
+      {mePresence && !meInTeams && (
         <div>
           <h2 className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-3">
             Ich
@@ -103,9 +106,9 @@ export default function TeamAnwesenheitClient({
         </div>
       )}
 
-      {/* Team sections */}
+      {/* Team sections (me included in the groups, identified by "(Ich)" badge) */}
       {data.teams.map((team) => {
-        const teamMembers = team.members.filter((m) => m.user_id !== userId)
+        const teamMembers = team.members
         if (teamMembers.length === 0 && !multipleTeams) return null
 
         const teamArbeitsortGroups = new Map<string, PersonPresence[]>()
@@ -161,7 +164,7 @@ export default function TeamAnwesenheitClient({
             )}
 
             {teamMembers.length === 0 && multipleTeams && (
-              <p className="text-sm text-slate-400 italic">Keine weiteren Teammitglieder heute.</p>
+              <p className="text-sm text-slate-400 italic">Keine Teammitglieder heute.</p>
             )}
           </div>
         )
