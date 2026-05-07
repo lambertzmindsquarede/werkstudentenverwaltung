@@ -4,6 +4,12 @@ import { useState } from 'react'
 import { Pencil, Trash2, Plus } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { minutesToHHMM } from './utils'
 import type { TagDetail, IstEintragDetail } from '@/app/manager/auswertung/actions'
 import ZeitkorrektureDialog from './ZeitkorrektureDialog'
@@ -106,12 +112,18 @@ export default function TagDetailZeile({ tag, userId, onCorrectionDone }: Props)
             <td className="px-3 py-1.5 text-xs text-slate-500 whitespace-nowrap" colSpan={3}>
               {formatTime(entry.actual_start)} – {formatTime(entry.actual_end)} Uhr
               {isCorrected && (
-                <Badge
-                  className="ml-2 text-[10px] px-1.5 py-0 bg-blue-100 text-blue-700 border border-blue-200 hover:bg-blue-100 cursor-help"
-                  title={entry.correction_note ?? undefined}
-                >
-                  Bearbeitet
-                </Badge>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge className="ml-2 text-[10px] px-1.5 py-0 bg-blue-100 text-blue-700 border border-blue-200 hover:bg-blue-100 cursor-help">
+                        Bearbeitet
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs text-xs">{entry.correction_note ?? 'Vom Manager korrigiert'}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               )}
               {isApproved && (
                 <Badge className="ml-2 text-[10px] px-1.5 py-0 bg-green-100 text-green-700 border border-green-200 hover:bg-green-100">

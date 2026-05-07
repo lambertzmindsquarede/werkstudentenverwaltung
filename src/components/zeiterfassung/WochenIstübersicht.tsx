@@ -213,7 +213,11 @@ export default function WochenIstübersicht({
                   </span>
                 )
               } else {
-                const hasCorrectedBlock = actuals.some((a) => !!a.corrected_by)
+                const correctedBlocks = actuals.filter((a) => !!a.corrected_by)
+                const hasCorrectedBlock = correctedBlocks.length > 0
+                const correctionTooltip = correctedBlocks.length === 1
+                  ? (correctedBlocks[0].correction_note ?? 'Vom Manager korrigiert')
+                  : `${correctedBlocks.length} Blöcke wurden vom Manager korrigiert`
                 istDisplay = (
                   <span className={`flex items-center gap-1.5 ${hasOpenBlock ? 'text-amber-600' : 'text-slate-900'}`}>
                     {actuals.length} Bl.
@@ -226,9 +230,18 @@ export default function WochenIstübersicht({
                       </Badge>
                     )}
                     {hasCorrectedBlock && (
-                      <Badge className="text-[10px] px-1.5 py-0 bg-blue-100 text-blue-700 border border-blue-200 hover:bg-blue-100">
-                        Bearbeitet
-                      </Badge>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge className="text-[10px] px-1.5 py-0 bg-blue-100 text-blue-700 border border-blue-200 hover:bg-blue-100 cursor-help">
+                              Bearbeitet
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="max-w-xs text-xs">{correctionTooltip}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     )}
                   </span>
                 )

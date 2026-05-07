@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Input } from '@/components/ui/input'
 import { createTimeEntry } from '@/app/manager/auswertung/correction-actions'
 
 function generateTimeOptions(): string[] {
@@ -47,6 +48,7 @@ interface Props {
 }
 
 export default function ZeiteintragHinzufuegenDialog({ open, date, userId, onClose, onSaved }: Props) {
+  const [selectedDate, setSelectedDate] = useState(date)
   const [start, setStart] = useState('')
   const [end, setEnd] = useState('')
   const [reason, setReason] = useState('')
@@ -55,16 +57,21 @@ export default function ZeiteintragHinzufuegenDialog({ open, date, userId, onClo
 
   useEffect(() => {
     if (open) {
+      setSelectedDate(date)
       setStart('')
       setEnd('')
       setReason('')
       setError(null)
     }
-  }, [open])
+  }, [open, date])
 
   const startAfterEnd = start && end && start >= end
 
   async function handleSave() {
+    if (!selectedDate) {
+      setError('Bitte ein Datum auswählen.')
+      return
+    }
     if (!start || !end) {
       setError('Bitte Start- und Endzeit auswählen.')
       return
@@ -80,7 +87,7 @@ export default function ZeiteintragHinzufuegenDialog({ open, date, userId, onClo
 
     setSaving(true)
     setError(null)
-    const result = await createTimeEntry(userId, { date, actual_start: start, actual_end: end, reason: reason.trim() })
+    const result = await createTimeEntry(userId, { date: selectedDate, actual_start: start, actual_end: end, reason: reason.trim() })
     setSaving(false)
 
     if (result.error) {
@@ -94,10 +101,22 @@ export default function ZeiteintragHinzufuegenDialog({ open, date, userId, onClo
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Eintrag hinzufügen – {formatDateDE(date)}</DialogTitle>
+          <DialogTitle>Eintrag hinzufügen</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
+          <div>
+            <Label className="text-sm text-slate-700">
+              Datum <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => { setSelectedDate(e.target.value); setError(null) }}
+              className="mt-1"
+            />
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label className="text-sm text-slate-700">Startzeit</Label>
