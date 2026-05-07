@@ -4,7 +4,6 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import {
   Select,
   SelectContent,
@@ -15,7 +14,7 @@ import {
 import { createClient } from '@/lib/supabase-browser'
 
 const DEV_USERS = [
-  { userId: '00000000-0000-0000-0000-000000000001', label: 'Dev Admin (Manager)' },
+  { userId: '00000000-0000-0000-0000-000000000001', label: 'Mia Schulz (Manager)' },
   { userId: '00000000-0000-0000-0000-000000000002', label: 'Anna Müller (Werkstudentin)' },
   { userId: '00000000-0000-0000-0000-000000000003', label: 'Ben Schneider (Werkstudent)' },
   { userId: '00000000-0000-0000-0000-000000000004', label: 'Clara Fischer (Werkstudentin)' },
@@ -68,39 +67,40 @@ export function DevLoginButton({ enabled }: { enabled?: boolean }) {
   }
 
   return (
-    <div className="mt-4 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
-      <div className="flex items-center gap-2 mb-2">
-        <Badge className="bg-amber-500 hover:bg-amber-500 text-amber-950 text-xs font-semibold">
-          Dev only
-        </Badge>
-        <span className="text-xs text-amber-400">Nur lokal sichtbar</span>
+    <div className="mt-5">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="flex-1 h-px bg-slate-200" />
+        <span className="text-xs font-medium text-slate-400 tracking-wide">Demo-Zugänge</span>
+        <div className="flex-1 h-px bg-slate-200" />
       </div>
-      <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-        <SelectTrigger className="w-full mb-2 bg-amber-500/10 border-amber-500/30 text-amber-200 text-sm">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {DEV_USERS.map((user) => (
-            <SelectItem key={user.userId} value={user.userId}>
-              {user.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Button
-        onClick={handleDevLogin}
-        disabled={loading}
-        className="w-full h-10 bg-amber-500 hover:bg-amber-400 text-amber-950 font-medium text-sm border-0"
-      >
-        {loading ? (
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 border-2 border-amber-900 border-t-transparent rounded-full animate-spin" />
-            <span>Einloggen…</span>
-          </div>
-        ) : (
-          'Als gewählten User einloggen'
-        )}
-      </Button>
+      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-2">
+        <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+          <SelectTrigger className="w-full bg-white border-slate-300 text-slate-700 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {DEV_USERS.map((user) => (
+              <SelectItem key={user.userId} value={user.userId}>
+                {user.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          onClick={handleDevLogin}
+          disabled={loading}
+          className="w-full h-10 bg-slate-800 hover:bg-slate-700 text-white font-medium text-sm"
+        >
+          {loading ? (
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <span>Einloggen…</span>
+            </div>
+          ) : (
+            'Als Demo-User anmelden'
+          )}
+        </Button>
+      </div>
     </div>
   )
 }
