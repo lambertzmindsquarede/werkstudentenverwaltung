@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase-browser'
 import WerkstudentNav from '@/components/werkstudent/WerkstudentNav'
 import StempelCard from './StempelCard'
 import OffenerEintragBanner from './OffenerEintragBanner'
+import PersonalnummerBanner from './PersonalnummerBanner'
+import StundenzettelExportButton from './StundenzettelExportButton'
 import WochenIstübersicht from './WochenIstübersicht'
 import IstEintragEditDialog from './IstEintragEditDialog'
 import { getWeekDates, dateToString } from '@/lib/week-utils'
@@ -20,6 +22,8 @@ interface Props {
   bundesland: string
   maxEditDaysPast: number | null
   hasManager: boolean
+  personalnummer: string | null
+  isWerkstudent: boolean
   initialTodayEntries: ActualEntry[]
   initialWeekEntries: ActualEntry[]
   initialPlannedEntries: PlannedEntry[]
@@ -39,6 +43,8 @@ export default function DashboardContent({
   bundesland,
   maxEditDaysPast,
   hasManager,
+  personalnummer,
+  isWerkstudent,
   initialTodayEntries,
   initialWeekEntries,
   initialPlannedEntries,
@@ -133,10 +139,21 @@ export default function DashboardContent({
 
       {/* Main */}
       <main className="max-w-5xl mx-auto px-6 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-900">Mein Dashboard</h1>
-          <p className="text-slate-500 mt-1 text-sm">Deine Arbeitszeiten auf einen Blick</p>
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Mein Dashboard</h1>
+            <p className="text-slate-500 mt-1 text-sm">Deine Arbeitszeiten auf einen Blick</p>
+          </div>
+          {isWerkstudent && (
+            <StundenzettelExportButton
+              disabled={!personalnummer}
+              disabledReason="Personalnummer fehlt – bitte im Profil eintragen."
+            />
+          )}
         </div>
+
+        {/* Personalnummer warning banner */}
+        {isWerkstudent && !personalnummer && <PersonalnummerBanner />}
 
         {/* Open entry banner */}
         {openEntry && (

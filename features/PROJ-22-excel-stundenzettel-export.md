@@ -1,6 +1,6 @@
 # PROJ-22: Excel-Stundenzettel-Export (HR-Vorlage)
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-05-07
 **Last Updated:** 2026-05-07
 

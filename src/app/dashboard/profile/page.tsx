@@ -1,13 +1,13 @@
 'use client'
 
-import Image from 'next/image'
 import { useEffect, useState } from 'react'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import WerkstudentNav from '@/components/werkstudent/WerkstudentNav'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { createClient } from '@/lib/supabase-browser'
+import PersonalnummerCard from '@/components/werkstudent/PersonalnummerCard'
 import type { Profile } from '@/lib/database.types'
 
 function getInitials(name: string | null): string {
@@ -24,7 +24,6 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [bereichName, setBereichName] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [signingOut, setSigningOut] = useState(false)
 
   useEffect(() => {
     async function fetchProfile() {
@@ -51,65 +50,9 @@ export default function ProfilePage() {
     fetchProfile()
   }, [])
 
-  async function handleSignOut() {
-    setSigningOut(true)
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    window.location.href = '/login'
-  }
-
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-3">
-          <Image src="/mindsquare-logo.svg" alt="mindsquare" width={130} height={32} />
-          <span className="text-slate-300">|</span>
-          <span className="text-slate-600 text-sm font-medium">Werkstudentenverwaltung</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs bg-slate-100 text-slate-600 font-medium px-2.5 py-1 rounded-full">
-            Werkstudent
-          </span>
-          <Button
-            onClick={handleSignOut}
-            disabled={signingOut}
-            variant="ghost"
-            size="sm"
-            className="text-slate-500 hover:text-slate-700"
-          >
-            {signingOut ? 'Abmelden…' : 'Abmelden'}
-          </Button>
-        </div>
-      </header>
-
-      <nav className="bg-white border-b border-slate-200 px-6">
-        <div className="max-w-3xl mx-auto flex gap-1">
-          <a
-            href="/dashboard"
-            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            Dashboard
-          </a>
-          <a
-            href="/dashboard/wochenplanung"
-            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            Wochenplanung
-          </a>
-          <a
-            href="/dashboard/team"
-            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            Team
-          </a>
-          <a
-            href="/dashboard/profile"
-            className="px-4 py-3 text-sm font-medium text-slate-900 border-b-2 border-blue-600"
-          >
-            Mein Profil
-          </a>
-        </div>
-      </nav>
+      <WerkstudentNav />
 
       <main className="max-w-3xl mx-auto px-6 py-10">
         <div className="mb-8">
@@ -201,6 +144,10 @@ export default function ProfilePage() {
             )}
           </CardContent>
         </Card>
+
+        {profile && profile.role === 'werkstudent' && (
+          <PersonalnummerCard userId={profile.id} initialValue={profile.personalnummer ?? null} />
+        )}
       </main>
     </div>
   )
