@@ -19,7 +19,7 @@
 | PROJ-3 | Wochenplanung | Deployed | [PROJ-3-wochenplanung.md](PROJ-3-wochenplanung.md) | 2026-04-28 |
 | PROJ-4 | Tages-Zeiterfassung | Deployed | [PROJ-4-tages-zeiterfassung.md](PROJ-4-tages-zeiterfassung.md) | 2026-04-28 |
 | PROJ-5 | Manager-Kalenderansicht | Deployed | [PROJ-5-manager-kalenderansicht.md](PROJ-5-manager-kalenderansicht.md) | 2026-04-28 |
-| PROJ-6 | Auswertung & Export | Planned | [PROJ-6-auswertung-export.md](PROJ-6-auswertung-export.md) | 2026-04-28 |
+| PROJ-6 | Auswertung & Export | Architected | [PROJ-6-auswertung-export.md](PROJ-6-auswertung-export.md) | 2026-04-28 |
 | PROJ-7 | Lokaler Dev-Login | Deployed | [PROJ-7-lokaler-dev-login.md](PROJ-7-lokaler-dev-login.md) | 2026-04-28 |
 | PROJ-8 | Mehrere Zeitblöcke pro Tag | Deployed | [PROJ-8-mehrere-zeitbloecke-pro-tag.md](PROJ-8-mehrere-zeitbloecke-pro-tag.md) | 2026-04-29 |
 | PROJ-9 | Pausenerfassung | Deployed | [PROJ-9-pausenerfassung.md](PROJ-9-pausenerfassung.md) | 2026-04-30 |
@@ -35,7 +35,8 @@
 | PROJ-19 | Bereichs-Datenisolation für Manager | Deployed | [PROJ-19-bereichs-datenisolation.md](PROJ-19-bereichs-datenisolation.md) | 2026-05-06 |
 | PROJ-20 | Team-Anwesenheitsübersicht | Deployed | [PROJ-20-team-anwesenheitsuebersicht.md](PROJ-20-team-anwesenheitsuebersicht.md) | 2026-05-06 |
 | PROJ-21 | Stimmungs-Emoji beim Einstempeln | Deployed | [PROJ-21-stimmungs-emoji.md](PROJ-21-stimmungs-emoji.md) | 2026-05-07 |
+| PROJ-22 | Excel-Stundenzettel-Export (HR-Vorlage) | In Review | [PROJ-22-excel-stundenzettel-export.md](PROJ-22-excel-stundenzettel-export.md) | 2026-05-07 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-22
+## Next Available ID: PROJ-23
