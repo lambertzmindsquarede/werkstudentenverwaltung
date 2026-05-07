@@ -19,7 +19,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import IstEintragEditDialog from './IstEintragEditDialog'
 import EmojiPickerPopover from './EmojiPickerPopover'
-import type { ActualEntry } from '@/lib/database.types'
+import type { ActualEntry, AbsenceWithType } from '@/lib/database.types'
+import { getAbsenceName, getAbsenceColor, getAbsenceAbbreviation } from '@/lib/database.types'
 import { calcNetHours, checkArbZGWarning, timeToMinutes } from '@/lib/time-block-utils'
 import { updateBreakMinutes } from '@/app/dashboard/actions'
 import { usePublicHolidays } from '@/hooks/usePublicHolidays'
@@ -30,6 +31,7 @@ interface Props {
   today: string
   isWeekend: boolean
   bundesland: string
+  todayAbsence: AbsenceWithType | null
   onEntryChange: (entry: ActualEntry) => void
   onEntryDeleted: (entryId: string) => void
 }
@@ -48,6 +50,7 @@ export default function StempelCard({
   today,
   isWeekend,
   bundesland,
+  todayAbsence,
   onEntryChange,
   onEntryDeleted,
 }: Props) {
@@ -167,6 +170,23 @@ export default function StempelCard({
 
   return (
     <>
+      {todayAbsence && (
+        <Alert className="mb-3 bg-rose-50 border-rose-200">
+          <AlertDescription className="text-rose-800 text-sm flex items-center gap-2">
+            <span
+              className="inline-flex items-center justify-center w-5 h-5 rounded text-white text-xs font-bold flex-shrink-0"
+              style={{ backgroundColor: getAbsenceColor(todayAbsence) }}
+            >
+              {getAbsenceAbbreviation(todayAbsence)}
+            </span>
+            <span>
+              <span className="font-medium">{getAbsenceName(todayAbsence)}</span>
+              {' – du bist heute als abwesend eingetragen. Zeiterfassung ist gesperrt.'}
+            </span>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {todayIsHoliday && todayHolidayName && (
         <Alert className="mb-3 bg-blue-50 border-blue-200">
           <AlertDescription className="text-blue-800 text-sm">
@@ -359,6 +379,15 @@ export default function StempelCard({
             >
               {loading ? '…' : 'Ausstempeln'}
             </Button>
+          ) : todayAbsence ? (
+            <div>
+              <Button disabled size="lg" className="bg-slate-200 text-slate-400 cursor-not-allowed">
+                Einstempeln
+              </Button>
+              <p className="text-xs text-slate-400 mt-1.5">
+                Abwesenheit eingetragen – Einstempeln nicht möglich.
+              </p>
+            </div>
           ) : canStampIn ? (
             <div className="flex items-center gap-2">
               <EmojiPickerPopover

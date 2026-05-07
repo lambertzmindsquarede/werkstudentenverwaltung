@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import DashboardContent from '@/components/zeiterfassung/DashboardContent'
 import { getCurrentISOWeek, getWeekDates, dateToString } from '@/lib/week-utils'
-import type { ActualEntry, PlannedEntry } from '@/lib/database.types'
+import type { ActualEntry, PlannedEntry, AbsenceWithType } from '@/lib/database.types'
 import { DEFAULT_MAX_EDIT_DAYS_PAST } from '@/lib/database.types'
 
 export default async function DashboardPage() {
@@ -25,7 +25,7 @@ export default async function DashboardPage() {
   const weekStart = dateToString(weekDates[0])
   const weekEnd = dateToString(weekDates[4])
 
-  const [profileResult, todayEntriesResult, weekEntriesResult, plannedEntriesResult, openEntryResult, settingResult] =
+  const [profileResult, todayEntriesResult, weekEntriesResult, plannedEntriesResult, openEntryResult, settingResult, todayAbsenceResult] =
     await Promise.all([
       supabase.from('profiles').select('weekly_hour_limit, bundesland, role, manager_id').eq('id', user.id).single(),
       supabase
@@ -55,6 +55,12 @@ export default async function DashboardPage() {
         .order('date', { ascending: false })
         .limit(1),
       supabase.from('app_settings').select('value').eq('key', 'max_edit_days_past').single(),
+      supabase
+        .from('absences')
+        .select('*, absence_type:absence_types(id, name, color, abbreviation), absence_type_override:absence_type_overrides(id, name, color, abbreviation)')
+        .eq('user_id', user.id)
+        .eq('date', today)
+        .maybeSingle(),
     ])
 
   const isManager = profileResult.data?.role === 'manager'
@@ -76,6 +82,7 @@ export default async function DashboardPage() {
       initialWeekEntries={(weekEntriesResult.data as ActualEntry[] | null) ?? []}
       initialPlannedEntries={(plannedEntriesResult.data as PlannedEntry[] | null) ?? []}
       initialOpenEntry={((openEntryResult.data as ActualEntry[] | null)?.[0]) ?? null}
+      todayAbsence={(todayAbsenceResult.data as AbsenceWithType | null) ?? null}
     />
   )
 }

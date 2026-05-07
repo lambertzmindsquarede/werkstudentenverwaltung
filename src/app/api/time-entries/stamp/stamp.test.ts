@@ -15,11 +15,15 @@ function getBerlinDateTime(): { date: string; time: string } {
   return { date, time }
 }
 
-// Mirrors the POST guard logic (multi-block)
+// Mirrors the POST guard logic (multi-block, including absence check)
 function canStampIn(
+  hasAbsenceToday: boolean,
   openBlock: Pick<ActualEntry, 'id'> | null,
   blockCount: number
 ): { allowed: boolean; error?: string } {
+  if (hasAbsenceToday) {
+    return { allowed: false, error: 'Du bist heute als abwesend eingetragen. Einstempeln ist nicht möglich.' }
+  }
   if (openBlock) {
     return { allowed: false, error: 'Bitte zuerst ausstempeln.' }
   }
@@ -78,36 +82,48 @@ describe('getBerlinDateTime', () => {
 })
 
 describe('canStampIn (POST multi-block guard)', () => {
-  it('allows stamp-in when no open block and 0 blocks today', () => {
-    const result = canStampIn(null, 0)
+  it('allows stamp-in when no absence, no open block, and 0 blocks today', () => {
+    const result = canStampIn(false, null, 0)
     expect(result.allowed).toBe(true)
     expect(result.error).toBeUndefined()
   })
 
-  it('allows stamp-in when no open block and 1 complete block today', () => {
-    const result = canStampIn(null, 1)
+  it('allows stamp-in when no absence, no open block, and 1 complete block today', () => {
+    const result = canStampIn(false, null, 1)
     expect(result.allowed).toBe(true)
   })
 
-  it('allows stamp-in when no open block and 2 complete blocks today', () => {
-    const result = canStampIn(null, 2)
+  it('allows stamp-in when no absence, no open block, and 2 complete blocks today', () => {
+    const result = canStampIn(false, null, 2)
     expect(result.allowed).toBe(true)
+  })
+
+  it('blocks stamp-in when absence is recorded for today', () => {
+    const result = canStampIn(true, null, 0)
+    expect(result.allowed).toBe(false)
+    expect(result.error).toBe('Du bist heute als abwesend eingetragen. Einstempeln ist nicht möglich.')
+  })
+
+  it('absence check takes priority over open-block check', () => {
+    const result = canStampIn(true, { id: 'open-block-id' }, 0)
+    expect(result.allowed).toBe(false)
+    expect(result.error).toBe('Du bist heute als abwesend eingetragen. Einstempeln ist nicht möglich.')
   })
 
   it('blocks stamp-in when an open block exists (must stamp out first)', () => {
-    const result = canStampIn({ id: 'open-block-id' }, 1)
+    const result = canStampIn(false, { id: 'open-block-id' }, 1)
     expect(result.allowed).toBe(false)
     expect(result.error).toBe('Bitte zuerst ausstempeln.')
   })
 
   it('blocks stamp-in when 3 blocks already exist', () => {
-    const result = canStampIn(null, 3)
+    const result = canStampIn(false, null, 3)
     expect(result.allowed).toBe(false)
     expect(result.error).toBe('Maximum 3 Blöcke pro Tag erreicht.')
   })
 
   it('open block check takes priority over count check', () => {
-    const result = canStampIn({ id: 'open-block-id' }, 3)
+    const result = canStampIn(false, { id: 'open-block-id' }, 3)
     expect(result.allowed).toBe(false)
     expect(result.error).toBe('Bitte zuerst ausstempeln.')
   })

@@ -243,6 +243,15 @@ Keine neuen npm-Pakete notwendig — alle benötigten UI-Komponenten (Dialog, Se
 ### Deviations from spec
 - PROJ-15 notification trigger on absence create: commented TODO, silent degradation implemented
 
+## Bug Fix (PROJ-17 Bug #1)
+
+### What was fixed
+- `src/app/dashboard/page.tsx` — Queries `absences` table for today's date (parallel with other queries), passes `todayAbsence` to `DashboardContent`
+- `src/components/zeiterfassung/DashboardContent.tsx` — Added `todayAbsence: AbsenceWithType | null` prop, forwards to `StempelCard`
+- `src/components/zeiterfassung/StempelCard.tsx` — Added `todayAbsence` prop: shows rose-colored absence banner above card; disables stamp-in button with explanation text when absent (stamp-out still allowed for edge case of already open block)
+- `src/app/api/time-entries/stamp/route.ts` — Added server-side absence check in POST handler before allowing stamp-in (defense in depth)
+- `src/app/api/time-entries/stamp/stamp.test.ts` — Updated `canStampIn` guard tests to cover absence check (2 new test cases; 252 total unit tests pass)
+
 ## Implementation Notes (Backend)
 
 ### What was built

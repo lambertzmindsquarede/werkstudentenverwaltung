@@ -9,7 +9,7 @@ import OffenerEintragBanner from './OffenerEintragBanner'
 import WochenIstübersicht from './WochenIstübersicht'
 import IstEintragEditDialog from './IstEintragEditDialog'
 import { getWeekDates, dateToString } from '@/lib/week-utils'
-import type { ActualEntry, PlannedEntry } from '@/lib/database.types'
+import type { ActualEntry, PlannedEntry, AbsenceWithType } from '@/lib/database.types'
 
 interface Props {
   userId: string
@@ -24,6 +24,7 @@ interface Props {
   initialWeekEntries: ActualEntry[]
   initialPlannedEntries: PlannedEntry[]
   initialOpenEntry: ActualEntry | null
+  todayAbsence: AbsenceWithType | null
 }
 
 export default function DashboardContent({
@@ -39,6 +40,7 @@ export default function DashboardContent({
   initialWeekEntries,
   initialPlannedEntries,
   initialOpenEntry,
+  todayAbsence,
 }: Props) {
   const [signingOut, setSigningOut] = useState(false)
   const [currentWeekStr, setCurrentWeekStr] = useState(initialWeekStr)
@@ -198,6 +200,7 @@ export default function DashboardContent({
             today={today}
             isWeekend={isWeekend}
             bundesland={bundesland}
+            todayAbsence={todayAbsence}
             onEntryChange={handleStampEntry}
             onEntryDeleted={handleStampEntryDeleted}
           />

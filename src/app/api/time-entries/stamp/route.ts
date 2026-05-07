@@ -32,6 +32,21 @@ export async function POST(request: Request) {
 
   const { date, time } = getBerlinDateTime()
 
+  // Block stamp-in if absence is recorded for today
+  const { data: todayAbsence } = await supabase
+    .from('absences')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('date', date)
+    .maybeSingle()
+
+  if (todayAbsence) {
+    return NextResponse.json(
+      { error: 'Du bist heute als abwesend eingetragen. Einstempeln ist nicht möglich.' },
+      { status: 409 }
+    )
+  }
+
   // Check for open block (must stamp out before stamping in again)
   const { data: openBlock } = await supabase
     .from('actual_entries')
