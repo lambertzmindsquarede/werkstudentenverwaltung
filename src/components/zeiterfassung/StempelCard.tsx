@@ -306,9 +306,9 @@ export default function StempelCard({
             </div>
           )}
 
-          {/* Active emoji display while stamped in */}
+          {/* Active emoji + Arbeitsort in one row while stamped in */}
           {openBlock && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3 flex-wrap">
               <EmojiPickerPopover
                 selected={openBlock.mood_emoji ?? null}
                 onSelect={updateMoodEmoji}
@@ -326,6 +326,24 @@ export default function StempelCard({
                   )
                 }
               />
+              {arbeitsorte.length > 0 && hasTodayPlan && !todayAbsence && (
+                <Select
+                  value={todayArbeitsortId ?? ''}
+                  onValueChange={handleArbeitsortChange}
+                  disabled={arbeitsortSaving}
+                >
+                  <SelectTrigger className="h-8 text-xs w-44">
+                    <SelectValue placeholder="Arbeitsort wählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {arbeitsorte.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           )}
 
@@ -380,17 +398,17 @@ export default function StempelCard({
             </div>
           )}
 
-          {/* Arbeitsort selector */}
-          {arbeitsorte.length > 0 && hasTodayPlan && !todayAbsence && (
+          {/* Arbeitsort selector when not stamped in */}
+          {!openBlock && arbeitsorte.length > 0 && hasTodayPlan && !todayAbsence && (
             <div className="flex items-center gap-2">
               <span className="text-xs text-slate-500 whitespace-nowrap">Arbeitsort:</span>
               <Select
-                value={todayArbeitsortId ?? '__none__'}
+                value={todayArbeitsortId ?? ''}
                 onValueChange={handleArbeitsortChange}
                 disabled={arbeitsortSaving}
               >
                 <SelectTrigger className="h-8 text-xs w-44">
-                  <SelectValue placeholder="Kein Arbeitsort" />
+                  <SelectValue placeholder="Arbeitsort wählen" />
                 </SelectTrigger>
                 <SelectContent>
                   {arbeitsorte.map((a) => (
