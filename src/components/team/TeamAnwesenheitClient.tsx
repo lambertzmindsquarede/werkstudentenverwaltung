@@ -154,7 +154,7 @@ export default function TeamAnwesenheitClient({
 
             {teamNoStatus.length > 0 && (
               <GruppenSection
-                label="Kein Status"
+                label="Abwesend"
                 members={teamNoStatus}
                 {...sharedProps}
               />

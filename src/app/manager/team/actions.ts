@@ -189,7 +189,7 @@ export async function getTeamPresenceForBereich(
       user_id: member.id,
       full_name: member.full_name,
       group_type: 'no_status',
-      group_label: 'Kein Status',
+      group_label: 'Abwesend',
       arbeitsort_id: null,
       sub_location_id: subLocationId,
       sub_location_name: subLocationName,

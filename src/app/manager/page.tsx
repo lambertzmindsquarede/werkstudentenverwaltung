@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase-server'
 import { ManagerSignOutButton } from '@/components/ManagerSignOutButton'
+import PresenceWidget from './PresenceWidget'
 
 export const dynamic = 'force-dynamic'
 
@@ -173,6 +174,8 @@ export default async function ManagerPage() {
             </CardContent>
           </Card>
         </div>
+
+        <PresenceWidget />
 
         <div className="mt-8 bg-blue-50 border border-blue-100 rounded-xl p-6 text-center">
           <p className="text-slate-500 text-sm">

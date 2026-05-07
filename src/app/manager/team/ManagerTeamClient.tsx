@@ -243,7 +243,7 @@ export default function ManagerTeamClient({
               <GruppenSection key={`absence-${label}`} label={label} members={grpMembers} {...sharedProps} />
             ))}
             {noStatus.length > 0 && (
-              <GruppenSection label="Kein Status" members={noStatus} {...sharedProps} />
+              <GruppenSection label="Abwesend" members={noStatus} {...sharedProps} />
             )}
           </div>
         )}
