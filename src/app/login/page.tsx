@@ -21,11 +21,8 @@ export default async function LoginPage({
 
   return (
     <main className="min-h-screen flex items-center justify-center relative p-4 bg-[url('/login-bg.jpg')] bg-cover bg-center">
-      {/* Subtle overlay for card readability */}
-      <div className="absolute inset-0 bg-white/30" />
-
       <div className="relative w-full max-w-md">
-        <Card className="border-slate-200 bg-white/95 backdrop-blur-sm shadow-2xl">
+        <Card className="border-slate-200 bg-white shadow-[0_8px_48px_rgba(0,0,0,0.35)]">
           <CardHeader className="text-center pb-2 pt-8">
             <div className="flex justify-center mb-6">
               <Image
