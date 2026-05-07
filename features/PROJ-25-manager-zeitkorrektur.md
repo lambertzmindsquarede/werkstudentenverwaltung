@@ -1,6 +1,6 @@
 # PROJ-25: Manager-Zeitkorrektur
 
-## Status: In Review
+## Status: Approved
 **Created:** 2026-05-07
 **Last Updated:** 2026-05-07
 
@@ -218,7 +218,69 @@ Geänderte Dateien:
 - Viertelstunden-Genauigkeit via Select is used (00:00–23:45 range)
 
 ## QA Test Results
-_To be added by /qa_
+
+**QA Date:** 2026-05-07
+**Tester:** /qa skill
+
+### Automated Tests
+- **Unit tests:** 292 existing tests — all pass (`npm test`)
+- **E2E tests:** 20 tests in `tests/PROJ-25-manager-zeitkorrektur.spec.ts` — 15 pass, 5 skipped (werkstudent session not available; no approved entries in seed data)
+- **Regression:** Full E2E suite (126 tests) — all pass, 0 failures
+
+### Acceptance Criteria Results
+
+| # | Criterion | Result |
+|---|-----------|--------|
+| 1 | Each entry in detail view has Bearbeiten (Pencil) and Löschen (Trash) icons | ✅ PASS |
+| 2 | "Eintrag hinzufügen" button visible under each day | ✅ PASS |
+| 3 | Approved entries show icons gray/disabled | ✅ PASS (code: `disabled={isApproved}`, title attribute set) |
+| 4 | Bearbeiten dialog has Startzeit/Endzeit selects (Viertelstunden) and Begründung | ✅ PASS |
+| 5 | Validation: start < end required; reason required | ✅ PASS (inline alert + disabled save button) |
+| 6 | Speichern sets corrected_by and corrected_at on entry | ✅ PASS (Server Action verified) |
+| 7 | Corrected entry shows "Bearbeitet" badge | ✅ PASS (blue badge in TagDetailZeile) |
+| 8 | "Eintrag hinzufügen" dialog has Datum, Start, End, Begründung fields | ⚠️ PARTIAL — see BUG-1 |
+| 9 | Multiple blocks per day allowed (PROJ-8) | ✅ PASS |
+| 10 | New entries get corrected_by/corrected_at set | ✅ PASS (Server Action) |
+| 11 | Delete dialog has Begründung Pflichtfeld | ✅ PASS |
+| 12 | Delete writes audit log to time_entry_corrections, then removes entry | ✅ PASS (Server Action) |
+| 13 | Delete blocked when status = approved | ✅ PASS (Server Action 403 guard) |
+| 14 | WochenIstübersicht shows "Bearbeitet" badge | ✅ PASS (single-block: with Tooltip; multi-block: badge without tooltip — see BUG-2) |
+| 15 | Badge shows Begründung on hover/tooltip | ⚠️ PARTIAL — see BUG-2 and BUG-3 |
+| 16 | time_entries.status field (default draft) | ✅ PASS (migration confirmed) |
+| 17 | Server Actions reject approved entries | ✅ PASS (explicit status check before write) |
+| 18 | Only Manager role can execute correction actions | ✅ PASS (assertManagerAccess check) |
+| 19 | RLS: Manager can only edit Werkstudenten in own Bereich | ✅ PASS (bereich membership check in assertManagerAccess) |
+
+### Security Audit
+- **Authentifizierung:** `assertManagerAccess` prüft Auth via `supabase.auth.getUser()` ✅
+- **Autorisierung:** Explizite Rollen-Prüfung (`role !== 'manager' && !is_admin`) ✅
+- **Bereichs-Isolation:** Manager-Bereich gegen Werkstudenten-Bereich serverseitig abgeglichen — IDOR nicht möglich ✅
+- **Approved-Status-Guard:** Serverseitig vor jeder Schreiboperation geprüft ✅
+- **Zod-Validierung:** Alle Server Action Inputs validiert (Zeitformat, Reason min/max) ✅
+- **Audit-Log:** `time_entry_corrections` wird vor Delete geschrieben (korrekte Reihenfolge) ✅
+
+### Bugs Found
+
+#### BUG-1 (Medium): Datum-Feld fehlt im „Eintrag hinzufügen"-Dialog
+**Datei:** `src/components/manager/auswertung/ZeiteintragHinzufuegenDialog.tsx`
+**Beschreibung:** Die Spec sagt: „Der Dialog ‚Eintrag hinzufügen' enthält Felder für Datum, Start-Uhrzeit, End-Uhrzeit und Begründung." Die Implementierung zeigt das Datum im Dialog-Titel an (kontextabhängig vom angeklickten Tag-Eintrag), stellt aber kein Datum-Feld zur Verfügung. Der Manager kann nur Einträge für den Tag anlegen, unter dem er auf „+ Eintrag hinzufügen" geklickt hat — ohne Möglichkeit, das Datum zu ändern.
+**Auswirkung:** Eingeschränkte Usability (Manager muss den richtigen Tag in der Auflistung suchen und erweitern). Kein Datenverlust, kein Security-Problem.
+**Workaround:** Der Manager expandiert einfach die Zeile des gewünschten Tages.
+
+#### BUG-2 (Low): Multi-Block-„Bearbeitet"-Badge ohne Tooltip in WochenIstübersicht
+**Datei:** `src/components/zeiterfassung/WochenIstübersicht.tsx`, Zeilen 228–232
+**Beschreibung:** Hat ein Tag mehrere Zeitblöcke und mindestens einer ist korrigiert, zeigt die Tageszeile ein „Bearbeitet"-Badge. Dieses Badge hat keinen `<Tooltip>`, obwohl die Spec „Das Badge zeigt bei Hover/Tooltip die Begründung an" fordert. Im Single-Block-Fall (Zeilen 199–212) ist der Tooltip korrekt mit `<TooltipProvider>` implementiert.
+**Auswirkung:** Manager/Werkstudent sieht nicht welcher Block korrigiert wurde und warum (muss ins Detail-Dialog schauen).
+
+#### BUG-3 (Low): TagDetailZeile nutzt natives HTML `title`-Attribut statt shadcn Tooltip
+**Datei:** `src/components/manager/auswertung/TagDetailZeile.tsx`, Zeile 110
+**Beschreibung:** Das „Bearbeitet"-Badge im Manager-Auswertungsbereich nutzt `title={entry.correction_note}` (nativer Browser-Tooltip). WochenIstübersicht verwendet shadcn `<Tooltip>`. Inkonsistenz: nativer `title` funktioniert nicht auf Touch-Geräten.
+**Auswirkung:** Managers auf Tablets/Mobil können den Korrektur-Grund nicht per Hover einsehen.
+
+### Production-Ready Decision
+**READY** — Keine Critical oder High Bugs. Drei Medium/Low Bugs gefunden, alle ohne Datenverlust-Risiko oder Security-Impact. Deployment kann erfolgen.
+
+Next step: `/deploy`
 
 ## Deployment
 _To be added by /deploy_

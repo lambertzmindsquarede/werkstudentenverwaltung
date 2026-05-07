@@ -1,6 +1,6 @@
 # PROJ-6: Auswertung & Export
 
-## Status: In Review
+## Status: Approved
 **Created:** 2026-04-28
 **Last Updated:** 2026-05-07
 
@@ -211,7 +211,7 @@ Keine neuen npm-Pakete notwendig. Alle shadcn-Komponenten und date-fns sind bere
 **QA Date:** 2026-05-07
 **Tester:** /qa skill
 **Fixed:** 2026-05-07
-**Status:** In Review — BUG-1 fixed, ready for re-QA or deploy
+**Status:** Approved — BUG-1 fixed, re-QA 2026-05-07 passed (includes PROJ-25 regression)
 
 ### Automated Tests
 - **Unit tests:** 8 new tests for `utils.ts` (minutesToHHMM) — all pass (`npm test`: 292/292)
