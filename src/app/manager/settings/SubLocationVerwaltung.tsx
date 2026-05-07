@@ -122,7 +122,7 @@ export default function SubLocationVerwaltung({ arbeitsorte, initialSubLocations
     return (
       <Card className="border-slate-200 shadow-sm mt-6">
         <CardHeader>
-          <CardTitle>Sub-Orte</CardTitle>
+          <CardTitle>Arbeitsplätze</CardTitle>
           <CardDescription>
             Noch keine aktiven Arbeitsorte angelegt. Erstelle zuerst Arbeitsorte unter{' '}
             <a href="/manager/arbeitsorte" className="text-blue-600 hover:underline">
@@ -139,10 +139,10 @@ export default function SubLocationVerwaltung({ arbeitsorte, initialSubLocations
     <>
       <Card className="border-slate-200 shadow-sm mt-6">
         <CardHeader>
-          <CardTitle>Sub-Orte konfigurieren</CardTitle>
+          <CardTitle>Arbeitsplätze konfigurieren</CardTitle>
           <CardDescription>
             Lege für jeden Arbeitsort genauere Aufenthaltsorte fest (z.B. „WRK", „LAB", „Platz 3").
-            Werkstudenten können ihren Sub-Ort in der Team-Ansicht selbst setzen.
+            Werkstudenten können ihren Arbeitsplatz in der Team-Ansicht selbst setzen.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -175,7 +175,7 @@ export default function SubLocationVerwaltung({ arbeitsorte, initialSubLocations
                       <span className="font-medium text-slate-800">{arbeitsort.name}</span>
                       {activeCount > 0 && (
                         <Badge variant="secondary" className="text-xs">
-                          {activeCount} Sub-Ort{activeCount !== 1 ? 'e' : ''}
+                          {activeCount !== 1 ? `${activeCount} Arbeitsplätze` : '1 Arbeitsplatz'}
                         </Badge>
                       )}
                     </div>
@@ -183,7 +183,7 @@ export default function SubLocationVerwaltung({ arbeitsorte, initialSubLocations
                   <AccordionContent className="pb-4">
                     <div className="space-y-2">
                       {sls.length === 0 ? (
-                        <p className="text-sm text-slate-400 italic">Keine Sub-Orte angelegt.</p>
+                        <p className="text-sm text-slate-400 italic">Keine Arbeitsplätze angelegt.</p>
                       ) : (
                         sls.map((sl) => (
                           <div
@@ -236,7 +236,7 @@ export default function SubLocationVerwaltung({ arbeitsorte, initialSubLocations
                         onClick={() => openAddDialog(arbeitsort.id)}
                         disabled={isPending}
                       >
-                        + Sub-Ort hinzufügen
+                        + Arbeitsplatz hinzufügen
                       </Button>
                     </div>
                   </AccordionContent>
@@ -254,7 +254,7 @@ export default function SubLocationVerwaltung({ arbeitsorte, initialSubLocations
       >
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Sub-Ort hinzufügen</DialogTitle>
+            <DialogTitle>Arbeitsplatz hinzufügen</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <Label htmlFor="sub-loc-name">Name (z.B. WRK, LAB, Platz 3)</Label>
@@ -295,7 +295,7 @@ export default function SubLocationVerwaltung({ arbeitsorte, initialSubLocations
       >
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Sub-Ort umbenennen</DialogTitle>
+            <DialogTitle>Arbeitsplatz umbenennen</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <Label htmlFor="edit-sub-loc-name">Neuer Name</Label>

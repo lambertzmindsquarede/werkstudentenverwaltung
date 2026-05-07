@@ -36,7 +36,7 @@ export default function PersonenKarte({
   const circleDisabled = isMe && (!hasPlannedDay || isAbsent)
 
   const disabledReason = isAbsent
-    ? 'Bei Abwesenheit kann kein Sub-Ort gesetzt werden.'
+    ? 'Bei Abwesenheit kann kein Arbeitsplatz gesetzt werden.'
     : 'Heute kein Arbeitstag geplant.'
 
   return (
@@ -76,7 +76,7 @@ export default function PersonenKarte({
           onClick={() => canSetSubOrt && setDialogOpen(true)}
           disabled={!canSetSubOrt}
           className={`flex-shrink-0 ${canSetSubOrt ? 'cursor-pointer' : 'cursor-default'}`}
-          aria-label={isMe ? 'Sub-Ort ändern' : undefined}
+          aria-label={isMe ? 'Arbeitsplatz ändern' : undefined}
         >
           <Badge
             variant="secondary"
@@ -99,7 +99,7 @@ export default function PersonenKarte({
                     : 'border-slate-300 hover:border-blue-400 cursor-pointer'
                   }
                 `}
-                aria-label="Sub-Ort setzen"
+                aria-label="Arbeitsplatz setzen"
               />
             </TooltipTrigger>
             {circleDisabled && (
@@ -109,7 +109,7 @@ export default function PersonenKarte({
             )}
             {!circleDisabled && (
               <TooltipContent>
-                <p className="text-xs">Sub-Ort setzen</p>
+                <p className="text-xs">Arbeitsplatz setzen</p>
               </TooltipContent>
             )}
           </Tooltip>

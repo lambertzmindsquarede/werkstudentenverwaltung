@@ -50,13 +50,13 @@ export default function SubOrtDialog({
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Sub-Ort setzen</DialogTitle>
+          <DialogTitle>Arbeitsplatz setzen</DialogTitle>
         </DialogHeader>
 
         {disabled ? (
           <p className="text-sm text-slate-500 py-2">{disabledReason}</p>
         ) : subLocations.length === 0 ? (
-          <p className="text-sm text-slate-500 py-2">Keine Sub-Orte konfiguriert</p>
+          <p className="text-sm text-slate-500 py-2">Keine Arbeitsplätze konfiguriert</p>
         ) : (
           <div className="flex flex-col gap-2 py-2">
             {subLocations.map((sl) => (
@@ -84,7 +84,7 @@ export default function SubOrtDialog({
                 onClick={() => handleSelect(null)}
                 disabled={isPending}
               >
-                Kein Sub-Ort (zurücksetzen)
+                Kein Arbeitsplatz (zurücksetzen)
               </Button>
             )}
           </div>
