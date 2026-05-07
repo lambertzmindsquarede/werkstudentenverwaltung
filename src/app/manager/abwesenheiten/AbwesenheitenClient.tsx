@@ -24,8 +24,9 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import type { AbwesenheitRow } from './actions'
-import { loadManagerAbsences } from './actions'
+import { loadManagerAbsences, deleteAbsenceAsManager } from './actions'
 import type { ResolvedAbsenceType } from '@/lib/database.types'
 import { getAbsenceName, getAbsenceColor, getAbsenceAbbreviation } from '@/lib/database.types'
 
@@ -49,9 +50,13 @@ export default function AbwesenheitenClient({ initialAbsences, werkstudenten, ab
   const [filterUser, setFilterUser] = useState<string>('all')
   const [filterFrom, setFilterFrom] = useState('')
   const [filterTo, setFilterTo] = useState('')
+  const [filterType, setFilterType] = useState<string>('all')
   const [sortKey, setSortKey] = useState<SortKey>('date')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [isPending, startTransition] = useTransition()
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   async function handleSignOut() {
     const supabase = createClient()
@@ -74,10 +79,24 @@ export default function AbwesenheitenClient({ initialAbsences, werkstudenten, ab
     setFilterUser('all')
     setFilterFrom('')
     setFilterTo('')
+    setFilterType('all')
     startTransition(async () => {
       const result = await loadManagerAbsences({})
       if (!result.error) setAbsences(result.data)
     })
+  }
+
+  async function handleDelete(id: string) {
+    setDeletingId(id)
+    setDeleteError(null)
+    const result = await deleteAbsenceAsManager(id)
+    setDeletingId(null)
+    setConfirmingDeleteId(null)
+    if (result.error) {
+      setDeleteError(result.error)
+      return
+    }
+    setAbsences((prev) => prev.filter((ab) => ab.id !== id))
   }
 
   function toggleSort(key: SortKey) {
@@ -89,7 +108,11 @@ export default function AbwesenheitenClient({ initialAbsences, werkstudenten, ab
     }
   }
 
-  const sorted = [...absences].sort((a, b) => {
+  const filtered = filterType === 'all'
+    ? absences
+    : absences.filter((ab) => getAbsenceName(ab) === filterType)
+
+  const sorted = [...filtered].sort((a, b) => {
     let cmp = 0
     if (sortKey === 'date') {
       cmp = a.date.localeCompare(b.date)
@@ -157,7 +180,7 @@ export default function AbwesenheitenClient({ initialAbsences, werkstudenten, ab
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold text-slate-700">Filter</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <div className="space-y-1">
                 <Label className="text-xs">Person</Label>
@@ -170,6 +193,22 @@ export default function AbwesenheitenClient({ initialAbsences, werkstudenten, ab
                     {werkstudenten.map((ws) => (
                       <SelectItem key={ws.id} value={ws.id}>
                         {ws.full_name ?? ws.email ?? ws.id}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Abwesenheitstyp</Label>
+                <Select value={filterType} onValueChange={setFilterType}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Alle" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle Typen</SelectItem>
+                    {absenceTypes.map((t) => (
+                      <SelectItem key={t.id} value={t.name}>
+                        {t.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -193,17 +232,23 @@ export default function AbwesenheitenClient({ initialAbsences, werkstudenten, ab
                   className="h-9 text-sm"
                 />
               </div>
-              <div className="flex items-end gap-2">
-                <Button onClick={applyFilter} disabled={isPending} size="sm" className="flex-1">
-                  {isPending ? 'Laden…' : 'Anwenden'}
-                </Button>
-                <Button onClick={resetFilter} disabled={isPending} variant="outline" size="sm">
-                  Zurücksetzen
-                </Button>
-              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button onClick={applyFilter} disabled={isPending} size="sm">
+                {isPending ? 'Laden…' : 'Anwenden'}
+              </Button>
+              <Button onClick={resetFilter} disabled={isPending} variant="outline" size="sm">
+                Zurücksetzen
+              </Button>
             </div>
           </CardContent>
         </Card>
+
+        {deleteError && (
+          <Alert className="mb-4 border-red-300 bg-red-50">
+            <AlertDescription className="text-red-700 text-sm">{deleteError}</AlertDescription>
+          </Alert>
+        )}
 
         {/* Table */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -225,12 +270,13 @@ export default function AbwesenheitenClient({ initialAbsences, werkstudenten, ab
                 <TableHead>Typ</TableHead>
                 <TableHead>Notiz</TableHead>
                 <TableHead>Erfasst am</TableHead>
+                <TableHead></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sorted.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-slate-400 py-12 text-sm">
+                  <TableCell colSpan={6} className="text-center text-slate-400 py-12 text-sm">
                     Keine Abwesenheiten gefunden.
                   </TableCell>
                 </TableRow>
@@ -265,6 +311,39 @@ export default function AbwesenheitenClient({ initialAbsences, werkstudenten, ab
                           month: '2-digit',
                           year: 'numeric',
                         })}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {confirmingDeleteId === ab.id ? (
+                          <div className="flex items-center justify-end gap-1">
+                            <span className="text-xs text-slate-500 mr-1">Löschen?</span>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              className="h-7 px-2 text-xs"
+                              disabled={deletingId === ab.id}
+                              onClick={() => handleDelete(ab.id)}
+                            >
+                              {deletingId === ab.id ? '…' : 'Ja'}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2 text-xs"
+                              onClick={() => setConfirmingDeleteId(null)}
+                            >
+                              Nein
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2 text-xs text-slate-400 hover:text-red-600 hover:bg-red-50"
+                            onClick={() => { setConfirmingDeleteId(ab.id); setDeleteError(null) }}
+                          >
+                            Löschen
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   )

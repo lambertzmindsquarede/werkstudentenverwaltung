@@ -15,16 +15,26 @@ import {
 } from '@/components/ui/dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import type { AbsenceType } from '@/lib/database.types'
 import {
   createAbsenceType,
   toggleAbsenceTypeActive,
   updateAbsenceType,
+  type BereichOverrideStatus,
 } from './actions'
 
 interface Props {
   initialTypes: AbsenceType[]
   usingDefaults: boolean
+  bereichStatus: BereichOverrideStatus[]
 }
 
 const PRESET_COLORS = [
@@ -32,7 +42,7 @@ const PRESET_COLORS = [
   '#3b82f6', '#8b5cf6', '#ec4899', '#94a3b8',
 ]
 
-export default function AbwesenheitstypenClient({ initialTypes, usingDefaults }: Props) {
+export default function AbwesenheitstypenClient({ initialTypes, usingDefaults, bereichStatus }: Props) {
   const [types, setTypes] = useState<AbsenceType[]>(initialTypes)
   const [showNewDialog, setShowNewDialog] = useState(false)
   const [editingType, setEditingType] = useState<AbsenceType | null>(null)
@@ -275,6 +285,52 @@ export default function AbwesenheitstypenClient({ initialTypes, usingDefaults }:
           </div>
         </CardContent>
       </Card>
+
+      {/* Bereich override overview */}
+      {bereichStatus.length > 0 && (
+        <Card className="mt-6 border-slate-200 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold text-slate-700">
+              Bereichs-Konfigurationen
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Bereiche mit eigener Abwesenheitstyp-Konfiguration überschreiben die globale Liste.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50">
+                  <TableHead className="text-xs">Bereich</TableHead>
+                  <TableHead className="text-xs">Eigene Typen</TableHead>
+                  <TableHead className="text-xs">Aktive Typen</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {bereichStatus.map((b) => (
+                  <TableRow key={b.id}>
+                    <TableCell className="text-sm font-medium">{b.name}</TableCell>
+                    <TableCell>
+                      {b.hasOverrides ? (
+                        <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs font-medium">
+                          Konfiguriert
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-slate-400 border-slate-300 text-xs">
+                          Standard
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm text-slate-600">
+                      {b.hasOverrides ? b.activeOverrideCount : '—'}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
       {/* New type dialog */}
       <Dialog open={showNewDialog} onOpenChange={(open) => { if (!open) setShowNewDialog(false) }}>

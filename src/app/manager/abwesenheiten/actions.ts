@@ -97,6 +97,59 @@ export async function loadManagerAbsences(
   }
 }
 
+export async function deleteAbsenceAsManager(id: string): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Nicht authentifiziert' }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, is_admin')
+    .eq('id', user.id)
+    .single()
+
+  if (profile?.role !== 'manager' && !profile?.is_admin) {
+    return { error: 'Keine Berechtigung' }
+  }
+
+  const { data: absence } = await supabase
+    .from('absences')
+    .select('user_id')
+    .eq('id', id)
+    .single()
+
+  if (!absence) return { error: 'Abwesenheit nicht gefunden' }
+
+  if (!profile?.is_admin) {
+    const { data: assignments } = await supabase
+      .from('bereich_manager')
+      .select('bereich_id')
+      .eq('user_id', user.id)
+
+    const bereichIds = (assignments ?? []).map((a) => a.bereich_id)
+
+    const { data: werkstudentProfile } = await supabase
+      .from('profiles')
+      .select('bereich_id')
+      .eq('id', absence.user_id)
+      .single()
+
+    if (
+      !werkstudentProfile?.bereich_id ||
+      !bereichIds.includes(werkstudentProfile.bereich_id)
+    ) {
+      return { error: 'Zugriff verweigert' }
+    }
+  }
+
+  const { error } = await supabase.from('absences').delete().eq('id', id)
+  if (error) return { error: error.message }
+
+  return {}
+}
+
 export async function getWerkstudentsForManager(): Promise<
   { id: string; full_name: string | null; email: string | null }[]
 > {

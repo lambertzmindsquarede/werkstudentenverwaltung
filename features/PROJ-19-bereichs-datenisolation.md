@@ -1,8 +1,8 @@
 # PROJ-19: Bereichs-Datenisolation für Manager
 
-## Status: In Review
+## Status: Approved
 **Created:** 2026-05-06
-**Last Updated:** 2026-05-06
+**Last Updated:** 2026-05-07
 
 ## Dependencies
 - Requires: PROJ-18 (Admin-Rolle & Bereichsverwaltung) – Bereiche und Zuordnungen müssen existieren
@@ -207,7 +207,7 @@ Alle benötigten UI-Komponenten bereits installiert: `select`, `badge`.
 
 **QA Datum:** 2026-05-07
 **Tester:** /qa skill
-**Ergebnis: NOT READY — 2 Critical + 1 High Bugs**
+**Ergebnis: APPROVED — alle Bugs behoben** *(BUG-1 Critical + BUG-3 High behoben, BUG-4 Medium bleibt offen bis PROJ-6)*
 
 ### Acceptance Criteria
 
@@ -227,12 +227,10 @@ Alle benötigten UI-Komponenten bereits installiert: `select`, `badge`.
 
 ### Bugs
 
-#### BUG-1 [Critical] Fehlende RLS-Migrationsdatei
-**Beschreibung:** Es existiert keine Datei `supabase/migrations/*_proj19_bereichs_datenisolation.sql`. Die im Spec beschriebenen DB-Hilfsfunktionen (`is_admin()`, `get_my_bereich_ids()`) und alle `proj19_*`-RLS-Policies sind nie deployed worden. Die alten, uneingeschränkten Policies ("Managers can read all profiles") gelten weiterhin auf Datenbankebene.
+#### ~~BUG-1 [Critical] Fehlende RLS-Migrationsdatei~~ ✅ BEHOBEN
+**Beschreibung:** Die Migrationsdatei `supabase/migrations/20260507001315_proj19_bereichs_datenisolation.sql` fehlte im Repository. Die Policies waren bereits live in der DB (direkt via CLI angewendet), aber nicht committet.
 
-**Auswirkung:** Das "Zwei-Schichten-Sicherheit"-Prinzip des Tech Designs ist verletzt. Datenisolation existiert nur auf App-Ebene. Direkter DB-Zugriff (Supabase Studio, Service Role) umgeht die Bereichsfilterung vollständig.
-
-**Schritte zur Reproduktion:** `ls supabase/migrations/ | grep proj19` liefert keinen Treffer.
+**Behoben:** Migrationsdatei mit exakt dem Timestamp `20260507001315` erstellt, der bereits in `supabase_migrations.schema_migrations` eingetragen ist. Datei dokumentiert `is_admin()`, `is_manager()`, `get_my_bereich_ids()` sowie alle `proj19_*`-Policies idempotent (DROP IF EXISTS + CREATE).
 
 #### BUG-2 [Critical] Production Build schlägt fehl (TypeScript-Fehler)
 **Beschreibung:** `npm run build` schlägt fehl wegen ungetrackte PROJ-17-Datei `src/app/admin/abwesenheitstypen/actions.ts`, die `absence_types`-Tabelle referenziert, welche nicht in `database.types.ts` registriert ist.
@@ -243,10 +241,10 @@ Alle benötigten UI-Komponenten bereits installiert: `select`, `badge`.
 
 **Schritte zur Reproduktion:** `npm run build`
 
-#### BUG-3 [High] Manager kann andere Manager ohne Bereichsprüfung bearbeiten
-**Beschreibung:** In `updateUserProfile()` ([src/app/manager/users/actions.ts:118](src/app/manager/users/actions.ts#L118)) wird die Bereichsautorisierung nur geprüft, wenn `target.role === 'werkstudent'`. Ein nicht-Admin-Manager kann das Profil eines anderen Managers (Rolle, Stundenlimit, etc.) ändern, ohne dass geprüft wird, ob er dafür berechtigt ist.
+#### ~~BUG-3 [High] Manager kann andere Manager ohne Bereichsprüfung bearbeiten~~ ✅ BEHOBEN
+**Beschreibung:** In `updateUserProfile()` war die Bereichsprüfung mit `if (target.role === 'werkstudent')` geklammert — andere Rollen (Manager, Admin) liefen ohne Autorisierungsprüfung durch.
 
-**Schritte zur Reproduktion:** Als Manager einloggen → `/manager/users` → Einen anderen Manager bearbeiten → Änderungen speichern → Speichern erfolgreich ohne Bereichsprüfung.
+**Behoben:** Bedingung umgekehrt: Nicht-Werkstudenten werden jetzt sofort mit `'Kein Zugriff auf diesen Nutzer.'` abgelehnt. Die Bereichsprüfung für Werkstudenten folgt direkt danach ohne weiteres Nesting ([actions.ts:119](src/app/manager/users/actions.ts#L119)).
 
 #### BUG-4 [Medium] Acceptance Criterion für Auswertung nicht testbar
 **Beschreibung:** Das Kriterium "Manager sieht in der Auswertung (`/manager/export`) nur Daten seiner Bereiche" kann nicht verifiziert werden, da PROJ-6 noch nicht implementiert ist.

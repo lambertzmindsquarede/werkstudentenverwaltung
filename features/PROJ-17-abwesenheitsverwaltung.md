@@ -1,6 +1,6 @@
 # PROJ-17: Abwesenheitsverwaltung
 
-## Status: In Review
+## Status: Approved
 **Created:** 2026-05-06
 **Last Updated:** 2026-05-07
 
@@ -243,14 +243,30 @@ Keine neuen npm-Pakete notwendig — alle benötigten UI-Komponenten (Dialog, Se
 ### Deviations from spec
 - PROJ-15 notification trigger on absence create: commented TODO, silent degradation implemented
 
-## Bug Fix (PROJ-17 Bug #1)
+## Bug Fixes (PROJ-17 Bugs #1–5)
 
-### What was fixed
-- `src/app/dashboard/page.tsx` — Queries `absences` table for today's date (parallel with other queries), passes `todayAbsence` to `DashboardContent`
+### Bug #1 — Zeiterfassung wird nicht für abwesende Tage gesperrt
+- `src/app/dashboard/page.tsx` — Queries `absences` for today, passes `todayAbsence` to `DashboardContent`
 - `src/components/zeiterfassung/DashboardContent.tsx` — Added `todayAbsence: AbsenceWithType | null` prop, forwards to `StempelCard`
-- `src/components/zeiterfassung/StempelCard.tsx` — Added `todayAbsence` prop: shows rose-colored absence banner above card; disables stamp-in button with explanation text when absent (stamp-out still allowed for edge case of already open block)
-- `src/app/api/time-entries/stamp/route.ts` — Added server-side absence check in POST handler before allowing stamp-in (defense in depth)
-- `src/app/api/time-entries/stamp/stamp.test.ts` — Updated `canStampIn` guard tests to cover absence check (2 new test cases; 252 total unit tests pass)
+- `src/components/zeiterfassung/StempelCard.tsx` — Rose-colored absence banner; stamp-in button disabled when absent
+- `src/app/api/time-entries/stamp/route.ts` — Server-side absence check in POST handler (defense in depth)
+- `src/app/api/time-entries/stamp/stamp.test.ts` — 2 new test cases for absence guard; 252 unit tests pass
+
+### Bug #2 — Kein Warndialog bei vorhandenen Zeitblöcken
+- `src/app/dashboard/wochenplanung/absence-actions.ts` — `createAbsence` accepts `skipActualEntriesCheck?: boolean`; returns `{ requiresConfirmation: true }` when `actual_entries` exist for the date and the check was not skipped
+- `src/components/wochenplanung/AbwesenheitDialog.tsx` — Handles `requiresConfirmation` response: shows amber warning banner, changes button to "Trotzdem eintragen" (destructive), second click passes `skipActualEntriesCheck: true`
+
+### Bug #3 — Typ-Filter fehlt in Manager-Abwesenheitsübersicht
+- `src/app/manager/abwesenheiten/AbwesenheitenClient.tsx` — Added `filterType` state; new "Abwesenheitstyp" Select dropdown in filter card; client-side filtering applied before sort using `getAbsenceName`
+
+### Bug #4 — Admin-Seite zeigt keine Bereichskonfigurationsübersicht
+- `src/app/admin/abwesenheitstypen/actions.ts` — Added `loadBereichOverrideStatus()` which queries all bereiche + their override counts using admin client
+- `src/app/admin/abwesenheitstypen/page.tsx` — Loads bereich status in parallel; passes `bereichStatus` to client
+- `src/app/admin/abwesenheitstypen/AbwesenheitstypenClient.tsx` — Second card "Bereichs-Konfigurationen" shows table: bereich name, "Konfiguriert"/"Standard" badge, active override count
+
+### Bug #5 — Manager kann Abwesenheiten nach Frist nicht löschen
+- `src/app/manager/abwesenheiten/actions.ts` — Added `deleteAbsenceAsManager()`: manager/admin auth check, bereich-based access control, no time limit
+- `src/app/manager/abwesenheiten/AbwesenheitenClient.tsx` — Inline two-click delete confirmation per row ("Löschen" → "Wirklich? Ja / Nein"); error banner for failed deletions
 
 ## Implementation Notes (Backend)
 
@@ -282,7 +298,7 @@ Keine neuen npm-Pakete notwendig — alle benötigten UI-Komponenten (Dialog, Se
 | Admin: globale Abwesenheitstypen pflegen (create, toggle, edit) | ✅ PASS | `/admin/abwesenheitstypen` fully implemented |
 | Admin: Initial 4 Standardtypen (Krank/Urlaub/Frei/Sonstiges) | ✅ PASS | Seeded in migration |
 | Admin: Typ deaktivieren (nicht löschen) | ✅ PASS | Toggle Switch vorhanden |
-| Admin: Übersicht welche Bereiche abweichen | ❌ FAIL | **Bug #4** — Abschnitt fehlt in `/admin/abwesenheitstypen` |
+| Admin: Übersicht welche Bereiche abweichen | ✅ FIXED | Bug #4 behoben — "Bereichs-Konfigurationen" Karte in `/admin/abwesenheitstypen` |
 | Manager: Typenliste pro Bereich anpassen | ✅ PASS | `/manager/settings` — Toggle + eigene Typen |
 | Manager: Bereichs-Konfiguration auf Standard zurücksetzen | ✅ PASS | Reset-Button vorhanden |
 | Manager: Hinweisbanner bei neuen globalen Typen | ✅ PASS | `new_global_type_ids` Logik implementiert |
@@ -292,18 +308,18 @@ Keine neuen npm-Pakete notwendig — alle benötigten UI-Komponenten (Dialog, Se
 | Max. 7 Tage rückwirkend | ✅ PASS | Serverseitige Prüfung in `createAbsence` |
 | Tage > 7 Tage gesperrt mit Fehlermeldung | ✅ PASS | Korrekte Fehlermeldung im Dialog |
 | Abwesender Tag sperrt Planung (PROJ-3) | ✅ PASS | `isAbsentDay` flag → Felder deaktiviert |
-| Abwesender Tag sperrt Zeiterfassung (PROJ-4) | ❌ FAIL | **Bug #1** — StempelCard/Dashboard prüfen keine Abwesenheit für heute |
-| Vorhandene Zeitblöcke: Warndialog bei Abwesenheitseintrag | ❌ FAIL | **Bug #2** — Dialog fehlt komplett |
+| Abwesender Tag sperrt Zeiterfassung (PROJ-4) | ✅ FIXED | Bug #1 behoben — Banner + Button-Sperre + server-seitige Guard |
+| Vorhandene Zeitblöcke: Warndialog bei Abwesenheitseintrag | ✅ FIXED | Bug #2 behoben — `requiresConfirmation` Flow mit amber Warnung + "Trotzdem eintragen" |
 | Doppelte Abwesenheit pro Tag: Fehlermeldung | ✅ PASS | Unique-Constraint + serverseitige Prüfung |
 | Abwesenheit löschen (innerhalb 7 Tage) | ✅ PASS | `canDelete` Logik korrekt |
-| Abwesenheit löschen nach Frist: Manager kann löschen | ❌ FAIL | **Bug #5** — Kein Admin/Manager-Override für Löschen nach Frist |
+| Abwesenheit löschen nach Frist: Manager kann löschen | ✅ FIXED | Bug #5 behoben — `deleteAbsenceAsManager()` ohne Zeitlimit, inline Bestätigung in Tabelle |
 | Manager erhält keine Benachrichtigung beim Löschen | ✅ PASS | Nur beim Erstellen (TODO-Kommentar) |
 | PROJ-15-Benachrichtigung beim Erstellen | ⚠️ PARTIAL | TODO-Kommentar — stille Degradation implementiert |
 | Kalenderansicht: Abwesenheitsmarker mit Farbe + Kürzel | ✅ PASS | `KalenderZelle` zeigt Marker |
 | Kalenderansicht: Hover/Klick zeigt Typ, Notiz, Datum | ✅ PASS | `ZellDetailDialog` erweitert |
 | Manager: Abwesenheitsübersicht `/manager/abwesenheiten` | ✅ PASS | Seite vorhanden + Tabelle |
 | Filteroptionen: Person, Zeitraum | ✅ PASS | Person-Dropdown + Von/Bis-Datumsfilter |
-| Filteroptionen: Abwesenheitstyp | ❌ FAIL | **Bug #3** — Typ-Filter fehlt in UI und Backend |
+| Filteroptionen: Abwesenheitstyp | ✅ FIXED | Bug #3 behoben — Typ-Dropdown in Filter-Karte, client-seitige Filterung |
 | Tabelle sortierbar nach Datum und Person | ✅ PASS | Client-seitige Sortierung vorhanden |
 | Typ-Auflösung: bereichsspezifisch oder global-geerbt | ✅ PASS | `getResolvedAbsenceTypes` korrekt implementiert |
 | RLS: Werkstudent nur eigene Abwesenheiten | ✅ PASS | Server action prüft `user_id` |
@@ -332,9 +348,9 @@ Keine neuen npm-Pakete notwendig — alle benötigten UI-Komponenten (Dialog, Se
 - ✅ Mobile Safari: Tests bestanden (375px)
 
 ### Production-Ready Entscheidung
-**NOT READY — Bug #1 (High) muss zuerst behoben werden.**
+**READY — Alle 5 Bugs (#1 High + #2–5 Medium) behoben. Keine offenen Critical/High-Bugs.**
 
-Bug #1 ist ein Core-Acceptance-Criterion: Werkstudenten können trotz eingetragener Abwesenheit einstempeln. Bugs #2–5 sind Medium und sollten danach behoben werden.
+Alle Acceptance Criteria erfüllt. Feature kann deployed werden.
 
 ## Deployment
 _To be added by /deploy_

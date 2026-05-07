@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import { ManagerSignOutButton } from '@/components/ManagerSignOutButton'
-import { loadGlobalAbsenceTypes } from './actions'
+import { loadGlobalAbsenceTypes, loadBereichOverrideStatus } from './actions'
 import AbwesenheitstypenClient from './AbwesenheitstypenClient'
 
 export const dynamic = 'force-dynamic'
@@ -23,7 +23,10 @@ export default async function AdminAbwesenheitstypenPage() {
 
   if (!profile?.is_admin) redirect('/dashboard')
 
-  const { data: types, usingDefaults } = await loadGlobalAbsenceTypes()
+  const [{ data: types, usingDefaults }, { data: bereichStatus }] = await Promise.all([
+    loadGlobalAbsenceTypes(),
+    loadBereichOverrideStatus(),
+  ])
 
   const navItems = [
     { href: '/admin', label: 'Übersicht' },
@@ -65,7 +68,11 @@ export default async function AdminAbwesenheitstypenPage() {
         </div>
       </nav>
 
-      <AbwesenheitstypenClient initialTypes={types} usingDefaults={usingDefaults ?? false} />
+      <AbwesenheitstypenClient
+        initialTypes={types}
+        usingDefaults={usingDefaults ?? false}
+        bereichStatus={bereichStatus ?? []}
+      />
     </div>
   )
 }

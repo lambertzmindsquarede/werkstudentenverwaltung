@@ -63,6 +63,7 @@ export default function AbwesenheitDialog({
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [needsConfirmation, setNeedsConfirmation] = useState(false)
 
   const today = new Date().toLocaleDateString('sv', { timeZone: 'Europe/Berlin' })
   const sevenDaysAgo = new Date()
@@ -70,16 +71,13 @@ export default function AbwesenheitDialog({
   const sevenDaysAgoStr = sevenDaysAgo.toLocaleDateString('sv', { timeZone: 'Europe/Berlin' })
   const canDelete = absence && absence.date >= sevenDaysAgoStr
 
-  async function handleCreate() {
-    if (!selectedTypeId) {
-      setError('Bitte einen Abwesenheitstyp wählen.')
-      return
-    }
-    const selectedType = absenceTypes.find((t) => t.id === selectedTypeId)
-    if (!selectedType) {
-      setError('Ungültiger Typ gewählt.')
-      return
-    }
+  function getSelectedType() {
+    return absenceTypes.find((t) => t.id === selectedTypeId) ?? null
+  }
+
+  async function submitAbsence(skipCheck: boolean) {
+    const selectedType = getSelectedType()
+    if (!selectedType) return
 
     setSaving(true)
     setError(null)
@@ -92,19 +90,26 @@ export default function AbwesenheitDialog({
       typeName: selectedType.name,
       typeColor: selectedType.color,
       typeAbbreviation: selectedType.abbreviation,
+      skipActualEntriesCheck: skipCheck,
     })
 
     setSaving(false)
 
+    if (result.requiresConfirmation) {
+      setNeedsConfirmation(true)
+      return
+    }
+
     if (result.error) {
       setError(result.error)
+      setNeedsConfirmation(false)
       return
     }
 
     if (result.data) {
       onCreated(result.data)
     } else {
-      // Fallback: create a synthetic absence with the selected type info
+      const selectedType = getSelectedType()!
       const synthetic: AbsenceWithType = {
         id: 'temp-' + Date.now(),
         user_id: '',
@@ -130,6 +135,22 @@ export default function AbwesenheitDialog({
       onCreated(synthetic)
     }
     onClose()
+  }
+
+  async function handleCreate() {
+    if (!selectedTypeId) {
+      setError('Bitte einen Abwesenheitstyp wählen.')
+      return
+    }
+    if (!getSelectedType()) {
+      setError('Ungültiger Typ gewählt.')
+      return
+    }
+    await submitAbsence(false)
+  }
+
+  async function handleConfirmedCreate() {
+    await submitAbsence(true)
   }
 
   async function handleDelete() {
@@ -271,6 +292,15 @@ export default function AbwesenheitDialog({
               </>
             )}
 
+            {needsConfirmation && (
+              <Alert className="border-amber-300 bg-amber-50">
+                <AlertDescription className="text-amber-800 text-sm">
+                  Du hast für diesen Tag bereits Zeitblöcke erfasst. Diese werden durch die Abwesenheit
+                  nicht automatisch gelöscht. Möchtest du die Abwesenheit trotzdem eintragen?
+                </AlertDescription>
+              </Alert>
+            )}
+
             {error && (
               <Alert className="border-red-300 bg-red-50">
                 <AlertDescription className="text-red-700 text-sm">{error}</AlertDescription>
@@ -278,12 +308,23 @@ export default function AbwesenheitDialog({
             )}
 
             <DialogFooter className="gap-2">
-              <Button variant="outline" onClick={onClose}>
-                Abbrechen
+              <Button
+                variant="outline"
+                onClick={needsConfirmation ? () => setNeedsConfirmation(false) : onClose}
+              >
+                {needsConfirmation ? 'Zurück' : 'Abbrechen'}
               </Button>
               {absenceTypes.length > 0 && (
-                <Button onClick={handleCreate} disabled={saving || !selectedTypeId}>
-                  {saving ? 'Wird gespeichert…' : 'Abwesenheit eintragen'}
+                <Button
+                  onClick={needsConfirmation ? handleConfirmedCreate : handleCreate}
+                  disabled={saving || !selectedTypeId}
+                  variant={needsConfirmation ? 'destructive' : 'default'}
+                >
+                  {saving
+                    ? 'Wird gespeichert…'
+                    : needsConfirmation
+                    ? 'Trotzdem eintragen'
+                    : 'Abwesenheit eintragen'}
                 </Button>
               )}
             </DialogFooter>

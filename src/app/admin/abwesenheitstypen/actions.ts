@@ -99,6 +99,49 @@ export async function toggleAbsenceTypeActive(
   return {}
 }
 
+export interface BereichOverrideStatus {
+  id: string
+  name: string
+  hasOverrides: boolean
+  activeOverrideCount: number
+}
+
+export async function loadBereichOverrideStatus(): Promise<{
+  data: BereichOverrideStatus[]
+  error?: string
+}> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { data: [], error: 'Nicht authentifiziert' }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('is_admin')
+    .eq('id', user.id)
+    .single()
+  if (!profile?.is_admin) return { data: [], error: 'Keine Berechtigung' }
+
+  const admin = createAdminClient()
+  const [bereicheResult, overridesResult] = await Promise.all([
+    admin.from('bereiche').select('id, name').order('name'),
+    admin.from('absence_type_overrides').select('bereich_id, id, is_active'),
+  ])
+
+  const data: BereichOverrideStatus[] = (bereicheResult.data ?? []).map((b) => {
+    const bOverrides = (overridesResult.data ?? []).filter((o) => o.bereich_id === b.id)
+    return {
+      id: b.id,
+      name: b.name,
+      hasOverrides: bOverrides.length > 0,
+      activeOverrideCount: bOverrides.filter((o) => o.is_active).length,
+    }
+  })
+
+  return { data }
+}
+
 export async function updateAbsenceType(
   id: string,
   input: z.infer<typeof CreateTypeSchema>

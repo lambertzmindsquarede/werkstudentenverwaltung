@@ -112,11 +112,12 @@ const CreateAbsenceSchema = z.object({
   typeName: z.string().min(1),
   typeColor: z.string().nullable().optional(),
   typeAbbreviation: z.string().nullable().optional(),
+  skipActualEntriesCheck: z.boolean().optional(),
 })
 
 export async function createAbsence(
   input: z.infer<typeof CreateAbsenceSchema>
-): Promise<{ data?: AbsenceWithType; error?: string }> {
+): Promise<{ data?: AbsenceWithType; error?: string; requiresConfirmation?: boolean }> {
   const supabase = await createClient()
   const {
     data: { user },
@@ -126,7 +127,7 @@ export async function createAbsence(
   const parsed = CreateAbsenceSchema.safeParse(input)
   if (!parsed.success) return { error: 'Ungültige Eingabe' }
 
-  const { date, typeId, isOverrideType, note } = parsed.data
+  const { date, typeId, isOverrideType, note, skipActualEntriesCheck } = parsed.data
 
   const sevenDaysAgo = new Date()
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
@@ -142,6 +143,19 @@ export async function createAbsence(
   }
 
   try {
+    if (!skipActualEntriesCheck) {
+      const { data: actualEntries } = await supabase
+        .from('actual_entries')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('date', date)
+        .limit(1)
+
+      if (actualEntries && actualEntries.length > 0) {
+        return { requiresConfirmation: true }
+      }
+    }
+
     const { data: existing } = await supabase
       .from('absences')
       .select('id')
