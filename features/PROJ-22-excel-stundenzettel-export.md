@@ -221,7 +221,7 @@ Keine weiteren Datenbankänderungen notwendig.
 
 **QA Date:** 2026-05-07  
 **Tester:** /qa skill  
-**Overall Result:** ❌ NOT READY — 1 High bug found
+**Overall Result:** ✅ APPROVED — alle Bugs behoben (2026-05-07)
 
 ---
 
@@ -242,25 +242,18 @@ Keine weiteren Datenbankänderungen notwendig.
 | 11 | File download with correct JJJJ-MM_Nachname_Vorname.xlsx filename | ✅ PASS — buildFileName logic verified by unit tests |
 | 12 | Filename Umlaut normalization (ä→ae, ö→oe, ü→ue, ß→ss) | ✅ PASS — 27 unit tests covering all cases |
 | 13 | Pers.-Nr. column in manager Users table | ✅ PASS — column header visible with missing indicator |
-| 14 | Manager export button per werkstudent row | ❌ FAIL — **High Bug #1** |
+| 14 | Manager export button per werkstudent row | ✅ PASS — behoben in fix(PROJ-22) commit 6fcd1bc |
 | 15 | RLS: Manager from different bereich blocked | ✅ PASS — access check in API routes verified in code |
 | 16 | Export button visible on mobile (375px) | ✅ PASS |
 
-**15/16 criteria pass.**
+**16/16 criteria pass.**
 
 ---
 
 ### Bugs Found
 
-#### BUG-1 — HIGH: Export button missing from manager Users table
-**Steps to reproduce:**
-1. Log in as a manager
-2. Navigate to `/manager/users`
-3. Look at werkstudent rows in the action column
-
-**Expected:** "Stundenzettel exportieren" button next to "Bearbeiten" for each werkstudent row  
-**Actual:** Only "Bearbeiten" button — no export button rendered  
-**Root cause:** `StundenzettelExportButton` is imported in `UsersClient.tsx` (line 41) but was not placed in the last `<TableCell>` action column (lines 597–608). The `{user.role === 'werkstudent' && <StundenzettelExportButton ... />}` block is missing from the JSX.
+#### BUG-1 — HIGH: Export button missing from manager Users table ✅ BEHOBEN
+**Fix:** Import und JSX-Block in `src/app/manager/users/UsersClient.tsx` ergänzt (commit 6fcd1bc). E2E-Test 14 bestätigt Fix.
 
 ---
 

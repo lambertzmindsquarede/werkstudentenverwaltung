@@ -35,8 +35,10 @@
 | PROJ-19 | Bereichs-Datenisolation für Manager | Deployed | [PROJ-19-bereichs-datenisolation.md](PROJ-19-bereichs-datenisolation.md) | 2026-05-06 |
 | PROJ-20 | Team-Anwesenheitsübersicht | Deployed | [PROJ-20-team-anwesenheitsuebersicht.md](PROJ-20-team-anwesenheitsuebersicht.md) | 2026-05-06 |
 | PROJ-21 | Stimmungs-Emoji beim Einstempeln | Deployed | [PROJ-21-stimmungs-emoji.md](PROJ-21-stimmungs-emoji.md) | 2026-05-07 |
-| PROJ-22 | Excel-Stundenzettel-Export (HR-Vorlage) | In Review | [PROJ-22-excel-stundenzettel-export.md](PROJ-22-excel-stundenzettel-export.md) | 2026-05-07 |
+| PROJ-22 | Excel-Stundenzettel-Export (HR-Vorlage) | Approved | [PROJ-22-excel-stundenzettel-export.md](PROJ-22-excel-stundenzettel-export.md) | 2026-05-07 |
+| PROJ-23 | Deckungsübersicht für Manager | Architected | [PROJ-23-deckungsuebersicht.md](PROJ-23-deckungsuebersicht.md) | 2026-05-07 |
+| PROJ-24 | Abwesenheiten pro Bereich deaktivierbar | Architected | [PROJ-24-abwesenheiten-bereich-toggle.md](PROJ-24-abwesenheiten-bereich-toggle.md) | 2026-05-07 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-23
+## Next Available ID: PROJ-25
