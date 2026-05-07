@@ -41,6 +41,7 @@ import { assignWerkstudentToBereich, getManagerBereichIds, setManagerBereiche } 
 import type { Profile, UserRole, Bereich } from '@/lib/database.types'
 import { BUNDESLAENDER, DEFAULT_BUNDESLAND } from '@/lib/bundesland-utils'
 import { AlertCircle } from 'lucide-react'
+import StundenzettelExportButton from '@/components/zeiterfassung/StundenzettelExportButton'
 
 type FilterStatus = 'all' | 'pending' | 'active' | 'inactive'
 type FilterRole = 'all' | 'werkstudent' | 'manager'
@@ -596,6 +597,13 @@ export default function UsersClient({
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
+                          {user.role === 'werkstudent' && (
+                            <StundenzettelExportButton
+                              userId={user.id}
+                              disabled={!user.personalnummer}
+                              disabledReason="Personalnummer fehlt."
+                            />
+                          )}
                           <Button
                             variant="outline"
                             size="sm"
