@@ -19,6 +19,7 @@ interface DaySummary {
   dateLabel: string
   startTime: string
   endTime: string
+  breakMinutes: number
   hours: number
 }
 
@@ -128,6 +129,7 @@ export default function StundenzettelExportButton({ userId, disabled, disabledRe
   }
 
   const hasAnyData = months.some((m) => m.hasData)
+  const totalHours = Math.round(months.reduce((sum, m) => sum + m.totalHours, 0) * 10) / 10
 
   return (
     <>
@@ -192,6 +194,7 @@ export default function StundenzettelExportButton({ userId, disabled, disabledRe
                     <tr>
                       <th className="px-3 py-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Tag / Monat</th>
                       <th className="px-3 py-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Zeitraum</th>
+                      <th className="px-3 py-2 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide">Pause</th>
                       <th className="px-3 py-2 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide">Stunden</th>
                     </tr>
                   </thead>
@@ -202,6 +205,7 @@ export default function StundenzettelExportButton({ userId, disabled, disabledRe
                         <tr key={`month-${m.year}-${m.month}`} className="border-t border-slate-200 bg-slate-50">
                           <td className="px-3 py-2 font-semibold text-slate-800">{m.monthLabel}</td>
                           <td className="px-3 py-2 text-slate-500 text-xs">{m.rangeLabel}</td>
+                          <td className="px-3 py-2 text-right text-slate-400">—</td>
                           <td className="px-3 py-2 text-right font-semibold text-slate-700">
                             {m.hasData ? `${m.totalHours} h` : <span className="text-slate-400">—</span>}
                           </td>
@@ -211,16 +215,28 @@ export default function StundenzettelExportButton({ userId, disabled, disabledRe
                           <tr key={d.date} className="border-t border-slate-100 hover:bg-slate-50/50">
                             <td className="pl-6 pr-3 py-1.5 text-slate-600 text-xs">{d.dateLabel}</td>
                             <td className="px-3 py-1.5 text-slate-500 text-xs tabular-nums">{d.startTime} – {d.endTime}</td>
+                            <td className="px-3 py-1.5 text-right text-slate-500 text-xs tabular-nums">
+                              {d.breakMinutes > 0 ? `${d.breakMinutes} min` : <span className="text-slate-300">—</span>}
+                            </td>
                             <td className="px-3 py-1.5 text-right text-slate-600 text-xs tabular-nums">{d.hours} h</td>
                           </tr>
                         ))}
                         {!m.hasData && (
                           <tr key={`empty-${m.year}-${m.month}`} className="border-t border-slate-100">
-                            <td colSpan={3} className="pl-6 pr-3 py-1.5 text-xs text-slate-400 italic">Keine Einträge</td>
+                            <td colSpan={4} className="pl-6 pr-3 py-1.5 text-xs text-slate-400 italic">Keine Einträge</td>
                           </tr>
                         )}
                       </>
                     ))}
+                    {/* Total row */}
+                    {hasAnyData && (
+                      <tr className="border-t-2 border-slate-300 bg-slate-50">
+                        <td className="px-3 py-2 font-semibold text-slate-800">Gesamt</td>
+                        <td className="px-3 py-2" />
+                        <td className="px-3 py-2" />
+                        <td className="px-3 py-2 text-right font-semibold text-slate-800">{totalHours} h</td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>

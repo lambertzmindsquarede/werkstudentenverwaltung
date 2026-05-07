@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
 
     let daysWithData = 0
     let totalMinutes = 0
-    const days: { date: string; dateLabel: string; startTime: string; endTime: string; hours: number }[] = []
+    const days: { date: string; dateLabel: string; startTime: string; endTime: string; breakMinutes: number; hours: number }[] = []
 
     for (let day = 1; day <= daysInMonth; day++) {
       const dateStr = `${year}-${mm}-${String(day).padStart(2, '0')}`
@@ -121,6 +121,7 @@ export async function POST(req: NextRequest) {
         dateLabel: `${weekday}, ${String(day).padStart(2, '0')}.${mm}.`,
         startTime: sorted[0].actual_start.slice(0, 5),
         endTime: sorted[sorted.length - 1].actual_end.slice(0, 5),
+        breakMinutes: pauseMin,
         hours: Math.round((dayMinutes / 60) * 10) / 10,
       })
     }
