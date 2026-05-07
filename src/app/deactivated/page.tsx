@@ -25,10 +25,10 @@ export default function DeactivatedPage() {
             <div className="flex justify-center mb-6">
               <div className="bg-white rounded-xl px-6 py-3 shadow-lg">
                 <Image
-                  src="/mindsquare-logo.svg"
+                  src="/logo-mindsquare-176x781.webp"
                   alt="mindsquare"
-                  width={160}
-                  height={38}
+                  width={126}
+                  height={56}
                   priority
                 />
               </div>

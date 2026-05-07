@@ -31,7 +31,7 @@ export default function ManagerNav({ isAdmin }: Props) {
     <>
       <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-3">
-          <Image src="/mindsquare-logo.svg" alt="mindsquare" width={130} height={32} />
+          <Image src="/logo-mindsquare-176x781.webp" alt="mindsquare" width={90} height={40} />
           <span className="text-slate-300">|</span>
           <span className="text-slate-600 text-sm font-medium">Werkstudentenverwaltung</span>
         </div>
