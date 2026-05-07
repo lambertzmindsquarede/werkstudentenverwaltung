@@ -1,6 +1,6 @@
 # PROJ-6: Auswertung & Export
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-04-28
 **Last Updated:** 2026-05-07
 

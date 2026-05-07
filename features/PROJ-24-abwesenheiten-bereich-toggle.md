@@ -1,6 +1,6 @@
 # PROJ-24: Abwesenheiten pro Bereich deaktivierbar
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-05-07
 **Last Updated:** 2026-05-07
 
