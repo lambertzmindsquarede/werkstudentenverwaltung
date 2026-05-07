@@ -14,6 +14,14 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 
+interface DaySummary {
+  date: string
+  dateLabel: string
+  startTime: string
+  endTime: string
+  hours: number
+}
+
 interface MonthSummary {
   year: number
   month: number
@@ -22,6 +30,7 @@ interface MonthSummary {
   daysWithData: number
   totalHours: number
   hasData: boolean
+  days: DaySummary[]
 }
 
 function toLocalDateString(d: Date): string {
@@ -177,26 +186,40 @@ export default function StundenzettelExportButton({ userId, disabled, disabledRe
               <p className="text-sm text-slate-500">
                 Folgende Dateien werden erzeugt:
               </p>
-              <div className="rounded-lg border border-slate-200 overflow-hidden">
+              <div className="rounded-lg border border-slate-200 overflow-hidden max-h-[60vh] overflow-y-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50">
+                  <thead className="bg-slate-50 sticky top-0 z-10">
                     <tr>
-                      <th className="px-3 py-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Monat</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Tag / Monat</th>
                       <th className="px-3 py-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Zeitraum</th>
-                      <th className="px-3 py-2 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide">Tage</th>
                       <th className="px-3 py-2 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide">Stunden</th>
                     </tr>
                   </thead>
                   <tbody>
                     {months.map((m) => (
-                      <tr key={`${m.year}-${m.month}`} className="border-t border-slate-100">
-                        <td className="px-3 py-2 text-slate-800">{m.monthLabel}</td>
-                        <td className="px-3 py-2 text-slate-500 text-xs">{m.rangeLabel}</td>
-                        <td className="px-3 py-2 text-right text-slate-700">{m.daysWithData}</td>
-                        <td className="px-3 py-2 text-right text-slate-700">
-                          {m.hasData ? `${m.totalHours} h` : <span className="text-slate-400">—</span>}
-                        </td>
-                      </tr>
+                      <>
+                        {/* Month header row */}
+                        <tr key={`month-${m.year}-${m.month}`} className="border-t border-slate-200 bg-slate-50">
+                          <td className="px-3 py-2 font-semibold text-slate-800">{m.monthLabel}</td>
+                          <td className="px-3 py-2 text-slate-500 text-xs">{m.rangeLabel}</td>
+                          <td className="px-3 py-2 text-right font-semibold text-slate-700">
+                            {m.hasData ? `${m.totalHours} h` : <span className="text-slate-400">—</span>}
+                          </td>
+                        </tr>
+                        {/* Day rows */}
+                        {m.days.map((d) => (
+                          <tr key={d.date} className="border-t border-slate-100 hover:bg-slate-50/50">
+                            <td className="pl-6 pr-3 py-1.5 text-slate-600 text-xs">{d.dateLabel}</td>
+                            <td className="px-3 py-1.5 text-slate-500 text-xs tabular-nums">{d.startTime} – {d.endTime}</td>
+                            <td className="px-3 py-1.5 text-right text-slate-600 text-xs tabular-nums">{d.hours} h</td>
+                          </tr>
+                        ))}
+                        {!m.hasData && (
+                          <tr key={`empty-${m.year}-${m.month}`} className="border-t border-slate-100">
+                            <td colSpan={3} className="pl-6 pr-3 py-1.5 text-xs text-slate-400 italic">Keine Einträge</td>
+                          </tr>
+                        )}
+                      </>
                     ))}
                   </tbody>
                 </table>
