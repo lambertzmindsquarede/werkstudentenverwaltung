@@ -1,4 +1,5 @@
-import type { PlannedEntry, ActualEntry } from '@/lib/database.types'
+import type { PlannedEntry, ActualEntry, AbsenceWithType } from '@/lib/database.types'
+import { getAbsenceName, getAbsenceColor, getAbsenceAbbreviation } from '@/lib/database.types'
 import { calcBlockHours } from '@/lib/time-block-utils'
 import {
   Tooltip,
@@ -13,6 +14,7 @@ interface Props {
   date: string
   today: string
   holidayName?: string | null
+  absence?: AbsenceWithType | null
   onClick: () => void
 }
 
@@ -45,7 +47,7 @@ const statusStyles: Record<CellStatus, string> = {
   both: 'bg-green-50 hover:bg-green-100 border border-green-200',
 }
 
-export default function KalenderZelle({ plans, actuals, date, today, holidayName, onClick }: Props) {
+export default function KalenderZelle({ plans, actuals, date, today, holidayName, absence, onClick }: Props) {
   const status = getCellStatus(plans, actuals, date, today)
 
   const planHours = plans.reduce((s, p) => s + calcBlockHours(p.planned_start, p.planned_end), 0)
@@ -80,16 +82,17 @@ export default function KalenderZelle({ plans, actuals, date, today, holidayName
       ? `${actStart} →`
       : null
 
+  const isClickable = status !== 'empty' || !!absence
   return (
     <button
-      onClick={status !== 'empty' ? onClick : undefined}
-      disabled={status === 'empty'}
+      onClick={isClickable ? onClick : undefined}
+      disabled={!isClickable}
       className={`
         w-full h-full min-h-[72px] rounded-md px-2 py-1.5 text-left transition-colors
         ${statusStyles[status]}
-        ${status === 'empty' ? 'cursor-default' : 'cursor-pointer'}
+        ${!isClickable ? 'cursor-default' : 'cursor-pointer'}
       `}
-      aria-label={status === 'empty' ? 'Kein Eintrag' : 'Zellendetails öffnen'}
+      aria-label={!isClickable ? 'Kein Eintrag' : 'Zellendetails öffnen'}
     >
       {status === 'empty' && <span className="text-slate-300 text-xs">—</span>}
 
@@ -138,6 +141,17 @@ export default function KalenderZelle({ plans, actuals, date, today, holidayName
       {holidayName && (
         <div className="mt-1 text-xs bg-amber-100 text-amber-700 rounded px-1 py-0.5 truncate font-medium">
           🗓 {holidayName}
+        </div>
+      )}
+
+      {absence && (
+        <div
+          className="mt-1 text-xs rounded px-1.5 py-0.5 font-medium text-white flex items-center gap-1 truncate"
+          style={{ backgroundColor: getAbsenceColor(absence) }}
+          title={`${getAbsenceName(absence)}${absence.note ? ` – ${absence.note}` : ''}`}
+        >
+          <span className="flex-shrink-0 font-bold">{getAbsenceAbbreviation(absence)}</span>
+          <span className="truncate">{getAbsenceName(absence)}</span>
         </div>
       )}
 

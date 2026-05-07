@@ -7,7 +7,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
-import type { PlannedEntry, ActualEntry } from '@/lib/database.types'
+import type { PlannedEntry, ActualEntry, AbsenceWithType } from '@/lib/database.types'
+import { getAbsenceName, getAbsenceColor, getAbsenceAbbreviation } from '@/lib/database.types'
 import { calcBlockHours } from '@/lib/time-block-utils'
 
 export interface SelectedCell {
@@ -15,6 +16,7 @@ export interface SelectedCell {
   date: string
   plans: PlannedEntry[]
   actuals: ActualEntry[]
+  absence?: AbsenceWithType | null
 }
 
 interface Props {
@@ -58,6 +60,8 @@ export default function ZellDetailDialog({ cell, onClose }: Props) {
         : `${diff > 0 ? '+' : ''}${formatHours(diff)} ${diff > 0 ? 'mehr' : 'weniger'} als geplant`
   }
 
+  const { absence } = cell
+
   return (
     <Dialog open={!!cell} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-sm">
@@ -67,6 +71,32 @@ export default function ZellDetailDialog({ cell, onClose }: Props) {
         </DialogHeader>
 
         <div className="space-y-4 pt-1">
+          {absence && (
+            <div className="rounded-lg border p-3" style={{ borderColor: getAbsenceColor(absence) + '40', backgroundColor: getAbsenceColor(absence) + '10' }}>
+              <div className="flex items-center gap-2 mb-1">
+                <span
+                  className="inline-flex items-center justify-center w-5 h-5 rounded text-white text-xs font-bold flex-shrink-0"
+                  style={{ backgroundColor: getAbsenceColor(absence) }}
+                >
+                  {getAbsenceAbbreviation(absence)}
+                </span>
+                <span className="text-sm font-semibold" style={{ color: getAbsenceColor(absence) }}>
+                  {getAbsenceName(absence)}
+                </span>
+              </div>
+              {absence.note && (
+                <p className="text-xs text-slate-600 pl-7">{absence.note}</p>
+              )}
+              <p className="text-xs text-slate-400 pl-7 mt-0.5">
+                Eingetragen am{' '}
+                {new Date(absence.created_at).toLocaleDateString('de-DE', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric',
+                })}
+              </p>
+            </div>
+          )}
           {/* Plan section */}
           <div className="rounded-lg border border-slate-200 p-3">
             <div className="flex items-center justify-between mb-2">

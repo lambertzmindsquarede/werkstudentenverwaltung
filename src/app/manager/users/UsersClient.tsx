@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import { useState, useEffect, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -34,7 +35,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { createClient } from '@/lib/supabase-browser'
-import { updateUserProfile } from './actions'
+import { updateUserProfile, getUsersForManager } from './actions'
 import { assignWerkstudentToBereich } from '@/app/admin/bereiche/actions'
 import type { Profile, UserRole, Bereich } from '@/lib/database.types'
 import { BUNDESLAENDER, DEFAULT_BUNDESLAND } from '@/lib/bundesland-utils'
@@ -275,28 +276,43 @@ function EditUserDialog({ user, managers, bereiche, onClose, onSaved }: EditDial
   )
 }
 
-export default function UsersClient({ bereiche }: { bereiche: Bereich[] }) {
-  const [users, setUsers] = useState<Profile[]>([])
-  const [loading, setLoading] = useState(true)
+interface UsersClientProps {
+  initialUsers: Profile[]
+  managers: Profile[]
+  isAdmin: boolean
+  bereiche: Bereich[]
+  selectedBereich: string | null
+}
+
+export default function UsersClient({
+  initialUsers,
+  managers,
+  isAdmin,
+  bereiche,
+  selectedBereich,
+}: UsersClientProps) {
+  const router = useRouter()
+  const [users, setUsers] = useState<Profile[]>(initialUsers)
+  const [refreshing, setRefreshing] = useState(false)
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
   const [filterRole, setFilterRole] = useState<FilterRole>('all')
   const [editingUser, setEditingUser] = useState<Profile | null>(null)
   const [signingOut, setSigningOut] = useState(false)
   const [togglingId, setTogglingId] = useState<string | null>(null)
 
-  async function fetchUsers() {
-    const supabase = createClient()
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .order('created_at', { ascending: false })
-    setUsers(data ?? [])
-    setLoading(false)
-  }
-
+  // Sync users state when SSR data changes (after router.refresh())
   useEffect(() => {
-    fetchUsers()
-  }, [])
+    setUsers(initialUsers)
+  }, [initialUsers])
+
+  async function refreshUsers() {
+    setRefreshing(true)
+    const result = await getUsersForManager(selectedBereich)
+    if (!('error' in result)) {
+      setUsers(result.users)
+    }
+    setRefreshing(false)
+  }
 
   async function handleSignOut() {
     setSigningOut(true)
@@ -313,11 +329,16 @@ export default function UsersClient({ bereiche }: { bereiche: Bereich[] }) {
       toast.error(result.error)
     } else {
       toast.success(user.is_active ? 'Nutzer deaktiviert' : 'Nutzer aktiviert')
-      await fetchUsers()
+      await refreshUsers()
     }
   }
 
-  const managers = users.filter((u) => u.role === 'manager' && u.is_active !== false)
+  function handleBereichFilterChange(value: string) {
+    const params = new URLSearchParams()
+    if (value !== 'all') params.set('bereich', value)
+    const query = params.toString()
+    router.push(`/manager/users${query ? `?${query}` : ''}`)
+  }
 
   const pendingCount = users.filter((u) => !u.role).length
   const activeCount = users.filter((u) => u.role && u.is_active !== false).length
@@ -344,8 +365,8 @@ export default function UsersClient({ bereiche }: { bereiche: Bereich[] }) {
           <span className="text-slate-600 text-sm font-medium">Werkstudentenverwaltung</span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs bg-blue-100 text-blue-700 font-medium px-2.5 py-1 rounded-full">
-            Manager
+          <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${isAdmin ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+            {isAdmin ? 'Admin' : 'Manager'}
           </span>
           <Button
             onClick={handleSignOut}
@@ -398,7 +419,7 @@ export default function UsersClient({ bereiche }: { bereiche: Bereich[] }) {
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Nutzerverwaltung</h1>
             <p className="text-slate-500 mt-1 text-sm">
-              {loading ? '…' : `${activeCount} aktive Nutzer`}
+              {`${activeCount} aktive Nutzer`}
               {pendingCount > 0 && (
                 <span className="ml-2 text-yellow-600 font-medium">
                   · {pendingCount} ausstehend
@@ -406,6 +427,29 @@ export default function UsersClient({ bereiche }: { bereiche: Bereich[] }) {
               )}
             </p>
           </div>
+
+          {/* Admin-only: bereich filter */}
+          {isAdmin && bereiche.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500 font-medium">Bereich:</span>
+              <Select
+                value={selectedBereich ?? 'all'}
+                onValueChange={handleBereichFilterChange}
+              >
+                <SelectTrigger className="w-44 h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Alle Bereiche</SelectItem>
+                  {bereiche.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
 
         <div className="mb-4 flex items-center gap-3 flex-wrap">
@@ -470,7 +514,7 @@ export default function UsersClient({ bereiche }: { bereiche: Bereich[] }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading ? (
+              {refreshing ? (
                 Array.from({ length: 4 }).map((_, i) => (
                   <TableRow key={i}>
                     <TableCell>
@@ -493,13 +537,15 @@ export default function UsersClient({ bereiche }: { bereiche: Bereich[] }) {
               ) : filteredUsers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-12 text-slate-400 text-sm">
-                    Keine Nutzer gefunden.
+                    {users.length === 0 && !isAdmin
+                      ? 'Ihrem Bereich sind noch keine Werkstudenten zugeordnet.'
+                      : 'Keine Nutzer gefunden.'}
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredUsers.map((user) => {
                   const assignedManager = user.manager_id
-                    ? users.find((u) => u.id === user.manager_id)
+                    ? managers.find((u) => u.id === user.manager_id)
                     : null
                   return (
                     <TableRow key={user.id} className="hover:bg-slate-50/50">
@@ -570,7 +616,7 @@ export default function UsersClient({ bereiche }: { bereiche: Bereich[] }) {
         managers={managers}
         bereiche={bereiche}
         onClose={() => setEditingUser(null)}
-        onSaved={fetchUsers}
+        onSaved={refreshUsers}
       />
     </div>
   )

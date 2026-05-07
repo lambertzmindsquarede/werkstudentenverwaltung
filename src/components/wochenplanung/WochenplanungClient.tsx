@@ -34,6 +34,9 @@ import {
 } from '@/lib/week-utils'
 import { validateBlocks, type BlockValidationError } from '@/lib/time-block-utils'
 import { usePublicHolidays } from '@/hooks/usePublicHolidays'
+import type { AbsenceWithType, ResolvedAbsenceType } from '@/lib/database.types'
+import { getAbsenceName, getAbsenceColor, getAbsenceAbbreviation } from '@/lib/database.types'
+import AbwesenheitDialog from './AbwesenheitDialog'
 
 const DAY_NAMES = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag']
 
@@ -80,6 +83,8 @@ interface Props {
   bundesland: string
   arbeitsorte: Arbeitsort[]
   lastUsedArbeitsortId: string | null
+  initialAbsences: AbsenceWithType[]
+  absenceTypes: ResolvedAbsenceType[]
 }
 
 function calcHours(start: string, end: string): number {
@@ -149,6 +154,8 @@ export default function WochenplanungClient({
   bundesland,
   arbeitsorte,
   lastUsedArbeitsortId,
+  initialAbsences,
+  absenceTypes,
 }: Props) {
   const router = useRouter()
   const weekDates = getWeekDates(weekStr)
@@ -180,6 +187,17 @@ export default function WochenplanungClient({
   const [loadingTemplate, setLoadingTemplate] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+
+  const [absencesByDate, setAbsencesByDate] = useState<Record<string, AbsenceWithType>>(() => {
+    const map: Record<string, AbsenceWithType> = {}
+    for (const a of initialAbsences) {
+      map[a.date] = a
+    }
+    return map
+  })
+  const [absenceDialogDate, setAbsenceDialogDate] = useState<string | null>(null)
+
+  const isAbsent = (dateStr: string) => !!absencesByDate[dateStr]
 
   const totalHours = weekDates.reduce((sum, date) => {
     const dateStr = dateToString(date)
@@ -492,11 +510,13 @@ export default function WochenplanungClient({
                 const holidayName = getHolidayName(dateStr)
                 const isHolidayDay = !!holidayName
                 const isPastDay = isPast(dateStr)
+                const isAbsentDay = isAbsent(dateStr)
+                const absence = absencesByDate[dateStr] ?? null
 
                 return (
                   <div
                     key={dateStr}
-                    className={`p-4 ${isPastDay ? 'bg-slate-50/80 opacity-70' : day.keinArbeitstag ? 'bg-slate-50/60' : isHolidayDay ? 'bg-amber-50' : ''}`}
+                    className={`p-4 ${isPastDay ? 'bg-slate-50/80 opacity-70' : isAbsentDay ? 'bg-rose-50/60' : day.keinArbeitstag ? 'bg-slate-50/60' : isHolidayDay ? 'bg-amber-50' : ''}`}
                   >
                     <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
                       {/* Day label */}
@@ -508,6 +528,18 @@ export default function WochenplanungClient({
                             🗓 {holidayName}
                           </div>
                         )}
+                        {isAbsentDay && absence && (
+                          <button
+                            type="button"
+                            onClick={() => setAbsenceDialogDate(dateStr)}
+                            className="mt-1 flex items-center gap-1 text-xs font-medium rounded px-1.5 py-0.5 text-white"
+                            style={{ backgroundColor: getAbsenceColor(absence) }}
+                            aria-label={`Abwesenheit: ${getAbsenceName(absence)}`}
+                          >
+                            <span>{getAbsenceAbbreviation(absence)}</span>
+                            <span className="truncate max-w-[72px]">{getAbsenceName(absence)}</span>
+                          </button>
+                        )}
                       </div>
 
                       {/* Checkbox */}
@@ -516,7 +548,7 @@ export default function WochenplanungClient({
                           id={`nowork-${dateStr}`}
                           checked={day.keinArbeitstag}
                           onCheckedChange={(checked) => updateDayFlag(dateStr, !!checked)}
-                          disabled={isPastDay}
+                          disabled={isPastDay || isAbsentDay}
                         />
                         <label
                           htmlFor={`nowork-${dateStr}`}
@@ -527,7 +559,20 @@ export default function WochenplanungClient({
                       </div>
 
                       {/* Blocks or placeholder */}
-                      {day.keinArbeitstag ? (
+                      {isAbsentDay ? (
+                        <div className="flex-1 flex items-center justify-between pt-1">
+                          <span className="text-sm text-rose-600 font-medium italic">
+                            Abwesend – Planung gesperrt
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setAbsenceDialogDate(dateStr)}
+                            className="text-xs text-rose-600 hover:text-rose-800 underline underline-offset-2"
+                          >
+                            Details / Löschen
+                          </button>
+                        </div>
+                      ) : day.keinArbeitstag ? (
                         <div className="flex-1 flex items-center pt-1">
                           <span className="text-sm text-slate-400 italic">—</span>
                         </div>
@@ -668,6 +713,16 @@ export default function WochenplanungClient({
                               Gesamt: {formatHours(dayHours)}
                             </div>
                           )}
+
+                          {!isPastDay && !isHolidayDay && (
+                            <button
+                              type="button"
+                              onClick={() => setAbsenceDialogDate(dateStr)}
+                              className="text-xs text-slate-400 hover:text-rose-600 transition-colors mt-1.5"
+                            >
+                              + Abwesenheit eintragen
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -725,6 +780,25 @@ export default function WochenplanungClient({
           </Button>
         </div>
       </main>
+
+      {absenceDialogDate && (
+        <AbwesenheitDialog
+          date={absenceDialogDate}
+          absence={absencesByDate[absenceDialogDate] ?? null}
+          absenceTypes={absenceTypes}
+          onCreated={(created) => {
+            setAbsencesByDate((prev) => ({ ...prev, [absenceDialogDate]: created }))
+          }}
+          onDeleted={() => {
+            setAbsencesByDate((prev) => {
+              const next = { ...prev }
+              delete next[absenceDialogDate]
+              return next
+            })
+          }}
+          onClose={() => setAbsenceDialogDate(null)}
+        />
+      )}
     </div>
   )
 }

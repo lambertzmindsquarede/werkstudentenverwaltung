@@ -168,6 +168,105 @@ export type Database = {
         }
         Relationships: []
       }
+      absence_types: {
+        Row: {
+          id: string
+          name: string
+          color: string | null
+          abbreviation: string | null
+          is_active: boolean
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          color?: string | null
+          abbreviation?: string | null
+          is_active?: boolean
+          created_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          color?: string | null
+          abbreviation?: string | null
+          is_active?: boolean
+          created_by?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      absence_type_overrides: {
+        Row: {
+          id: string
+          bereich_id: string
+          absence_type_id: string | null
+          name: string
+          color: string | null
+          abbreviation: string | null
+          is_active: boolean
+          is_custom: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          bereich_id: string
+          absence_type_id?: string | null
+          name: string
+          color?: string | null
+          abbreviation?: string | null
+          is_active?: boolean
+          is_custom?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          bereich_id?: string
+          absence_type_id?: string | null
+          name?: string
+          color?: string | null
+          abbreviation?: string | null
+          is_active?: boolean
+          is_custom?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
+      absences: {
+        Row: {
+          id: string
+          user_id: string
+          bereich_id: string | null
+          absence_type_id: string | null
+          absence_type_override_id: string | null
+          date: string
+          note: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          bereich_id?: string | null
+          absence_type_id?: string | null
+          absence_type_override_id?: string | null
+          date: string
+          note?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          bereich_id?: string | null
+          absence_type_id?: string | null
+          absence_type_override_id?: string | null
+          date?: string
+          note?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       bereiche: {
         Row: {
           id: string
@@ -322,3 +421,66 @@ export type BereichWithCounts = Bereich & {
   managerCount: number
   werkstudentCount: number
 }
+
+export type AbsenceType = {
+  id: string
+  name: string
+  color: string | null
+  abbreviation: string | null
+  is_active: boolean
+  created_by: string | null
+  created_at: string
+}
+
+export type AbsenceTypeOverride = {
+  id: string
+  bereich_id: string
+  absence_type_id: string | null
+  name: string
+  color: string | null
+  abbreviation: string | null
+  is_active: boolean
+  is_custom: boolean
+  created_at: string
+}
+
+export type AbsenceWithType = {
+  id: string
+  user_id: string
+  bereich_id: string | null
+  absence_type_id: string | null
+  absence_type_override_id: string | null
+  date: string
+  note: string | null
+  created_at: string
+  absence_type?: Pick<AbsenceType, 'id' | 'name' | 'color' | 'abbreviation'> | null
+  absence_type_override?: Pick<AbsenceTypeOverride, 'id' | 'name' | 'color' | 'abbreviation'> | null
+}
+
+export type ResolvedAbsenceType = {
+  id: string
+  name: string
+  color: string | null
+  abbreviation: string | null
+  is_custom: boolean
+  is_override: boolean
+}
+
+export function getAbsenceName(a: AbsenceWithType): string {
+  return a.absence_type_override?.name ?? a.absence_type?.name ?? 'Abwesend'
+}
+
+export function getAbsenceColor(a: AbsenceWithType): string {
+  return a.absence_type_override?.color ?? a.absence_type?.color ?? '#94a3b8'
+}
+
+export function getAbsenceAbbreviation(a: AbsenceWithType): string {
+  return a.absence_type_override?.abbreviation ?? a.absence_type?.abbreviation ?? '?'
+}
+
+export const DEFAULT_ABSENCE_TYPES: ResolvedAbsenceType[] = [
+  { id: 'default-krank', name: 'Krank', color: '#ef4444', abbreviation: 'K', is_custom: false, is_override: false },
+  { id: 'default-urlaub', name: 'Urlaub', color: '#3b82f6', abbreviation: 'U', is_custom: false, is_override: false },
+  { id: 'default-frei', name: 'Frei (unbezahlt)', color: '#f59e0b', abbreviation: 'F', is_custom: false, is_override: false },
+  { id: 'default-sonstiges', name: 'Sonstiges', color: '#94a3b8', abbreviation: 'S', is_custom: false, is_override: false },
+]

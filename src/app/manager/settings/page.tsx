@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase-server'
 import { ManagerSignOutButton } from '@/components/ManagerSignOutButton'
 import { DEFAULT_MAX_EDIT_DAYS_PAST } from '@/lib/database.types'
 import SettingsForm from './SettingsForm'
+import AbwesenheitstypenKonfiguration from './AbwesenheitstypenKonfiguration'
+import { loadManagerBereiche, loadBereichConfig } from './absence-type-override-actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,11 +19,11 @@ export default async function ManagerSettingsPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, is_admin')
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'manager') redirect('/dashboard')
+  if (profile?.role !== 'manager' && !profile?.is_admin) redirect('/dashboard')
 
   const { data: setting } = await supabase
     .from('app_settings')
@@ -30,6 +32,13 @@ export default async function ManagerSettingsPage() {
     .single()
 
   const maxEditDaysPast = setting ? parseInt(setting.value, 10) : DEFAULT_MAX_EDIT_DAYS_PAST
+
+  const bereiche = await loadManagerBereiche()
+  const initialBereichId = bereiche[0]?.id ?? null
+  const initialConfigResult = initialBereichId
+    ? await loadBereichConfig(initialBereichId)
+    : null
+  const initialConfig = initialConfigResult?.data ?? null
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -83,6 +92,12 @@ export default async function ManagerSettingsPage() {
         </div>
 
         <SettingsForm maxEditDaysPast={maxEditDaysPast} />
+
+        <AbwesenheitstypenKonfiguration
+          bereiche={bereiche}
+          initialBereichId={initialBereichId}
+          initialConfig={initialConfig}
+        />
       </main>
     </div>
   )

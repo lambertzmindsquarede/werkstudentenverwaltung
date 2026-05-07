@@ -30,7 +30,7 @@
 | PROJ-14 | Bearbeitungsfrist für Zeiterfassung | Deployed | [PROJ-14-zeiterfassung-bearbeitungsfrist.md](PROJ-14-zeiterfassung-bearbeitungsfrist.md) | 2026-05-02 |
 | PROJ-15 | Änderungsbenachrichtigung für Manager | Deployed | [PROJ-15-aenderungsbenachrichtigung-manager.md](PROJ-15-aenderungsbenachrichtigung-manager.md) | 2026-05-05 |
 | PROJ-16 | Arbeitsort-Auswahl | Deployed | [PROJ-16-arbeitsort-auswahl.md](PROJ-16-arbeitsort-auswahl.md) | 2026-05-06 |
-| PROJ-17 | Abwesenheitsverwaltung | Architected | [PROJ-17-abwesenheitsverwaltung.md](PROJ-17-abwesenheitsverwaltung.md) | 2026-05-06 |
+| PROJ-17 | Abwesenheitsverwaltung | In Review | [PROJ-17-abwesenheitsverwaltung.md](PROJ-17-abwesenheitsverwaltung.md) | 2026-05-06 |
 | PROJ-18 | Admin-Rolle & Bereichsverwaltung | Deployed | [PROJ-18-admin-rolle-bereichsverwaltung.md](PROJ-18-admin-rolle-bereichsverwaltung.md) | 2026-05-06 |
 | PROJ-19 | Bereichs-Datenisolation für Manager | In Review | [PROJ-19-bereichs-datenisolation.md](PROJ-19-bereichs-datenisolation.md) | 2026-05-06 |
 | PROJ-20 | Team-Anwesenheitsübersicht | Architected | [PROJ-20-team-anwesenheitsuebersicht.md](PROJ-20-team-anwesenheitsuebersicht.md) | 2026-05-06 |

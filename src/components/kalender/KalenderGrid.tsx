@@ -24,9 +24,16 @@ import {
 } from '@/lib/week-utils'
 import KalenderZelle from './KalenderZelle'
 import ZellDetailDialog, { type SelectedCell } from './ZellDetailDialog'
-import type { Profile, PlannedEntry, ActualEntry } from '@/lib/database.types'
+import type { Profile, PlannedEntry, ActualEntry, Bereich, AbsenceWithType } from '@/lib/database.types'
 import { fetchHolidaysForDates } from '@/hooks/usePublicHolidays'
 import { DEFAULT_BUNDESLAND } from '@/lib/bundesland-utils'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 interface Props {
   profiles: Profile[]
@@ -34,6 +41,10 @@ interface Props {
   actual: ActualEntry[]
   weekStr: string
   today: string
+  isAdmin: boolean
+  bereiche: Bereich[]
+  selectedBereich: string | null
+  absences?: AbsenceWithType[]
 }
 
 const DAY_LABELS = ['Mo', 'Di', 'Mi', 'Do', 'Fr']
@@ -54,6 +65,10 @@ export default function KalenderGrid({
   actual,
   weekStr,
   today,
+  isAdmin,
+  bereiche,
+  selectedBereich,
+  absences = [],
 }: Props) {
   const router = useRouter()
   const [signingOut, setSigningOut] = useState(false)
@@ -109,6 +124,13 @@ export default function KalenderGrid({
     dateMap.get(a.date)!.push(a)
   }
 
+  // Build absence lookup map: userId → date → absence
+  const absenceMap = new Map<string, Map<string, AbsenceWithType>>()
+  for (const ab of absences) {
+    if (!absenceMap.has(ab.user_id)) absenceMap.set(ab.user_id, new Map())
+    absenceMap.get(ab.user_id)!.set(ab.date, ab)
+  }
+
   const visibleProfiles = profiles.filter((p) => !hiddenUsers.has(p.id))
 
   function toggleUser(userId: string) {
@@ -129,7 +151,15 @@ export default function KalenderGrid({
 
   function navigateWeek(direction: 'prev' | 'next') {
     const target = direction === 'prev' ? getPreviousWeek(weekStr) : getNextWeek(weekStr)
-    router.push(`/manager/kalender?week=${target}`)
+    const params = new URLSearchParams({ week: target })
+    if (selectedBereich) params.set('bereich', selectedBereich)
+    router.push(`/manager/kalender?${params.toString()}`)
+  }
+
+  function handleBereichFilterChange(value: string) {
+    const params = new URLSearchParams({ week: weekStr })
+    if (value !== 'all') params.set('bereich', value)
+    router.push(`/manager/kalender?${params.toString()}`)
   }
 
   function handleCellClick(profile: Profile, date: string) {
@@ -138,6 +168,7 @@ export default function KalenderGrid({
       date,
       plans: planMap.get(profile.id)?.get(date) ?? [],
       actuals: actualMap.get(profile.id)?.get(date) ?? [],
+      absence: absenceMap.get(profile.id)?.get(date) ?? null,
     })
   }
 
@@ -151,8 +182,8 @@ export default function KalenderGrid({
           <span className="text-slate-600 text-sm font-medium">Werkstudentenverwaltung</span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs bg-blue-100 text-blue-700 font-medium px-2.5 py-1 rounded-full">
-            Manager
+          <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${isAdmin ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+            {isAdmin ? 'Admin' : 'Manager'}
           </span>
           <Button
             onClick={handleSignOut}
@@ -188,6 +219,12 @@ export default function KalenderGrid({
             Kalenderansicht
           </a>
           <a
+            href="/manager/abwesenheiten"
+            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
+          >
+            Abwesenheiten
+          </a>
+          <a
             href="/manager/arbeitsorte"
             className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
           >
@@ -214,6 +251,29 @@ export default function KalenderGrid({
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
+            {/* Admin-only: bereich filter */}
+            {isAdmin && bereiche.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500 font-medium">Bereich:</span>
+                <Select
+                  value={selectedBereich ?? 'all'}
+                  onValueChange={handleBereichFilterChange}
+                >
+                  <SelectTrigger className="w-44 h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle Bereiche</SelectItem>
+                    {bereiche.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             {/* Week navigator */}
             <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 shadow-sm">
               <Button
@@ -391,6 +451,7 @@ export default function KalenderGrid({
                       const plans = planMap.get(profile.id)?.get(dateStr) ?? []
                       const acts = actualMap.get(profile.id)?.get(dateStr) ?? []
                       const hName = getHolidayName(profile.bundesland ?? DEFAULT_BUNDESLAND, dateStr)
+                      const cellAbsence = absenceMap.get(profile.id)?.get(dateStr) ?? null
                       return (
                         <div
                           key={dateStr}
@@ -402,6 +463,7 @@ export default function KalenderGrid({
                             date={dateStr}
                             today={today}
                             holidayName={hName}
+                            absence={cellAbsence}
                             onClick={() => handleCellClick(profile, dateStr)}
                           />
                         </div>

@@ -57,6 +57,12 @@ export default async function AdminPage() {
           >
             Bereiche
           </Link>
+          <Link
+            href="/admin/abwesenheitstypen"
+            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
+          >
+            Abwesenheitstypen
+          </Link>
         </div>
       </nav>
 

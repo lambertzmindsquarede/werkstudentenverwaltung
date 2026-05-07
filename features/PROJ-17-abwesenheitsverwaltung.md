@@ -1,8 +1,8 @@
 # PROJ-17: Abwesenheitsverwaltung
 
-## Status: Architected
+## Status: In Progress
 **Created:** 2026-05-06
-**Last Updated:** 2026-05-06
+**Last Updated:** 2026-05-07
 
 ## Dependencies
 - Requires: PROJ-1 (Authentication) — für eingeloggten Nutzer
@@ -222,6 +222,40 @@ ZellDetailDialog (erweitert)
 
 ### Abhängigkeiten / Packages
 Keine neuen npm-Pakete notwendig — alle benötigten UI-Komponenten (Dialog, Select, Table, Badge, Switch, Popover) sind bereits als shadcn/ui installiert.
+
+## Implementation Notes (Frontend)
+
+### What was built
+- `src/lib/database.types.ts` — Added `absence_types`, `absence_type_overrides`, `absences` DB table types + `AbsenceType`, `AbsenceTypeOverride`, `AbsenceWithType`, `ResolvedAbsenceType`, helper functions (`getAbsenceName`, `getAbsenceColor`, `getAbsenceAbbreviation`), `DEFAULT_ABSENCE_TYPES`
+- `src/app/dashboard/wochenplanung/absence-actions.ts` — Server actions: `getResolvedAbsenceTypes`, `loadWeekAbsences`, `createAbsence`, `deleteAbsence`
+- `src/components/wochenplanung/AbwesenheitDialog.tsx` — Dialog to create / view / delete absence with type select + note field
+- `src/components/wochenplanung/WochenplanungClient.tsx` — Extended: absence state per day, `AbwesenheitsBadge` in day label, day locking when absent, "+ Abwesenheit eintragen" button, `AbwesenheitDialog` integration
+- `src/app/dashboard/wochenplanung/page.tsx` — Extended: loads `initialAbsences` + `absenceTypes` on page load
+- `src/components/kalender/KalenderZelle.tsx` — Extended: accepts `absence` prop, shows colored marker with abbreviation + name, clickable even if no plan/actual
+- `src/components/kalender/ZellDetailDialog.tsx` — Extended: shows absence type, note, and creation date in dialog
+- `src/components/kalender/KalenderGrid.tsx` — Extended: accepts `absences` prop, builds `absenceMap`, passes to `KalenderZelle` and `SelectedCell`
+- `src/app/manager/kalender/actions.ts` — Extended: loads absences for all visible users in the week
+- `src/app/manager/kalender/page.tsx` — Extended: passes `absences` to `KalenderGrid`
+- `src/app/manager/abwesenheiten/` — New page: filter (person, date range) + sortable table for manager absence overview
+- `src/app/admin/abwesenheitstypen/` — New page: global absence type CRUD (create, edit name/color/abbreviation, toggle active/inactive)
+- Navigation: added "Abwesenheiten" to manager nav in `KalenderGrid`, "Abwesenheitstypen" to admin nav
+
+### Deviations from spec
+- PROJ-15 notification trigger on absence create: commented TODO, silent degradation implemented
+
+## Implementation Notes (Backend)
+
+### What was built
+- **Supabase migration** `create_absence_tables` — Created 3 tables with RLS:
+  - `absence_types`: global types (Admin-managed), seeded with 4 defaults (Krank/K/#EF4444, Urlaub/U/#3B82F6, Frei/F/#F59E0B, Sonstiges/S/#8B5CF6)
+  - `absence_type_overrides`: per-Bereich customizations (Manager-managed), with global reference or custom entry
+  - `absences`: absence entries (Werkstudent-managed), unique constraint on (user_id, date)
+- **RLS policies**: Werkstudent reads/writes own absences; Manager reads bereich absences + writes bereich overrides; Admin full access
+- **Indexes**: on `user_id`, `date`, `(user_id, date)`, `bereich_id`, `absence_type_id`
+- `src/app/manager/settings/absence-type-override-actions.ts` — Server actions: `loadManagerBereiche`, `loadBereichConfig`, `initOverridesAndToggleGlobal`, `addCustomAbsenceType`, `deleteCustomAbsenceType`, `resetBereichToGlobal`
+- `src/app/manager/settings/AbwesenheitstypenKonfiguration.tsx` — Manager UI: per-bereich toggle global types, add/remove custom types, reset to global, hint banner for new global types
+- `src/app/manager/settings/page.tsx` — Extended: loads bereiche + initial config, renders `AbwesenheitstypenKonfiguration`, allows admins as well as managers
+- `src/app/manager/abwesenheiten/page.tsx` — Updated to load real `absence_types` from DB instead of `DEFAULT_ABSENCE_TYPES` fallback
 
 ## QA Test Results
 _To be added by /qa_

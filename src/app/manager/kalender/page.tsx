@@ -2,10 +2,12 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import { getISOWeekString } from '@/lib/week-utils'
 import { loadKalenderWeek } from './actions'
+import { getBereicheForAssignment } from '@/app/admin/bereiche/actions'
 import KalenderGrid from '@/components/kalender/KalenderGrid'
+import type { Bereich } from '@/lib/database.types'
 
 interface Props {
-  searchParams: Promise<{ week?: string }>
+  searchParams: Promise<{ week?: string; bereich?: string }>
 }
 
 export default async function KalenderPage({ searchParams }: Props) {
@@ -16,13 +18,26 @@ export default async function KalenderPage({ searchParams }: Props) {
   if (!user) redirect('/login')
 
   const params = await searchParams
-  // Compute today in Berlin timezone first, then derive weekStr from it.
-  // Using the Berlin date as input avoids the UTC-midnight edge case between
-  // 00:00–02:00 Berlin time where the server's local date lags one day behind.
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin' }).format(new Date())
   const weekStr = params.week ?? getISOWeekString(new Date(today + 'T12:00:00Z'))
+  const bereichFilter = params.bereich ?? null
 
-  const result = await loadKalenderWeek(weekStr)
+  const { data: currentProfile } = await supabase
+    .from('profiles')
+    .select('is_admin')
+    .eq('id', user.id)
+    .single()
+
+  const isAdmin = currentProfile?.is_admin ?? false
+
+  let bereiche: Bereich[] = []
+  try {
+    bereiche = await getBereicheForAssignment()
+  } catch {
+    bereiche = []
+  }
+
+  const result = await loadKalenderWeek(weekStr, bereichFilter)
 
   if (result.error) {
     return (
@@ -38,8 +53,12 @@ export default async function KalenderPage({ searchParams }: Props) {
       profiles={result.data!.profiles}
       planned={result.data!.planned}
       actual={result.data!.actual}
+      absences={result.data!.absences}
       weekStr={weekStr}
       today={today}
+      isAdmin={isAdmin}
+      bereiche={bereiche}
+      selectedBereich={bereichFilter}
     />
   )
 }
