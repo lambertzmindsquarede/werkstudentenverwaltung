@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import AbwesenheitenClient from './AbwesenheitenClient'
-import { loadManagerAbsences, getWerkstudentsForManager } from './actions'
+import { loadManagerAbsences, getWerkstudentsForManager, getManagerDisabledAbsencesBereichCount } from './actions'
 import { DEFAULT_ABSENCE_TYPES } from '@/lib/database.types'
 import type { ResolvedAbsenceType } from '@/lib/database.types'
 
@@ -22,10 +22,11 @@ export default async function ManagerAbwesenheitenPage() {
 
   if (profile?.role !== 'manager' && !profile?.is_admin) redirect('/dashboard')
 
-  const [absencesResult, werkstudenten, typesResult] = await Promise.all([
+  const [absencesResult, werkstudenten, typesResult, disabledBereichCount] = await Promise.all([
     loadManagerAbsences({}),
     getWerkstudentsForManager(),
     supabase.from('absence_types').select('id, name, color, abbreviation').eq('is_active', true).order('created_at'),
+    getManagerDisabledAbsencesBereichCount(),
   ])
 
   const absenceTypes: ResolvedAbsenceType[] =
@@ -46,6 +47,7 @@ export default async function ManagerAbwesenheitenPage() {
       werkstudenten={werkstudenten}
       absenceTypes={absenceTypes}
       isAdmin={profile?.is_admin ?? false}
+      disabledBereichCount={disabledBereichCount}
     />
   )
 }

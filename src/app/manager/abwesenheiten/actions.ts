@@ -34,23 +34,29 @@ export async function loadManagerAbsences(
     return { data: [], error: 'Zugriff verweigert' }
   }
 
-  // Determine accessible user IDs
+  // Determine accessible user IDs (only from bereiche with absences_enabled=true)
   let userIds: string[] | null = null
 
   if (!currentProfile?.is_admin) {
     const { data: assignments } = await supabase
       .from('bereich_manager')
-      .select('bereich_id')
+      .select('bereich_id, bereiche(absences_enabled)')
       .eq('user_id', user.id)
 
     if (!assignments?.length) return { data: [] }
 
-    const bereichIds = assignments.map((a) => a.bereich_id)
+    type Assignment = { bereich_id: string; bereiche: { absences_enabled: boolean } | null }
+    const enabledBereichIds = (assignments as unknown as Assignment[])
+      .filter((a) => a.bereiche?.absences_enabled !== false)
+      .map((a) => a.bereich_id)
+
+    if (enabledBereichIds.length === 0) return { data: [] }
+
     const { data: werkstudenten } = await supabase
       .from('profiles')
       .select('id')
       .eq('role', 'werkstudent')
-      .in('bereich_id', bereichIds)
+      .in('bereich_id', enabledBereichIds)
 
     userIds = (werkstudenten ?? []).map((p) => p.id)
     if (userIds.length === 0) return { data: [] }
@@ -177,19 +183,59 @@ export async function getWerkstudentsForManager(): Promise<
 
   const { data: assignments } = await supabase
     .from('bereich_manager')
-    .select('bereich_id')
+    .select('bereich_id, bereiche(absences_enabled)')
     .eq('user_id', user.id)
 
   if (!assignments?.length) return []
 
-  const bereichIds = assignments.map((a) => a.bereich_id)
+  type Assignment = { bereich_id: string; bereiche: { absences_enabled: boolean } | null }
+  const enabledBereichIds = (assignments as unknown as Assignment[])
+    .filter((a) => a.bereiche?.absences_enabled !== false)
+    .map((a) => a.bereich_id)
+
+  if (enabledBereichIds.length === 0) return []
+
   const { data } = await supabase
     .from('profiles')
     .select('id, full_name, email')
     .eq('role', 'werkstudent')
     .eq('is_active', true)
-    .in('bereich_id', bereichIds)
+    .in('bereich_id', enabledBereichIds)
     .order('full_name')
 
   return (data ?? []) as { id: string; full_name: string | null; email: string | null }[]
+}
+
+export async function getManagerDisabledAbsencesBereichCount(): Promise<number> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return 0
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('is_admin')
+    .eq('id', user.id)
+    .single()
+
+  if (profile?.is_admin) {
+    const { count } = await supabase
+      .from('bereiche')
+      .select('*', { count: 'exact', head: true })
+      .eq('absences_enabled', false)
+    return count ?? 0
+  }
+
+  const { data: assignments } = await supabase
+    .from('bereich_manager')
+    .select('bereich_id, bereiche(absences_enabled)')
+    .eq('user_id', user.id)
+
+  if (!assignments?.length) return 0
+
+  type Assignment = { bereich_id: string; bereiche: { absences_enabled: boolean } | null }
+  return (assignments as unknown as Assignment[]).filter(
+    (a) => a.bereiche?.absences_enabled === false
+  ).length
 }

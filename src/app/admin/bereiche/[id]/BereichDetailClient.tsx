@@ -1,12 +1,12 @@
 'use client'
 
-import Image from 'next/image'
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Switch } from '@/components/ui/switch'
 import {
   Table,
   TableBody,
@@ -31,9 +31,9 @@ import {
 } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
-import { addManagerToBereich, removeManagerFromBereich } from '../actions'
+import { addManagerToBereich, removeManagerFromBereich, toggleAbsencesEnabled } from '../actions'
 import type { Bereich, Profile } from '@/lib/database.types'
-import { ManagerSignOutButton } from '@/components/ManagerSignOutButton'
+import AdminNav from '@/components/admin/AdminNav'
 
 type ManagerEntry = {
   user_id: string
@@ -179,6 +179,21 @@ export default function BereichDetailClient({
   const [showAddManager, setShowAddManager] = useState(false)
   const [removingId, setRemovingId] = useState<string | null>(null)
   const [isPendingRemove, startRemoveTransition] = useTransition()
+  const [absencesEnabled, setAbsencesEnabled] = useState(bereich.absences_enabled ?? true)
+  const [isPendingToggle, startToggleTransition] = useTransition()
+
+  function handleToggleAbsences(checked: boolean) {
+    setAbsencesEnabled(checked)
+    startToggleTransition(async () => {
+      const result = await toggleAbsencesEnabled(bereich.id, checked)
+      if (result.error) {
+        setAbsencesEnabled(!checked)
+        toast.error(result.error)
+      } else {
+        toast.success(checked ? 'Abwesenheitsverwaltung aktiviert' : 'Abwesenheitsverwaltung deaktiviert')
+      }
+    })
+  }
 
   const assignedUserIds = managers.map((m) => m.user_id)
 
@@ -198,48 +213,7 @@ export default function BereichDetailClient({
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-3">
-          <Image src="/logo-mindsquare-176x781.webp" alt="mindsquare" width={90} height={40} />
-          <span className="text-slate-300">|</span>
-          <span className="text-slate-600 text-sm font-medium">Werkstudentenverwaltung</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs bg-purple-100 text-purple-700 font-medium px-2.5 py-1 rounded-full">
-            Admin
-          </span>
-          <ManagerSignOutButton />
-        </div>
-      </header>
-
-      <nav className="bg-white border-b border-slate-200 px-6">
-        <div className="max-w-5xl mx-auto flex gap-1">
-          <Link
-            href="/admin"
-            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            Übersicht
-          </Link>
-          <Link
-            href="/admin/bereiche"
-            className="px-4 py-3 text-sm font-medium text-slate-900 border-b-2 border-purple-600"
-          >
-            Bereiche
-          </Link>
-          <Link
-            href="/admin/abwesenheitstypen"
-            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            Abwesenheitstypen
-          </Link>
-          <Link
-            href="/manager/users"
-            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            Nutzerverwaltung
-          </Link>
-        </div>
-      </nav>
+      <AdminNav isAdmin={true} />
 
       <main className="max-w-5xl mx-auto px-6 py-8 space-y-8">
         {/* Breadcrumb */}
@@ -414,6 +388,34 @@ export default function BereichDetailClient({
           <p className="mt-3 text-xs text-slate-400">
             Werkstudenten werden über die Nutzerverwaltung einem Bereich zugeordnet.
           </p>
+        </section>
+
+        <Separator />
+
+        {/* Settings Section */}
+        <section>
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-slate-800">Einstellungen</h2>
+            <p className="text-sm text-slate-500 mt-0.5">Funktionen für diesen Bereich konfigurieren</p>
+          </div>
+
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-900">Abwesenheitsverwaltung</p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Wenn deaktiviert, sehen Werkstudenten und Manager dieses Bereichs keine Abwesenheits-Funktionen.
+                </p>
+              </div>
+              <Switch
+                id={`absences-toggle-${bereich.id}`}
+                checked={absencesEnabled}
+                onCheckedChange={handleToggleAbsences}
+                disabled={isPendingToggle}
+                aria-label="Abwesenheitsverwaltung aktivieren/deaktivieren"
+              />
+            </div>
+          </div>
         </section>
       </main>
 

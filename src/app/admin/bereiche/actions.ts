@@ -261,6 +261,29 @@ export async function setManagerBereiche(
   return {}
 }
 
+// ─── Absences toggle ──────────────────────────────────────────────────────────
+
+export async function toggleAbsencesEnabled(
+  bereichId: string,
+  enabled: boolean
+): Promise<ActionResult> {
+  const auth = await requireAdmin()
+  if ('error' in auth) return auth
+
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('bereiche')
+    .update({ absences_enabled: enabled })
+    .eq('id', bereichId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/admin/bereiche')
+  revalidatePath(`/admin/bereiche/${bereichId}`)
+  revalidatePath('/manager/abwesenheiten')
+  return {}
+}
+
 // ─── Read helpers (for server components) ────────────────────────────────────
 
 export async function getBereiche() {

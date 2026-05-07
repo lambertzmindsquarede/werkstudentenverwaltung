@@ -1,6 +1,5 @@
 'use client'
 
-import Image from 'next/image'
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
@@ -33,9 +32,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { createBereich, renameBereich, deleteBereich } from './actions'
+import { Switch } from '@/components/ui/switch'
+import { createBereich, renameBereich, deleteBereich, toggleAbsencesEnabled } from './actions'
 import type { BereichWithCounts } from '@/lib/database.types'
-import { ManagerSignOutButton } from '@/components/ManagerSignOutButton'
+import AdminNav from '@/components/admin/AdminNav'
 
 interface Props {
   initialBereiche: BereichWithCounts[]
@@ -238,6 +238,20 @@ export default function BereicheClient({ initialBereiche }: Props) {
   const [showCreate, setShowCreate] = useState(false)
   const [renaming, setRenaming] = useState<BereichWithCounts | null>(null)
   const [deleting, setDeleting] = useState<BereichWithCounts | null>(null)
+  const [togglingId, setTogglingId] = useState<string | null>(null)
+
+  async function handleToggleAbsences(id: string, current: boolean) {
+    setTogglingId(id)
+    const result = await toggleAbsencesEnabled(id, !current)
+    setTogglingId(null)
+    if (result.error) {
+      toast.error(result.error)
+    } else {
+      setBereiche((prev) =>
+        prev.map((b) => (b.id === id ? { ...b, absences_enabled: !current } : b))
+      )
+    }
+  }
 
   async function refresh() {
     const res = await fetch('/admin/bereiche?_refresh=1', { cache: 'no-store' })
@@ -247,48 +261,7 @@ export default function BereicheClient({ initialBereiche }: Props) {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-3">
-          <Image src="/logo-mindsquare-176x781.webp" alt="mindsquare" width={90} height={40} />
-          <span className="text-slate-300">|</span>
-          <span className="text-slate-600 text-sm font-medium">Werkstudentenverwaltung</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs bg-purple-100 text-purple-700 font-medium px-2.5 py-1 rounded-full">
-            Admin
-          </span>
-          <ManagerSignOutButton />
-        </div>
-      </header>
-
-      <nav className="bg-white border-b border-slate-200 px-6">
-        <div className="max-w-5xl mx-auto flex gap-1">
-          <Link
-            href="/admin"
-            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            Übersicht
-          </Link>
-          <Link
-            href="/admin/bereiche"
-            className="px-4 py-3 text-sm font-medium text-slate-900 border-b-2 border-purple-600"
-          >
-            Bereiche
-          </Link>
-          <Link
-            href="/admin/abwesenheitstypen"
-            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            Abwesenheitstypen
-          </Link>
-          <Link
-            href="/manager/users"
-            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            Nutzerverwaltung
-          </Link>
-        </div>
-      </nav>
+      <AdminNav isAdmin={true} />
 
       <main className="max-w-5xl mx-auto px-6 py-8">
         <div className="mb-6 flex items-center justify-between">
@@ -316,6 +289,9 @@ export default function BereicheClient({ initialBereiche }: Props) {
                 <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
                   Werkstudenten
                 </TableHead>
+                <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  Abwesenheiten
+                </TableHead>
                 <TableHead className="w-40" />
               </TableRow>
             </TableHeader>
@@ -323,7 +299,7 @@ export default function BereicheClient({ initialBereiche }: Props) {
               {bereiche.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={4}
+                    colSpan={5}
                     className="text-center py-12 text-slate-400 text-sm"
                   >
                     Keine Bereiche vorhanden. Erstelle deinen ersten Bereich.
@@ -355,6 +331,14 @@ export default function BereicheClient({ initialBereiche }: Props) {
                       >
                         {b.werkstudentCount}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Switch
+                        checked={b.absences_enabled ?? true}
+                        onCheckedChange={() => handleToggleAbsences(b.id, b.absences_enabled ?? true)}
+                        disabled={togglingId === b.id}
+                        aria-label={`Abwesenheitsverwaltung für ${b.name}`}
+                      />
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2 justify-end">

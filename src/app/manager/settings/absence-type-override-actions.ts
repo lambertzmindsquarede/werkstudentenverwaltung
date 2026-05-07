@@ -54,7 +54,7 @@ async function assertManagerForBereich(
   return !!data
 }
 
-export async function loadManagerBereiche(): Promise<{ id: string; name: string }[]> {
+export async function loadManagerBereiche(): Promise<{ id: string; name: string; absences_enabled: boolean }[]> {
   const supabase = await createClient()
   const {
     data: { user },
@@ -63,11 +63,11 @@ export async function loadManagerBereiche(): Promise<{ id: string; name: string 
 
   const { data: assignments } = await supabase
     .from('bereich_manager')
-    .select('bereich_id, bereiche(id, name)')
+    .select('bereich_id, bereiche(id, name, absences_enabled)')
     .eq('user_id', user.id)
 
-  return ((assignments ?? []) as unknown as { bereiche: { id: string; name: string } }[]).map(
-    (a) => ({ id: a.bereiche.id, name: a.bereiche.name })
+  return ((assignments ?? []) as unknown as { bereiche: { id: string; name: string; absences_enabled: boolean } }[]).map(
+    (a) => ({ id: a.bereiche.id, name: a.bereiche.name, absences_enabled: a.bereiche.absences_enabled ?? true })
   )
 }
 

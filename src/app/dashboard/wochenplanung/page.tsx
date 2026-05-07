@@ -28,12 +28,23 @@ export default async function WochenplanungPage({ searchParams }: Props) {
     { data: absenceTypes },
   ] = await Promise.all([
     loadWeekEntries(weekStr),
-    supabase.from('profiles').select('weekly_hour_limit, bundesland').eq('id', user.id).single(),
+    supabase.from('profiles').select('weekly_hour_limit, bundesland, bereich_id').eq('id', user.id).single(),
     getArbeitsorteForWerkstudent(),
     getLastUsedArbeitsortId(),
     loadWeekAbsences(weekStr),
     getResolvedAbsenceTypes(),
   ])
+
+  // Check if absences are enabled for the user's Bereich (default true if no bereich)
+  let absencesEnabled = true
+  if (profile?.bereich_id) {
+    const { data: bereich } = await supabase
+      .from('bereiche')
+      .select('absences_enabled')
+      .eq('id', profile.bereich_id)
+      .single()
+    absencesEnabled = bereich?.absences_enabled ?? true
+  }
 
   return (
     <WochenplanungClient
@@ -44,8 +55,9 @@ export default async function WochenplanungPage({ searchParams }: Props) {
       bundesland={profile?.bundesland ?? 'NW'}
       arbeitsorte={arbeitsorte ?? []}
       lastUsedArbeitsortId={lastUsedArbeitsortId}
-      initialAbsences={absences ?? []}
-      absenceTypes={absenceTypes}
+      initialAbsences={absencesEnabled ? (absences ?? []) : []}
+      absenceTypes={absencesEnabled ? absenceTypes : []}
+      absencesEnabled={absencesEnabled}
     />
   )
 }

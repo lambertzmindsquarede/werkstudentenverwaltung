@@ -34,6 +34,7 @@ interface Props {
   werkstudenten: { id: string; full_name: string | null; email: string | null }[]
   absenceTypes: ResolvedAbsenceType[]
   isAdmin: boolean
+  disabledBereichCount?: number
 }
 
 function formatDate(dateStr: string): string {
@@ -44,7 +45,7 @@ function formatDate(dateStr: string): string {
 type SortKey = 'date' | 'name'
 type SortDir = 'asc' | 'desc'
 
-export default function AbwesenheitenClient({ initialAbsences, werkstudenten, absenceTypes, isAdmin }: Props) {
+export default function AbwesenheitenClient({ initialAbsences, werkstudenten, absenceTypes, isAdmin, disabledBereichCount = 0 }: Props) {
   const [absences, setAbsences] = useState(initialAbsences)
   const [filterUser, setFilterUser] = useState<string>('all')
   const [filterFrom, setFilterFrom] = useState('')
@@ -126,6 +127,16 @@ export default function AbwesenheitenClient({ initialAbsences, werkstudenten, ab
           <h1 className="text-2xl font-bold text-slate-900">Abwesenheiten</h1>
           <p className="text-slate-500 mt-1 text-sm">Übersicht aller Abwesenheiten deiner Werkstudenten</p>
         </div>
+
+        {disabledBereichCount > 0 && (
+          <Alert className="mb-5 border-blue-200 bg-blue-50">
+            <AlertDescription className="text-blue-800 text-sm">
+              {disabledBereichCount === 1
+                ? '1 Bereich hat die Abwesenheitsverwaltung deaktiviert. Werkstudenten aus diesem Bereich werden hier nicht angezeigt.'
+                : `${disabledBereichCount} Bereiche haben die Abwesenheitsverwaltung deaktiviert. Werkstudenten aus diesen Bereichen werden hier nicht angezeigt.`}
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Filter card */}
         <Card className="mb-6 border-slate-200 shadow-sm">

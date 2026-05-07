@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import { DEFAULT_MAX_EDIT_DAYS_PAST } from '@/lib/database.types'
-import ManagerNav from '@/components/manager/ManagerNav'
+import AdminNav from '@/components/admin/AdminNav'
 import SettingsForm from './SettingsForm'
 import AbwesenheitstypenKonfiguration from './AbwesenheitstypenKonfiguration'
 import SubLocationVerwaltung from './SubLocationVerwaltung'
@@ -35,7 +35,9 @@ export default async function ManagerSettingsPage() {
   const maxEditDaysPast = setting ? parseInt(setting.value, 10) : DEFAULT_MAX_EDIT_DAYS_PAST
 
   const bereiche = await loadManagerBereiche()
-  const initialBereichId = bereiche[0]?.id ?? null
+  // Only show absence type configuration for bereiche with absences_enabled
+  const absenceEnabledBereiche = bereiche.filter((b) => b.absences_enabled !== false)
+  const initialBereichId = absenceEnabledBereiche[0]?.id ?? null
   const initialConfigResult = initialBereichId
     ? await loadBereichConfig(initialBereichId)
     : null
@@ -63,7 +65,7 @@ export default async function ManagerSettingsPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <ManagerNav isAdmin={profile?.is_admin ?? false} />
+      <AdminNav isAdmin={profile?.is_admin ?? false} />
 
       <main className="max-w-5xl mx-auto px-6 py-10">
         <div className="mb-8">
@@ -74,7 +76,7 @@ export default async function ManagerSettingsPage() {
         <SettingsForm maxEditDaysPast={maxEditDaysPast} />
 
         <AbwesenheitstypenKonfiguration
-          bereiche={bereiche}
+          bereiche={absenceEnabledBereiche}
           initialBereichId={initialBereichId}
           initialConfig={initialConfig}
         />

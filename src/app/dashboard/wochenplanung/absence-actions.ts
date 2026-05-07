@@ -127,6 +127,18 @@ export async function createAbsence(
   const parsed = CreateAbsenceSchema.safeParse(input)
   if (!parsed.success) return { error: 'Ungültige Eingabe' }
 
+  // Defense-in-depth: check absences_enabled for the user's bereich
+  const { data: profileWithBereich } = await supabase
+    .from('profiles')
+    .select('bereich_id, bereiche(absences_enabled)')
+    .eq('id', user.id)
+    .single()
+
+  const bereichData = profileWithBereich?.bereiche as unknown as { absences_enabled: boolean } | null
+  if (profileWithBereich?.bereich_id && bereichData?.absences_enabled === false) {
+    return { error: 'Abwesenheitsverwaltung ist für diesen Bereich deaktiviert.' }
+  }
+
   const { date, typeId, isOverrideType, note, skipActualEntriesCheck } = parsed.data
 
   const sevenDaysAgo = new Date()
@@ -221,6 +233,18 @@ export async function deleteAbsence(
 
     if (!absence) return { error: 'Abwesenheit nicht gefunden' }
     if (absence.user_id !== user.id) return { error: 'Zugriff verweigert' }
+
+    // Defense-in-depth: check absences_enabled for the user's bereich
+    const { data: profileWithBereich } = await supabase
+      .from('profiles')
+      .select('bereich_id, bereiche(absences_enabled)')
+      .eq('id', user.id)
+      .single()
+
+    const bereichData = profileWithBereich?.bereiche as unknown as { absences_enabled: boolean } | null
+    if (profileWithBereich?.bereich_id && bereichData?.absences_enabled === false) {
+      return { error: 'Abwesenheitsverwaltung ist für diesen Bereich deaktiviert.' }
+    }
 
     const sevenDaysAgo = new Date()
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)

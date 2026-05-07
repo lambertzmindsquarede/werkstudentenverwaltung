@@ -1,8 +1,6 @@
-import Image from 'next/image'
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
-import { ManagerSignOutButton } from '@/components/ManagerSignOutButton'
+import AdminNav from '@/components/admin/AdminNav'
 import { loadGlobalAbsenceTypes, loadBereichOverrideStatus } from './actions'
 import AbwesenheitstypenClient from './AbwesenheitstypenClient'
 
@@ -21,53 +19,16 @@ export default async function AdminAbwesenheitstypenPage() {
     .eq('id', user.id)
     .single()
 
-  if (!profile?.is_admin) redirect('/dashboard')
+  if (!profile?.is_admin) redirect('/admin/users')
 
   const [{ data: types, usingDefaults }, { data: bereichStatus }] = await Promise.all([
     loadGlobalAbsenceTypes(),
     loadBereichOverrideStatus(),
   ])
 
-  const navItems = [
-    { href: '/admin', label: 'Übersicht' },
-    { href: '/admin/bereiche', label: 'Bereiche' },
-    { href: '/admin/abwesenheitstypen', label: 'Abwesenheitstypen', active: true },
-    { href: '/manager/users', label: 'Nutzerverwaltung' },
-  ]
-
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-3">
-          <Image src="/logo-mindsquare-176x781.webp" alt="mindsquare" width={90} height={40} />
-          <span className="text-slate-300">|</span>
-          <span className="text-slate-600 text-sm font-medium">Werkstudentenverwaltung</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs bg-purple-100 text-purple-700 font-medium px-2.5 py-1 rounded-full">
-            Admin
-          </span>
-          <ManagerSignOutButton />
-        </div>
-      </header>
-
-      <nav className="bg-white border-b border-slate-200 px-6">
-        <div className="max-w-5xl mx-auto flex gap-1">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                item.active
-                  ? 'text-slate-900 border-purple-600'
-                  : 'text-slate-500 hover:text-slate-700 border-transparent hover:border-slate-300'
-              }`}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </div>
-      </nav>
+      <AdminNav isAdmin={true} />
 
       <AbwesenheitstypenClient
         initialTypes={types}
