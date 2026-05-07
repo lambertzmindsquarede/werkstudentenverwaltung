@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase-server'
+import { createAdminClient } from '@/lib/supabase-admin'
 import { revalidatePath } from 'next/cache'
 
 export type SubLocation = {
@@ -38,8 +39,10 @@ export async function getTeamPresence(date: string): Promise<{ data: TeamPresenc
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { data: null, error: 'Nicht authentifiziert' }
 
+  const admin = createAdminClient()
+
   // Get self profile to determine own bereich
-  const { data: selfProfile } = await supabase
+  const { data: selfProfile } = await admin
     .from('profiles')
     .select('bereich_id, role')
     .eq('id', user.id)
@@ -50,7 +53,7 @@ export async function getTeamPresence(date: string): Promise<{ data: TeamPresenc
   // Load all bereiche visible to the user:
   // - own bereich
   // - globally visible bereiche
-  const { data: bereiche } = await supabase
+  const { data: bereiche } = await admin
     .from('bereiche')
     .select('id, name, visibility')
 
@@ -67,7 +70,7 @@ export async function getTeamPresence(date: string): Promise<{ data: TeamPresenc
   const visibleBereichIds = visibleBereiche.map((b) => b.id)
 
   // Load all werkstudenten in visible bereiche
-  const { data: members } = await supabase
+  const { data: members } = await admin
     .from('profiles')
     .select('id, full_name, bereich_id')
     .in('bereich_id', visibleBereichIds)
@@ -79,7 +82,7 @@ export async function getTeamPresence(date: string): Promise<{ data: TeamPresenc
 
   // Load today's planned arbeitsort for each member
   const { data: plannedEntries } = memberIds.length > 0
-    ? await supabase
+    ? await admin
         .from('planned_entries')
         .select('user_id, arbeitsort_id')
         .in('user_id', memberIds)
@@ -89,7 +92,7 @@ export async function getTeamPresence(date: string): Promise<{ data: TeamPresenc
 
   // Load today's absences for each member
   const { data: absences } = memberIds.length > 0
-    ? await supabase
+    ? await admin
         .from('absences')
         .select('user_id, absence_type_id, absence_type_override_id')
         .in('user_id', memberIds)
@@ -98,14 +101,14 @@ export async function getTeamPresence(date: string): Promise<{ data: TeamPresenc
     : { data: [] }
 
   // Load absence type names
-  const { data: absenceTypes } = await supabase
+  const { data: absenceTypes } = await admin
     .from('absence_types')
     .select('id, name')
     .limit(100)
 
   // Load absence type overrides — filtered to visible bereiche only (BUG-20-3)
   const { data: absenceTypeOverrides } = visibleBereichIds.length > 0
-    ? await supabase
+    ? await admin
         .from('absence_type_overrides')
         .select('id, name')
         .in('bereich_id', visibleBereichIds)
@@ -114,7 +117,7 @@ export async function getTeamPresence(date: string): Promise<{ data: TeamPresenc
 
   // Load daily presence (sub-locations)
   const { data: presences } = memberIds.length > 0
-    ? await supabase
+    ? await admin
         .from('daily_presence')
         .select('user_id, sub_location_id')
         .in('user_id', memberIds)
@@ -124,7 +127,7 @@ export async function getTeamPresence(date: string): Promise<{ data: TeamPresenc
 
   // Load actual entries for today: used to determine if stamped in + mood emoji
   const { data: todayActualEntries } = memberIds.length > 0
-    ? await supabase
+    ? await admin
         .from('actual_entries')
         .select('user_id, mood_emoji, is_complete')
         .in('user_id', memberIds)
@@ -138,7 +141,7 @@ export async function getTeamPresence(date: string): Promise<{ data: TeamPresenc
     .filter(Boolean) as string[]
 
   const { data: subLocations } = subLocationIds.length > 0
-    ? await supabase.from('sub_locations').select('id, name').in('id', subLocationIds)
+    ? await admin.from('sub_locations').select('id, name').in('id', subLocationIds)
     : { data: [] }
 
   // Load arbeitsorte names
@@ -146,7 +149,7 @@ export async function getTeamPresence(date: string): Promise<{ data: TeamPresenc
     (plannedEntries ?? []).map((p) => p.arbeitsort_id).filter(Boolean) as string[]
   )]
   const { data: arbeitsorte } = arbeitsortIds.length > 0
-    ? await supabase.from('arbeitsorte').select('id, name').in('id', arbeitsortIds)
+    ? await admin.from('arbeitsorte').select('id, name').in('id', arbeitsortIds)
     : { data: [] }
 
   // Build lookup maps
@@ -257,15 +260,15 @@ export async function getTeamPresence(date: string): Promise<{ data: TeamPresenc
   // BUG-20-2: werkstudent without bereich still gets an "Ich"-section
   if (!me && selfProfile?.role === 'werkstudent') {
     const [profileRes, absenceRes, presenceRes, openEntryRes] = await Promise.all([
-      supabase.from('profiles').select('full_name').eq('id', user.id).single(),
-      supabase.from('absences').select('absence_type_id, absence_type_override_id').eq('user_id', user.id).eq('date', date).maybeSingle(),
-      supabase.from('daily_presence').select('sub_location_id').eq('user_id', user.id).eq('date', date).maybeSingle(),
-      supabase.from('actual_entries').select('mood_emoji').eq('user_id', user.id).eq('date', date).eq('is_complete', false).maybeSingle(),
+      admin.from('profiles').select('full_name').eq('id', user.id).single(),
+      admin.from('absences').select('absence_type_id, absence_type_override_id').eq('user_id', user.id).eq('date', date).maybeSingle(),
+      admin.from('daily_presence').select('sub_location_id').eq('user_id', user.id).eq('date', date).maybeSingle(),
+      admin.from('actual_entries').select('mood_emoji').eq('user_id', user.id).eq('date', date).eq('is_complete', false).maybeSingle(),
     ])
     const ownSubLocId = presenceRes.data?.sub_location_id ?? null
     let ownSubLocName: string | null = null
     if (ownSubLocId) {
-      const slRes = await supabase.from('sub_locations').select('name').eq('id', ownSubLocId).single()
+      const slRes = await admin.from('sub_locations').select('name').eq('id', ownSubLocId).single()
       ownSubLocName = slRes.data?.name ?? null
     }
     const ownAbsence = absenceRes.data
