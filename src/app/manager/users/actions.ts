@@ -166,5 +166,6 @@ export async function updateUserProfile(
   if (error) return { error: error.message }
 
   revalidatePath('/manager/users')
+  revalidatePath('/admin/users')
   return {}
 }

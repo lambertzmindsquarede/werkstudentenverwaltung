@@ -85,6 +85,7 @@ interface Props {
   lastUsedArbeitsortId: string | null
   initialAbsences: AbsenceWithType[]
   absenceTypes: ResolvedAbsenceType[]
+  absencesEnabled?: boolean
 }
 
 function calcHours(start: string, end: string): number {
@@ -156,6 +157,7 @@ export default function WochenplanungClient({
   lastUsedArbeitsortId,
   initialAbsences,
   absenceTypes,
+  absencesEnabled = true,
 }: Props) {
   const router = useRouter()
   const weekDates = getWeekDates(weekStr)
@@ -661,7 +663,7 @@ export default function WochenplanungClient({
                             </div>
                           )}
 
-                          {!isPastDay && !isHolidayDay && (
+                          {!isPastDay && !isHolidayDay && absencesEnabled && (
                             <button
                               type="button"
                               onClick={() => setAbsenceDialogDate(dateStr)}
@@ -728,7 +730,7 @@ export default function WochenplanungClient({
         </div>
       </main>
 
-      {absenceDialogDate && (
+      {absenceDialogDate && absencesEnabled && (
         <AbwesenheitDialog
           date={absenceDialogDate}
           absence={absencesByDate[absenceDialogDate] ?? null}

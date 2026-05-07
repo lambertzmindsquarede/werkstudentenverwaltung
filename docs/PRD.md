@@ -38,6 +38,10 @@ Teamleiter oder HR-Verantwortliche, die einen Überblick über die Verfügbarkei
 | P0 (MVP) | PROJ-19: Bereichs-Datenisolation für Manager | Planned |
 | P1 | PROJ-20: Team-Anwesenheitsübersicht | Planned |
 | P2 | PROJ-21: Stimmungs-Emoji beim Einstempeln | Planned |
+| P0 (MVP) | PROJ-22: Excel-Stundenzettel-Export (HR-Vorlage) | Planned |
+| P1 | PROJ-23: Deckungsübersicht für Manager | Planned |
+| P1 | PROJ-24: Abwesenheiten pro Bereich deaktivierbar | Planned |
+| P1 | PROJ-25: Manager-Zeitkorrektur | Planned |
 
 ## Success Metrics
 - Alle Werkstudenten nutzen die App täglich zum Einstempeln (100% Adoption)

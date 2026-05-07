@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { toast } from 'sonner'
-import ManagerNav from '@/components/manager/ManagerNav'
+import AdminNav from '@/components/admin/AdminNav'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -113,7 +113,7 @@ export default function ArbeitsortVerwaltungClient({ initialArbeitsorte, isAdmin
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <ManagerNav isAdmin={isAdmin} />
+      <AdminNav isAdmin={isAdmin} />
 
       <main className="max-w-5xl mx-auto px-6 py-8">
         <div className="mb-6 flex items-start justify-between">

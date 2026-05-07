@@ -3,6 +3,7 @@
 import { useState, useEffect, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import ManagerNav from '@/components/manager/ManagerNav'
+import AdminNav from '@/components/admin/AdminNav'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -40,8 +41,6 @@ import { updateUserProfile, getUsersForManager } from './actions'
 import { assignWerkstudentToBereich, getManagerBereichIds, setManagerBereiche } from '@/app/admin/bereiche/actions'
 import type { Profile, UserRole, Bereich } from '@/lib/database.types'
 import { BUNDESLAENDER, DEFAULT_BUNDESLAND } from '@/lib/bundesland-utils'
-import { AlertCircle } from 'lucide-react'
-import StundenzettelExportButton from '@/components/zeiterfassung/StundenzettelExportButton'
 
 type FilterStatus = 'all' | 'pending' | 'active' | 'inactive'
 type FilterRole = 'all' | 'werkstudent' | 'manager'
@@ -329,6 +328,7 @@ interface UsersClientProps {
   isAdmin: boolean
   bereiche: Bereich[]
   selectedBereich: string | null
+  navType?: 'manager' | 'admin'
 }
 
 export default function UsersClient({
@@ -337,6 +337,7 @@ export default function UsersClient({
   isAdmin,
   bereiche,
   selectedBereich,
+  navType = 'manager',
 }: UsersClientProps) {
   const router = useRouter()
   const [users, setUsers] = useState<Profile[]>(initialUsers)
@@ -376,7 +377,8 @@ export default function UsersClient({
     const params = new URLSearchParams()
     if (value !== 'all') params.set('bereich', value)
     const query = params.toString()
-    router.push(`/manager/users${query ? `?${query}` : ''}`)
+    const basePath = navType === 'admin' ? '/admin/users' : '/manager/users'
+    router.push(`${basePath}${query ? `?${query}` : ''}`)
   }
 
   const pendingCount = users.filter((u) => !u.role).length
@@ -397,7 +399,7 @@ export default function UsersClient({
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <ManagerNav isAdmin={isAdmin} />
+      {navType === 'admin' ? <AdminNav isAdmin={isAdmin} /> : <ManagerNav isAdmin={isAdmin} />}
 
       <main className="max-w-5xl mx-auto px-6 py-8">
         <div className="mb-6 flex items-start justify-between">
@@ -481,9 +483,6 @@ export default function UsersClient({
                   Nutzer
                 </TableHead>
                 <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                  Status
-                </TableHead>
-                <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
                   Rolle
                 </TableHead>
                 <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
@@ -494,9 +493,6 @@ export default function UsersClient({
                 </TableHead>
                 <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
                   Aktiv
-                </TableHead>
-                <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                  Pers.-Nr.
                 </TableHead>
                 <TableHead className="w-20" />
               </TableRow>
@@ -514,18 +510,16 @@ export default function UsersClient({
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-9" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-14" /></TableCell>
                     <TableCell><Skeleton className="h-8 w-16" /></TableCell>
                   </TableRow>
                 ))
               ) : filteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-12 text-slate-400 text-sm">
+                  <TableCell colSpan={6} className="text-center py-12 text-slate-400 text-sm">
                     {users.length === 0 && !isAdmin
                       ? 'Ihrem Bereich sind noch keine Werkstudenten zugeordnet.'
                       : 'Keine Nutzer gefunden.'}
@@ -554,9 +548,6 @@ export default function UsersClient({
                         </div>
                       </TableCell>
                       <TableCell>
-                        <StatusBadge profile={user} />
-                      </TableCell>
-                      <TableCell>
                         <RoleBadge role={user.role} />
                       </TableCell>
                       <TableCell>
@@ -582,28 +573,7 @@ export default function UsersClient({
                         />
                       </TableCell>
                       <TableCell>
-                        {user.role === 'werkstudent' ? (
-                          user.personalnummer ? (
-                            <span className="text-sm text-slate-600">{user.personalnummer}</span>
-                          ) : (
-                            <span className="flex items-center gap-1 text-xs text-amber-600">
-                              <AlertCircle className="h-3.5 w-3.5" />
-                              Fehlt
-                            </span>
-                          )
-                        ) : (
-                          <span className="text-slate-400 text-sm">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
                         <div className="flex items-center gap-2">
-                          {user.role === 'werkstudent' && (
-                            <StundenzettelExportButton
-                              userId={user.id}
-                              disabled={!user.personalnummer}
-                              disabledReason="Personalnummer fehlt."
-                            />
-                          )}
                           <Button
                             variant="outline"
                             size="sm"
