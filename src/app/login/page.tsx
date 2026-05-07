@@ -20,40 +20,34 @@ export default async function LoginPage({
   const devLoginEnabled = process.env.DEV_LOGIN_ENABLED === 'true'
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 p-4">
-      {/* Background decoration */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl" />
-      </div>
+    <main className="min-h-screen flex items-center justify-center relative p-4 bg-[url('/login-bg.jpg')] bg-cover bg-center">
+      {/* Subtle overlay for card readability */}
+      <div className="absolute inset-0 bg-white/30" />
 
       <div className="relative w-full max-w-md">
-        <Card className="border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl">
+        <Card className="border-slate-200 bg-white/95 backdrop-blur-sm shadow-2xl">
           <CardHeader className="text-center pb-2 pt-8">
-            {/* Logo */}
             <div className="flex justify-center mb-6">
-              <div className="bg-white rounded-xl px-6 py-3 shadow-lg">
-                <Image
-                  src="/logo-mindsquare-176x781.webp"
-                  alt="mindsquare"
-                  width={126}
-                  height={56}
-                  priority
-                />
-              </div>
+              <Image
+                src="/logo-mindsquare-176x781.webp"
+                alt="mindsquare"
+                width={126}
+                height={56}
+                priority
+              />
             </div>
-            <CardTitle className="text-2xl font-semibold text-white">
+            <CardTitle className="text-2xl font-semibold text-slate-900">
               Werkstudentenverwaltung
             </CardTitle>
-            <CardDescription className="text-slate-400 text-sm mt-1">
+            <CardDescription className="text-slate-500 text-sm mt-1">
               Melde dich mit deinem mindsquare-Konto an
             </CardDescription>
           </CardHeader>
 
           <CardContent className="px-8 pb-8 pt-6">
-            <Separator className="bg-white/10 mb-6" />
+            <Separator className="bg-slate-200 mb-6" />
             {errorMessage && (
-              <Alert variant="destructive" className="mb-4 border-red-500/50 bg-red-500/10 text-red-400">
+              <Alert variant="destructive" className="mb-4">
                 <AlertDescription>{errorMessage}</AlertDescription>
               </Alert>
             )}
@@ -67,7 +61,7 @@ export default async function LoginPage({
           </CardContent>
         </Card>
 
-        <p className="text-center text-slate-600 text-xs mt-6">
+        <p className="text-center text-slate-700 text-xs mt-6 drop-shadow">
           © {new Date().getFullYear()} mindsquare AG
         </p>
       </div>
