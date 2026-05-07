@@ -91,9 +91,6 @@ export default function PersonenKarte({
           {person.full_name ?? 'Unbekannt'}
           {isMe && <span className="ml-1 text-xs text-blue-500 font-normal">(Ich)</span>}
         </p>
-        {isMe && person.group_type === 'arbeitsort' && (
-          <p className="text-xs text-slate-400 truncate">{person.group_label}</p>
-        )}
       </div>
 
       {/* Sub-location indicator — hidden when absent (absence takes precedence) */}
