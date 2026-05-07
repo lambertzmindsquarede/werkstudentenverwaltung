@@ -223,9 +223,9 @@ Geänderte Dateien:
 **Tester:** /qa skill
 
 ### Automated Tests
-- **Unit tests:** 292 existing tests — all pass (`npm test`)
-- **E2E tests:** 20 tests in `tests/PROJ-25-manager-zeitkorrektur.spec.ts` — 15 pass, 5 skipped (werkstudent session not available; no approved entries in seed data)
-- **Regression:** Full E2E suite (126 tests) — all pass, 0 failures
+- **Unit tests:** 292 tests — all pass (`npm test`)
+- **E2E tests:** 20 tests in `tests/PROJ-25-manager-zeitkorrektur.spec.ts` — 19 pass, 1 skipped (no approved entries in seed data; expected) when run `--workers=1`
+- **Regression:** Full E2E suite — 137 pass, 203 skipped, 0 failures (`npm run test:e2e`)
 
 ### Acceptance Criteria Results
 
