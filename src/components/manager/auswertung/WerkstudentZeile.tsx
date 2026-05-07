@@ -8,6 +8,7 @@ import TagDetailZeile from './TagDetailZeile'
 
 interface Props {
   ws: WerkstudentAuswertung
+  onCorrectionDone: () => void
 }
 
 function formatHours(minutes: number): string {
@@ -38,7 +39,7 @@ function AuslastungBadge({ pct, over }: { pct: number | null; over: boolean }) {
   )
 }
 
-export default function WerkstudentZeile({ ws }: Props) {
+export default function WerkstudentZeile({ ws, onCorrectionDone }: Props) {
   const [expanded, setExpanded] = useState(false)
   const hasData = ws.geplanteMinutes > 0 || ws.istMinutes > 0
 
@@ -86,11 +87,17 @@ export default function WerkstudentZeile({ ws }: Props) {
                   <th className="px-3 py-1.5 text-xs font-medium text-slate-500 text-left">Ist</th>
                   <th className="px-3 py-1.5 text-xs font-medium text-slate-500 text-left">Netto</th>
                   <th className="px-3 py-1.5 text-xs font-medium text-slate-500 text-left">Diff.</th>
+                  <th className="px-3 py-1.5 text-xs font-medium text-slate-500 text-left w-8"></th>
                 </tr>
               </thead>
               <tbody>
                 {ws.tage.map((tag) => (
-                  <TagDetailZeile key={tag.date} tag={tag} />
+                  <TagDetailZeile
+                    key={tag.date}
+                    tag={tag}
+                    userId={ws.userId}
+                    onCorrectionDone={onCorrectionDone}
+                  />
                 ))}
               </tbody>
             </table>

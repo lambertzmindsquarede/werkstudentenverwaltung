@@ -14,6 +14,18 @@ import {
   parseISO,
 } from 'date-fns'
 
+export interface IstEintragDetail {
+  id: string
+  actual_start: string | null
+  actual_end: string | null
+  break_minutes: number
+  block_index: number | null
+  status: 'draft' | 'approved'
+  corrected_by: string | null
+  corrected_at: string | null
+  correction_note: string | null
+}
+
 export interface TagDetail {
   date: string
   weekday: string
@@ -24,6 +36,7 @@ export interface TagDetail {
   nettoMinutes: number
   diffMinutes: number | null
   isUngeplant: boolean
+  istEintraege: IstEintragDetail[]
 }
 
 export interface WerkstudentAuswertung {
@@ -159,7 +172,7 @@ export async function getAuswertungDaten(
       .lte('date', endStr),
     admin
       .from('actual_entries')
-      .select('user_id, date, actual_start, actual_end, break_minutes, block_index')
+      .select('id, user_id, date, actual_start, actual_end, break_minutes, block_index, status, corrected_by, corrected_at, correction_note')
       .in('user_id', memberIds)
       .gte('date', startStr)
       .lte('date', endStr),
@@ -167,7 +180,17 @@ export async function getAuswertungDaten(
 
   // Group by user_id → date
   type PlanEntry = { planned_start: string; planned_end: string }
-  type ActualEntry = { actual_start: string | null; actual_end: string | null; break_minutes: number; block_index: number | null }
+  type ActualEntry = {
+    id: string
+    actual_start: string | null
+    actual_end: string | null
+    break_minutes: number
+    block_index: number | null
+    status: string
+    corrected_by: string | null
+    corrected_at: string | null
+    correction_note: string | null
+  }
 
   const planByUserDate = new Map<string, Map<string, PlanEntry[]>>()
   for (const pe of plannedEntries ?? []) {
@@ -183,10 +206,15 @@ export async function getAuswertungDaten(
     const byDate = actualByUserDate.get(ae.user_id)!
     if (!byDate.has(ae.date)) byDate.set(ae.date, [])
     byDate.get(ae.date)!.push({
+      id: ae.id,
       actual_start: ae.actual_start,
       actual_end: ae.actual_end,
       break_minutes: ae.break_minutes ?? 0,
       block_index: ae.block_index,
+      status: ae.status ?? 'draft',
+      corrected_by: ae.corrected_by ?? null,
+      corrected_at: ae.corrected_at ?? null,
+      correction_note: ae.correction_note ?? null,
     })
   }
 
@@ -194,8 +222,8 @@ export async function getAuswertungDaten(
   const allDays = eachDayOfInterval({ start, end }).filter((d) => !isWeekend(d))
 
   const results: WerkstudentAuswertung[] = werkstudenten.map((ws) => {
-    const planDates = planByUserDate.get(ws.id) ?? new Map()
-    const actualDates = actualByUserDate.get(ws.id) ?? new Map()
+    const planDates = planByUserDate.get(ws.id) ?? new Map<string, PlanEntry[]>()
+    const actualDates = actualByUserDate.get(ws.id) ?? new Map<string, ActualEntry[]>()
 
     // Collect all relevant dates: planned or actual
     const relevantDates = new Set([...planDates.keys(), ...actualDates.keys()])
@@ -289,6 +317,17 @@ export async function getAuswertungDaten(
         nettoMinutes: Math.max(0, nettoMin),
         diffMinutes: diffMin,
         isUngeplant,
+        istEintraege: actuals.map((a) => ({
+          id: a.id,
+          actual_start: a.actual_start,
+          actual_end: a.actual_end,
+          break_minutes: a.break_minutes,
+          block_index: a.block_index,
+          status: (a.status as 'draft' | 'approved') ?? 'draft',
+          corrected_by: a.corrected_by,
+          corrected_at: a.corrected_at,
+          correction_note: a.correction_note,
+        })),
       })
     }
 

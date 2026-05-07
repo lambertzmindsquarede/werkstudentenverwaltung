@@ -10,6 +10,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import IstEintragEditDialog from './IstEintragEditDialog'
 import {
   getWeekDates,
@@ -71,6 +77,7 @@ export default function WochenIstübersicht({
 }: Props) {
   const [dayDetailDate, setDayDetailDate] = useState<string | null>(null)
   const [blockEditEntry, setBlockEditEntry] = useState<ActualEntry | null>(null)
+  const [newBlockDate, setNewBlockDate] = useState<string | null>(null)
 
   const weekDates = getWeekDates(weekStr)
   const kwNumber = getCalendarWeekNumber(weekStr)
@@ -179,6 +186,7 @@ export default function WochenIstübersicht({
               } else if (actuals.length === 1) {
                 const a = actuals[0]
                 const isIncomplete = !a.is_complete
+                const isCorrected = !!a.corrected_by
                 istDisplay = (
                   <span className={`flex items-center gap-1.5 ${isIncomplete ? 'text-amber-600' : 'text-slate-900'}`}>
                     {formatTime(a.actual_start)}
@@ -188,9 +196,24 @@ export default function WochenIstübersicht({
                         offen
                       </Badge>
                     )}
+                    {isCorrected && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge className="text-[10px] px-1.5 py-0 bg-blue-100 text-blue-700 border border-blue-200 hover:bg-blue-100 cursor-help">
+                              Bearbeitet
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="max-w-xs text-xs">{a.correction_note ?? 'Vom Manager korrigiert'}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
                   </span>
                 )
               } else {
+                const hasCorrectedBlock = actuals.some((a) => !!a.corrected_by)
                 istDisplay = (
                   <span className={`flex items-center gap-1.5 ${hasOpenBlock ? 'text-amber-600' : 'text-slate-900'}`}>
                     {actuals.length} Bl.
@@ -200,6 +223,11 @@ export default function WochenIstübersicht({
                     {hasOpenBlock && (
                       <Badge className="text-[10px] px-1 py-0 bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-100">
                         offen
+                      </Badge>
+                    )}
+                    {hasCorrectedBlock && (
+                      <Badge className="text-[10px] px-1.5 py-0 bg-blue-100 text-blue-700 border border-blue-200 hover:bg-blue-100">
+                        Bearbeitet
                       </Badge>
                     )}
                   </span>
@@ -262,12 +290,9 @@ export default function WochenIstübersicht({
                             variant="ghost"
                             size="sm"
                             className="h-7 text-xs text-slate-400 hover:text-slate-700 px-2"
-                            onClick={() => {
-                              setBlockEditEntry(null)
-                              setDayDetailDate(dateStr)
-                            }}
+                            onClick={() => setNewBlockDate(dateStr)}
                           >
-                            Bearbeiten
+                            Erfassen
                           </Button>
                         )}
                       </div>
@@ -319,6 +344,7 @@ export default function WochenIstübersicht({
             {dayDetailEntries.map((entry) => {
               const h = calcNetHours(entry.actual_start, entry.actual_end, entry.break_minutes ?? 0)
               const withinCutoff = cutoffStr === null || entry.date >= cutoffStr
+              const isCorrected = !!entry.corrected_by
               return (
                 <div
                   key={entry.id}
@@ -337,6 +363,20 @@ export default function WochenIstübersicht({
                         offen
                       </Badge>
                     )}
+                    {isCorrected && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge className="ml-2 text-[10px] px-1.5 py-0 bg-blue-100 text-blue-700 border border-blue-200 hover:bg-blue-100 cursor-help">
+                              Bearbeitet
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="max-w-xs text-xs">{entry.correction_note ?? 'Vom Manager korrigiert'}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
                   </div>
                   {withinCutoff && (
                     <Button
@@ -351,6 +391,16 @@ export default function WochenIstübersicht({
                 </div>
               )
             })}
+            {(cutoffStr === null || (dayDetailDate && dayDetailDate >= cutoffStr)) && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full text-xs mt-1"
+                onClick={() => setNewBlockDate(dayDetailDate)}
+              >
+                + Neuer Block
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -368,6 +418,22 @@ export default function WochenIstübersicht({
           onClose={() => setBlockEditEntry(null)}
           onSaved={handleEditSaved}
           onDeleted={handleEditDeleted}
+        />
+      )}
+
+      {/* New block dialog (retroactive entry) */}
+      {newBlockDate && (
+        <IstEintragEditDialog
+          open
+          date={newBlockDate}
+          entry={null}
+          otherEntries={actualByDate.get(newBlockDate) ?? []}
+          showManagerNotice={hasManager && newBlockDate < today}
+          onClose={() => setNewBlockDate(null)}
+          onSaved={(entry) => {
+            onEntryChange(entry)
+            setNewBlockDate(null)
+          }}
         />
       )}
     </div>

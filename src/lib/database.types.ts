@@ -101,6 +101,10 @@ export type Database = {
           block_index: number | null
           break_minutes: number
           mood_emoji: string | null
+          status: string
+          corrected_by: string | null
+          corrected_at: string | null
+          correction_note: string | null
           created_at: string
           updated_at: string
         }
@@ -114,6 +118,10 @@ export type Database = {
           block_index?: number | null
           break_minutes?: number
           mood_emoji?: string | null
+          status?: string
+          corrected_by?: string | null
+          corrected_at?: string | null
+          correction_note?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -127,6 +135,10 @@ export type Database = {
           block_index?: number | null
           break_minutes?: number
           mood_emoji?: string | null
+          status?: string
+          corrected_by?: string | null
+          corrected_at?: string | null
+          correction_note?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -267,23 +279,68 @@ export type Database = {
         }
         Relationships: []
       }
+      time_entry_corrections: {
+        Row: {
+          id: string
+          time_entry_id: string | null
+          action: string
+          manager_id: string
+          corrected_at: string
+          reason: string
+          old_start: string | null
+          old_end: string | null
+          new_start: string | null
+          new_end: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          time_entry_id?: string | null
+          action: string
+          manager_id: string
+          corrected_at?: string
+          reason: string
+          old_start?: string | null
+          old_end?: string | null
+          new_start?: string | null
+          new_end?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          time_entry_id?: string | null
+          action?: string
+          manager_id?: string
+          corrected_at?: string
+          reason?: string
+          old_start?: string | null
+          old_end?: string | null
+          new_start?: string | null
+          new_end?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       bereiche: {
         Row: {
           id: string
           name: string
           visibility: 'team' | 'global'
+          absences_enabled: boolean
           created_at: string
         }
         Insert: {
           id?: string
           name: string
           visibility?: 'team' | 'global'
+          absences_enabled?: boolean
           created_at?: string
         }
         Update: {
           id?: string
           name?: string
           visibility?: 'team' | 'global'
+          absences_enabled?: boolean
           created_at?: string
         }
         Relationships: []
@@ -401,6 +458,7 @@ export type Database = {
           manager_id: string | null
           is_admin: boolean
           bereich_id: string | null
+          personalnummer: string | null
           created_at: string
           updated_at: string
         }
@@ -415,6 +473,7 @@ export type Database = {
           manager_id?: string | null
           is_admin?: boolean
           bereich_id?: string | null
+          personalnummer?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -429,6 +488,7 @@ export type Database = {
           manager_id?: string | null
           is_admin?: boolean
           bereich_id?: string | null
+          personalnummer?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -442,7 +502,7 @@ export type Database = {
 }
 
 export type Profile = Database['public']['Tables']['profiles']['Row']
-export type ProfileWithManager = Profile & { manager?: Pick<Profile, 'id' | 'full_name'> | null }
+export type ProfileWithManager = Profile & { manager?: Pick<Profile, 'id' | 'full_name' | 'email'> | null }
 export const DEFAULT_BUNDESLAND = 'NW'
 export type UserRole = 'werkstudent' | 'manager'
 export type ProfileUpdate = Database['public']['Tables']['profiles']['Update']
@@ -457,8 +517,26 @@ export type ActualEntry = {
   block_index: number | null
   break_minutes: number
   mood_emoji: string | null
+  status: 'draft' | 'approved'
+  corrected_by: string | null
+  corrected_at: string | null
+  correction_note: string | null
   created_at: string
   updated_at: string
+}
+
+export type TimeEntryCorrection = {
+  id: string
+  time_entry_id: string | null
+  action: 'edit' | 'create' | 'delete'
+  manager_id: string
+  corrected_at: string
+  reason: string
+  old_start: string | null
+  old_end: string | null
+  new_start: string | null
+  new_end: string | null
+  created_at: string
 }
 
 export const DEFAULT_MAX_EDIT_DAYS_PAST = 14
