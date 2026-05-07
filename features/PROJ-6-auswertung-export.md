@@ -210,7 +210,8 @@ Keine neuen npm-Pakete notwendig. Alle shadcn-Komponenten und date-fns sind bere
 
 **QA Date:** 2026-05-07
 **Tester:** /qa skill
-**Status:** In Review — 1 High bug blocks deployment
+**Fixed:** 2026-05-07
+**Status:** In Review — BUG-1 fixed, ready for re-QA or deploy
 
 ### Automated Tests
 - **Unit tests:** 8 new tests for `utils.ts` (minutesToHHMM) — all pass (`npm test`: 292/292)
@@ -260,8 +261,8 @@ Keine neuen npm-Pakete notwendig. Alle shadcn-Komponenten und date-fns sind bere
 - **Jahr-Picker zeigt nur 3 Jahre** (`buildYears()` → aktuelles Jahr, -1, -2). Spec sagt „beliebige vergangene Monate" ohne explizite Jahreslimits. Für den aktuellen Nutzungsumfang ausreichend.
 
 ### Production-Ready Decision
-**NOT READY** — BUG-1 (High) muss vor Deployment behoben werden.
-Nach dem Fix kann direkt `/deploy` gestartet werden.
+**READY** — BUG-1 wurde behoben (`fix(PROJ-6)` commit). `npm run build` erfolgreich.
+Next step: `/deploy` starten.
 
 ## Deployment
 _To be added by /deploy_
