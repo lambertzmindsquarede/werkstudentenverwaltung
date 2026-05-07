@@ -40,6 +40,7 @@ import { updateUserProfile, getUsersForManager } from './actions'
 import { assignWerkstudentToBereich, getManagerBereichIds, setManagerBereiche } from '@/app/admin/bereiche/actions'
 import type { Profile, UserRole, Bereich } from '@/lib/database.types'
 import { BUNDESLAENDER, DEFAULT_BUNDESLAND } from '@/lib/bundesland-utils'
+import { AlertCircle } from 'lucide-react'
 
 type FilterStatus = 'all' | 'pending' | 'active' | 'inactive'
 type FilterRole = 'all' | 'werkstudent' | 'manager'
@@ -493,6 +494,9 @@ export default function UsersClient({
                 <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
                   Aktiv
                 </TableHead>
+                <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  Pers.-Nr.
+                </TableHead>
                 <TableHead className="w-20" />
               </TableRow>
             </TableHeader>
@@ -514,12 +518,13 @@ export default function UsersClient({
                     <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-9" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-14" /></TableCell>
                     <TableCell><Skeleton className="h-8 w-16" /></TableCell>
                   </TableRow>
                 ))
               ) : filteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-slate-400 text-sm">
+                  <TableCell colSpan={8} className="text-center py-12 text-slate-400 text-sm">
                     {users.length === 0 && !isAdmin
                       ? 'Ihrem Bereich sind noch keine Werkstudenten zugeordnet.'
                       : 'Keine Nutzer gefunden.'}
@@ -576,14 +581,30 @@ export default function UsersClient({
                         />
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-xs"
-                          onClick={() => setEditingUser(user)}
-                        >
-                          Bearbeiten
-                        </Button>
+                        {user.role === 'werkstudent' ? (
+                          user.personalnummer ? (
+                            <span className="text-sm text-slate-600">{user.personalnummer}</span>
+                          ) : (
+                            <span className="flex items-center gap-1 text-xs text-amber-600">
+                              <AlertCircle className="h-3.5 w-3.5" />
+                              Fehlt
+                            </span>
+                          )
+                        ) : (
+                          <span className="text-slate-400 text-sm">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs"
+                            onClick={() => setEditingUser(user)}
+                          >
+                            Bearbeiten
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )
