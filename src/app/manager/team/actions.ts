@@ -108,10 +108,9 @@ export async function getTeamPresenceForBereich(
     admin.from('absence_type_overrides').select('id, name').eq('bereich_id', bereichId),
     admin
       .from('actual_entries')
-      .select('user_id, mood_emoji')
+      .select('user_id, mood_emoji, is_complete')
       .in('user_id', memberIds)
-      .eq('date', date)
-      .eq('is_complete', false),
+      .eq('date', date),
   ])
 
   const arbeitsortIds = [
@@ -139,7 +138,12 @@ export async function getTeamPresenceForBereich(
   const arbeitsortMap = new Map((arbeitsorte ?? []).map((a) => [a.id, a.name]))
   const subLocationMap = new Map((subLocations ?? []).map((s) => [s.id, s.name]))
   const presenceMap = new Map((presences ?? []).map((p) => [p.user_id, p.sub_location_id]))
-  const moodEmojiMap = new Map((openEntries ?? []).map((e) => [e.user_id, e.mood_emoji as string | null]))
+  const stampedInSet = new Set((openEntries ?? []).map((e) => e.user_id))
+  const moodEmojiMap = new Map(
+    (openEntries ?? [])
+      .filter((e) => !e.is_complete)
+      .map((e) => [e.user_id, e.mood_emoji as string | null])
+  )
 
   const plannedArbeitsortMap = new Map<string, string | null>()
   for (const pe of plannedEntries ?? []) {
@@ -183,7 +187,7 @@ export async function getTeamPresenceForBereich(
     }
 
     const arbeitsortId = plannedArbeitsortMap.get(member.id) ?? null
-    if (arbeitsortId) {
+    if (arbeitsortId && stampedInSet.has(member.id)) {
       return {
         user_id: member.id,
         full_name: member.full_name,

@@ -122,15 +122,14 @@ export async function getTeamPresence(date: string): Promise<{ data: TeamPresenc
         .limit(500)
     : { data: [] }
 
-  // Load mood emoji from open time entries
-  const { data: openEntries } = memberIds.length > 0
+  // Load actual entries for today: used to determine if stamped in + mood emoji
+  const { data: todayActualEntries } = memberIds.length > 0
     ? await supabase
         .from('actual_entries')
-        .select('user_id, mood_emoji')
+        .select('user_id, mood_emoji, is_complete')
         .in('user_id', memberIds)
         .eq('date', date)
-        .eq('is_complete', false)
-        .limit(500)
+        .limit(1000)
     : { data: [] }
 
   // Load sub_location names if any are set
@@ -156,7 +155,12 @@ export async function getTeamPresence(date: string): Promise<{ data: TeamPresenc
   const presenceMap = new Map((presences ?? []).map((p) => [p.user_id, p.sub_location_id]))
   const subLocationMap = new Map((subLocations ?? []).map((s) => [s.id, s.name]))
   const arbeitsortMap = new Map((arbeitsorte ?? []).map((a) => [a.id, a.name]))
-  const moodEmojiMap = new Map((openEntries ?? []).map((e) => [e.user_id, e.mood_emoji as string | null]))
+  const stampedInSet = new Set((todayActualEntries ?? []).map((e) => e.user_id))
+  const moodEmojiMap = new Map(
+    (todayActualEntries ?? [])
+      .filter((e) => !e.is_complete)
+      .map((e) => [e.user_id, e.mood_emoji as string | null])
+  )
 
   // Deduplicate planned entries: pick any arbeitsort per user for today
   const plannedArbeitsortMap = new Map<string, string | null>()
@@ -202,7 +206,7 @@ export async function getTeamPresence(date: string): Promise<{ data: TeamPresenc
     }
 
     const arbeitsortId = plannedArbeitsortMap.get(userId) ?? null
-    if (arbeitsortId) {
+    if (arbeitsortId && stampedInSet.has(userId)) {
       const arbeitsortName = arbeitsortMap.get(arbeitsortId) ?? 'Büro'
       return {
         user_id: userId,
