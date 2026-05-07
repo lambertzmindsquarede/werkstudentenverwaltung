@@ -393,7 +393,6 @@ export default function StempelCard({
                   <SelectValue placeholder="Kein Arbeitsort" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">Kein Arbeitsort</SelectItem>
                   {arbeitsorte.map((a) => (
                     <SelectItem key={a.id} value={a.id}>
                       {a.name}
