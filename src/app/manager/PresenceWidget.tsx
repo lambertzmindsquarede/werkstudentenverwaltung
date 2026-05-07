@@ -37,7 +37,12 @@ function MemberCard({ person }: { person: PersonPresence }) {
       <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-xs font-semibold flex-shrink-0">
         {getInitials(person.full_name)}
       </div>
-      <p className="text-sm font-medium text-slate-800 truncate">{person.full_name ?? 'Unbekannt'}</p>
+      <p className="text-sm font-medium text-slate-800 truncate flex-1">{person.full_name ?? 'Unbekannt'}</p>
+      {person.sub_location_name && (
+        <span className="text-xs font-mono bg-slate-100 text-slate-600 border border-slate-200 rounded px-1.5 py-0.5 flex-shrink-0">
+          {person.sub_location_name}
+        </span>
+      )}
     </div>
   )
 }
