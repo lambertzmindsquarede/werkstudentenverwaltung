@@ -25,7 +25,7 @@ export default async function DashboardPage() {
   const weekStart = dateToString(weekDates[0])
   const weekEnd = dateToString(weekDates[4])
 
-  const [profileResult, todayEntriesResult, weekEntriesResult, plannedEntriesResult, openEntryResult, settingResult, todayAbsenceResult] =
+  const [profileResult, todayEntriesResult, weekEntriesResult, plannedEntriesResult, openEntryResult, settingResult, todayAbsenceResult, arbeitsorteResult] =
     await Promise.all([
       supabase.from('profiles').select('weekly_hour_limit, bundesland, role, manager_id').eq('id', user.id).single(),
       supabase
@@ -61,12 +61,18 @@ export default async function DashboardPage() {
         .eq('user_id', user.id)
         .eq('date', today)
         .maybeSingle(),
+      supabase.from('arbeitsorte').select('id, name').eq('is_active', true).order('name'),
     ])
 
   const isManager = profileResult.data?.role === 'manager'
   const rawDays = settingResult.data ? parseInt(settingResult.data.value, 10) : DEFAULT_MAX_EDIT_DAYS_PAST
   // Managers have no cutoff (null = unrestricted)
   const maxEditDaysPast = isManager ? null : rawDays
+
+  const plannedEntries = (plannedEntriesResult.data as PlannedEntry[] | null) ?? []
+  const todayPlannedEntry = plannedEntries.find((p) => p.date === today)
+  const todayArbeitsortId = todayPlannedEntry?.arbeitsort_id ?? null
+  const arbeitsorte = (arbeitsorteResult.data as { id: string; name: string }[] | null) ?? []
 
   return (
     <DashboardContent
@@ -80,9 +86,12 @@ export default async function DashboardPage() {
       hasManager={!!profileResult.data?.manager_id}
       initialTodayEntries={(todayEntriesResult.data as ActualEntry[] | null) ?? []}
       initialWeekEntries={(weekEntriesResult.data as ActualEntry[] | null) ?? []}
-      initialPlannedEntries={(plannedEntriesResult.data as PlannedEntry[] | null) ?? []}
+      initialPlannedEntries={plannedEntries}
       initialOpenEntry={((openEntryResult.data as ActualEntry[] | null)?.[0]) ?? null}
       todayAbsence={(todayAbsenceResult.data as AbsenceWithType | null) ?? null}
+      arbeitsorte={arbeitsorte}
+      initialTodayArbeitsortId={todayArbeitsortId}
+      hasTodayPlan={!!todayPlannedEntry}
     />
   )
 }

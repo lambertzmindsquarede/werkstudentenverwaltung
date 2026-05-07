@@ -128,9 +128,11 @@ export default function AbwesenheitenClient({ initialAbsences, werkstudenten, ab
     { href: '/manager', label: 'Übersicht' },
     { href: '/manager/users', label: 'Nutzerverwaltung' },
     { href: '/manager/kalender', label: 'Kalenderansicht' },
+    { href: '/manager/team', label: 'Team' },
     { href: '/manager/abwesenheiten', label: 'Abwesenheiten', active: true },
     { href: '/manager/arbeitsorte', label: 'Arbeitsorte' },
     { href: '/manager/settings', label: 'Einstellungen' },
+    ...(isAdmin ? [{ href: '/admin', label: 'Admin-Bereich', adminLink: true }] : []),
   ]
 
   return (
@@ -157,10 +159,11 @@ export default function AbwesenheitenClient({ initialAbsences, werkstudenten, ab
             <Link
               key={item.href}
               href={item.href}
-              className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                item.active
-                  ? 'text-slate-900 border-blue-600'
-                  : 'text-slate-500 hover:text-slate-700 border-transparent hover:border-slate-300'
+              className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${'adminLink' in item && item.adminLink
+                  ? 'text-purple-600 hover:text-purple-700 border-transparent hover:border-purple-300'
+                  : item.active
+                    ? 'text-slate-900 border-blue-600'
+                    : 'text-slate-500 hover:text-slate-700 border-transparent hover:border-slate-300'
               }`}
             >
               {item.label}

@@ -278,17 +278,12 @@ export default function WochenplanungClient({
     setSaveError(null)
 
     const entries: DayEntry[] = []
-    let blockedByHoliday = false
     weekDates.forEach((date) => {
       const dateStr = dateToString(date)
       if (isPast(dateStr)) return
+      if (isHoliday(dateStr)) return
       const day = dayStates[dateStr]
       if (!day || day.keinArbeitstag) return
-      const hasNewBlocks = day.blocks.some((b) => b.start && b.end)
-      if (hasNewBlocks && isHoliday(dateStr)) {
-        blockedByHoliday = true
-        return
-      }
       day.blocks.forEach((block, i) => {
         if (block.start && block.end) {
           entries.push({
@@ -301,12 +296,6 @@ export default function WochenplanungClient({
         }
       })
     })
-
-    if (blockedByHoliday) {
-      setSaveError('Planung nicht möglich: Mindestens ein ausgewählter Tag ist ein gesetzlicher Feiertag.')
-      setSaving(false)
-      return
-    }
 
     if (arbeitsorte.length > 0) {
       const missingArbeitsort = weekDates.some((date) => {
@@ -364,6 +353,7 @@ export default function WochenplanungClient({
       weekDates.forEach((date, i) => {
         const dateStr = dateToString(date)
         if (isPast(dateStr)) return
+        if (isHoliday(dateStr)) return
         const dayEntries = templateByDayIndex.get(i)
         if (dayEntries && dayEntries.length > 0) {
           const sorted = dayEntries.sort((a, b) => a.block_index - b.block_index)

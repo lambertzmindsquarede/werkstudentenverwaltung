@@ -219,6 +219,12 @@ export default function KalenderGrid({
             Kalenderansicht
           </a>
           <a
+            href="/manager/team"
+            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
+          >
+            Team
+          </a>
+          <a
             href="/manager/abwesenheiten"
             className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
           >
@@ -236,6 +242,14 @@ export default function KalenderGrid({
           >
             Einstellungen
           </a>
+          {isAdmin && (
+            <a
+              href="/admin"
+              className="px-4 py-3 text-sm font-medium text-purple-600 hover:text-purple-700 border-b-2 border-transparent hover:border-purple-300 transition-colors"
+            >
+              Admin-Bereich
+            </a>
+          )}
         </div>
       </nav>
 

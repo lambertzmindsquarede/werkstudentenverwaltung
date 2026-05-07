@@ -110,6 +110,26 @@ export async function deleteActualEntry(
   return {}
 }
 
+export async function updateTodayArbeitsort(
+  arbeitsortId: string | null
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Nicht authentifiziert' }
+
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin' }).format(new Date())
+  const { error } = await supabase
+    .from('planned_entries')
+    .update({ arbeitsort_id: arbeitsortId })
+    .eq('user_id', user.id)
+    .eq('date', today)
+
+  if (error) return { error: error.message }
+  return {}
+}
+
 export async function updateBreakMinutes(
   entryId: string,
   date: string,

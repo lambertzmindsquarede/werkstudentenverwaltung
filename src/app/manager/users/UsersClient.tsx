@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
@@ -36,7 +37,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { createClient } from '@/lib/supabase-browser'
 import { updateUserProfile, getUsersForManager } from './actions'
-import { assignWerkstudentToBereich } from '@/app/admin/bereiche/actions'
+import { assignWerkstudentToBereich, getManagerBereichIds, setManagerBereiche } from '@/app/admin/bereiche/actions'
 import type { Profile, UserRole, Bereich } from '@/lib/database.types'
 import { BUNDESLAENDER, DEFAULT_BUNDESLAND } from '@/lib/bundesland-utils'
 
@@ -105,6 +106,7 @@ function EditUserDialog({ user, managers, bereiche, onClose, onSaved }: EditDial
   const [editBundesland, setEditBundesland] = useState<string>(DEFAULT_BUNDESLAND)
   const [editManagerId, setEditManagerId] = useState<string>('none')
   const [editBereichId, setEditBereichId] = useState<string>('none')
+  const [managerBereichIds, setManagerBereichIds] = useState<string[]>([])
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
@@ -114,6 +116,11 @@ function EditUserDialog({ user, managers, bereiche, onClose, onSaved }: EditDial
       setEditBundesland(user.bundesland ?? DEFAULT_BUNDESLAND)
       setEditManagerId(user.manager_id ?? 'none')
       setEditBereichId(user.bereich_id ?? 'none')
+      if (user.role === 'manager') {
+        getManagerBereichIds(user.id).then(setManagerBereichIds)
+      } else {
+        setManagerBereichIds([])
+      }
     }
   }, [user])
 
@@ -142,6 +149,13 @@ function EditUserDialog({ user, managers, bereiche, onClose, onSaved }: EditDial
           user.id,
           editBereichId === 'none' ? null : editBereichId
         )
+        if (bereichResult.error) {
+          toast.error(bereichResult.error)
+          return
+        }
+      }
+      if (effectiveRole === 'manager') {
+        const bereichResult = await setManagerBereiche(user.id, managerBereichIds)
         if (bereichResult.error) {
           toast.error(bereichResult.error)
           return
@@ -189,6 +203,37 @@ function EditUserDialog({ user, managers, bereiche, onClose, onSaved }: EditDial
                 </SelectContent>
               </Select>
             </div>
+
+            {effectiveRole === 'manager' && (
+              <div className="space-y-2">
+                <Label>Bereiche</Label>
+                {bereiche.length === 0 ? (
+                  <p className="text-xs text-slate-400">Keine Bereiche vorhanden. Zuerst Bereiche in der Admin-Verwaltung anlegen.</p>
+                ) : (
+                  <div className="space-y-1.5 max-h-36 overflow-y-auto border border-slate-200 rounded-md p-2">
+                    {bereiche.map((b) => (
+                      <div key={b.id} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`mgr-bereich-${b.id}`}
+                          checked={managerBereichIds.includes(b.id)}
+                          onCheckedChange={(checked) => {
+                            setManagerBereichIds((prev) =>
+                              checked ? [...prev, b.id] : prev.filter((id) => id !== b.id)
+                            )
+                          }}
+                        />
+                        <label
+                          htmlFor={`mgr-bereich-${b.id}`}
+                          className="text-sm text-slate-700 cursor-pointer"
+                        >
+                          {b.name}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {effectiveRole === 'werkstudent' && (
               <>
@@ -406,11 +451,37 @@ export default function UsersClient({
             Kalenderansicht
           </a>
           <a
+            href="/manager/team"
+            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
+          >
+            Team
+          </a>
+          <a
+            href="/manager/abwesenheiten"
+            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
+          >
+            Abwesenheiten
+          </a>
+          <a
+            href="/manager/arbeitsorte"
+            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
+          >
+            Arbeitsorte
+          </a>
+          <a
             href="/manager/settings"
             className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
           >
             Einstellungen
           </a>
+          {isAdmin && (
+            <a
+              href="/admin"
+              className="px-4 py-3 text-sm font-medium text-purple-600 hover:text-purple-700 border-b-2 border-transparent hover:border-purple-300 transition-colors"
+            >
+              Admin-Bereich
+            </a>
+          )}
         </div>
       </nav>
 

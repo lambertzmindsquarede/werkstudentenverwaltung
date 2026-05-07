@@ -32,6 +32,7 @@ export default async function AdminAbwesenheitstypenPage() {
     { href: '/admin', label: 'Übersicht' },
     { href: '/admin/bereiche', label: 'Bereiche' },
     { href: '/admin/abwesenheitstypen', label: 'Abwesenheitstypen', active: true },
+    { href: '/manager/users', label: 'Nutzerverwaltung' },
   ]
 
   return (

@@ -151,6 +151,12 @@ export default function ArbeitsortVerwaltungClient({ initialArbeitsorte }: Props
           <a href="/manager/kalender" className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors">
             Kalenderansicht
           </a>
+          <a href="/manager/team" className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors">
+            Team
+          </a>
+          <a href="/manager/abwesenheiten" className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors">
+            Abwesenheiten
+          </a>
           <a href="/manager/arbeitsorte" className="px-4 py-3 text-sm font-medium text-slate-900 border-b-2 border-blue-600">
             Arbeitsorte
           </a>

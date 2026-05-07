@@ -10,11 +10,11 @@ export default async function ArbeitsorteVerwaltungPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, is_admin')
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'manager') redirect('/dashboard')
+  if (profile?.role !== 'manager' && !profile?.is_admin) redirect('/dashboard')
 
   const { data: arbeitsorte, error } = await getArbeitsorte()
 

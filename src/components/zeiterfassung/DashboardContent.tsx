@@ -25,6 +25,9 @@ interface Props {
   initialPlannedEntries: PlannedEntry[]
   initialOpenEntry: ActualEntry | null
   todayAbsence: AbsenceWithType | null
+  arbeitsorte: { id: string; name: string }[]
+  initialTodayArbeitsortId: string | null
+  hasTodayPlan: boolean
 }
 
 export default function DashboardContent({
@@ -41,6 +44,9 @@ export default function DashboardContent({
   initialPlannedEntries,
   initialOpenEntry,
   todayAbsence,
+  arbeitsorte,
+  initialTodayArbeitsortId,
+  hasTodayPlan,
 }: Props) {
   const [signingOut, setSigningOut] = useState(false)
   const [currentWeekStr, setCurrentWeekStr] = useState(initialWeekStr)
@@ -50,6 +56,7 @@ export default function DashboardContent({
   const [openEntry, setOpenEntry] = useState<ActualEntry | null>(initialOpenEntry)
   const [weekLoading, setWeekLoading] = useState(false)
   const [openEntryEditDate, setOpenEntryEditDate] = useState<string | null>(null)
+  const [todayArbeitsortId, setTodayArbeitsortId] = useState<string | null>(initialTodayArbeitsortId)
 
   useEffect(() => {
     if (currentWeekStr === initialWeekStr) return
@@ -201,6 +208,10 @@ export default function DashboardContent({
             isWeekend={isWeekend}
             bundesland={bundesland}
             todayAbsence={todayAbsence}
+            arbeitsorte={arbeitsorte}
+            todayArbeitsortId={todayArbeitsortId}
+            hasTodayPlan={hasTodayPlan}
+            onArbeitsortChange={setTodayArbeitsortId}
             onEntryChange={handleStampEntry}
             onEntryDeleted={handleStampEntryDeleted}
           />

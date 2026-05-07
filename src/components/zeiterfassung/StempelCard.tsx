@@ -22,9 +22,16 @@ import EmojiPickerPopover from './EmojiPickerPopover'
 import type { ActualEntry, AbsenceWithType } from '@/lib/database.types'
 import { getAbsenceName, getAbsenceColor, getAbsenceAbbreviation } from '@/lib/database.types'
 import { calcNetHours, checkArbZGWarning, timeToMinutes } from '@/lib/time-block-utils'
-import { updateBreakMinutes } from '@/app/dashboard/actions'
+import { updateBreakMinutes, updateTodayArbeitsort } from '@/app/dashboard/actions'
 import { usePublicHolidays } from '@/hooks/usePublicHolidays'
 import { getBundeslandName } from '@/lib/bundesland-utils'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 interface Props {
   todayEntries: ActualEntry[]
@@ -32,6 +39,10 @@ interface Props {
   isWeekend: boolean
   bundesland: string
   todayAbsence: AbsenceWithType | null
+  arbeitsorte: { id: string; name: string }[]
+  todayArbeitsortId: string | null
+  hasTodayPlan: boolean
+  onArbeitsortChange: (id: string | null) => void
   onEntryChange: (entry: ActualEntry) => void
   onEntryDeleted: (entryId: string) => void
 }
@@ -51,6 +62,10 @@ export default function StempelCard({
   isWeekend,
   bundesland,
   todayAbsence,
+  arbeitsorte,
+  todayArbeitsortId,
+  hasTodayPlan,
+  onArbeitsortChange,
   onEntryChange,
   onEntryDeleted,
 }: Props) {
@@ -62,6 +77,17 @@ export default function StempelCard({
   const [breakSaving, setBreakSaving] = useState(false)
   const [showHolidayDialog, setShowHolidayDialog] = useState(false)
   const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null)
+  const [arbeitsortSaving, setArbeitsortSaving] = useState(false)
+
+  async function handleArbeitsortChange(id: string) {
+    const newId = id === '__none__' ? null : id
+    setArbeitsortSaving(true)
+    const result = await updateTodayArbeitsort(newId)
+    setArbeitsortSaving(false)
+    if (!result.error) {
+      onArbeitsortChange(newId)
+    }
+  }
 
   const year = parseInt(today.slice(0, 4), 10)
   const { isHoliday, getHolidayName } = usePublicHolidays(bundesland, year)
@@ -351,6 +377,30 @@ export default function StempelCard({
                   {breakSaving ? 'Speichern…' : 'Speichern'}
                 </Button>
               </div>
+            </div>
+          )}
+
+          {/* Arbeitsort selector */}
+          {arbeitsorte.length > 0 && hasTodayPlan && !todayAbsence && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500 whitespace-nowrap">Arbeitsort:</span>
+              <Select
+                value={todayArbeitsortId ?? '__none__'}
+                onValueChange={handleArbeitsortChange}
+                disabled={arbeitsortSaving}
+              >
+                <SelectTrigger className="h-8 text-xs w-44">
+                  <SelectValue placeholder="Kein Arbeitsort" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Kein Arbeitsort</SelectItem>
+                  {arbeitsorte.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
 

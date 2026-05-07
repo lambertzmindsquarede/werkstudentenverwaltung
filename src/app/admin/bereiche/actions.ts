@@ -223,6 +223,44 @@ export async function assignWerkstudentToBereich(
   return {}
 }
 
+// ─── Manager → Bereiche (bulk set) ───────────────────────────────────────────
+
+export async function getManagerBereichIds(userId: string): Promise<string[]> {
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('bereich_manager')
+    .select('bereich_id')
+    .eq('user_id', userId)
+  return data?.map((d) => d.bereich_id) ?? []
+}
+
+export async function setManagerBereiche(
+  userId: string,
+  bereichIds: string[]
+): Promise<ActionResult> {
+  const auth = await requireAdmin()
+  if ('error' in auth) return auth
+
+  const admin = createAdminClient()
+
+  const { error: deleteError } = await admin
+    .from('bereich_manager')
+    .delete()
+    .eq('user_id', userId)
+  if (deleteError) return { error: deleteError.message }
+
+  if (bereichIds.length > 0) {
+    const { error: insertError } = await admin
+      .from('bereich_manager')
+      .insert(bereichIds.map((bereichId) => ({ user_id: userId, bereich_id: bereichId })))
+    if (insertError) return { error: insertError.message }
+  }
+
+  revalidatePath('/admin/bereiche')
+  revalidatePath('/manager/users')
+  return {}
+}
+
 // ─── Read helpers (for server components) ────────────────────────────────────
 
 export async function getBereiche() {
@@ -324,7 +362,7 @@ export async function getManagersForBereichSelect() {
     .from('profiles')
     .select('id, full_name, email, role, is_admin')
     .or('role.eq.manager,is_admin.eq.true')
-    .eq('is_active', true)
+    .neq('is_active', false)
     .order('full_name')
 
   return data ?? []
