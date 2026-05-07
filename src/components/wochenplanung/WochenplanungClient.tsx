@@ -2,9 +2,9 @@
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import WerkstudentNav from '@/components/werkstudent/WerkstudentNav'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
@@ -379,12 +379,6 @@ export default function WochenplanungClient({
     toast.success('Vorlage der Vorwoche übernommen')
   }
 
-  async function handleSignOut() {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    window.location.href = '/login'
-  }
-
   function navigateWeek(newWeekStr: string) {
     router.push(`/dashboard/wochenplanung?week=${newWeekStr}`)
   }
@@ -394,50 +388,7 @@ export default function WochenplanungClient({
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-3">
-          <Image src="/mindsquare-logo.svg" alt="mindsquare" width={130} height={32} />
-          <span className="text-slate-300">|</span>
-          <span className="text-slate-600 text-sm font-medium">Werkstudentenverwaltung</span>
-        </div>
-        <Button
-          onClick={handleSignOut}
-          variant="ghost"
-          size="sm"
-          className="text-slate-500 hover:text-slate-700"
-        >
-          Abmelden
-        </Button>
-      </header>
-
-      <nav className="bg-white border-b border-slate-200 px-6">
-        <div className="max-w-3xl mx-auto flex gap-1">
-          <a
-            href="/dashboard"
-            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            Dashboard
-          </a>
-          <a
-            href="/dashboard/wochenplanung"
-            className="px-4 py-3 text-sm font-medium text-slate-900 border-b-2 border-blue-600"
-          >
-            Wochenplanung
-          </a>
-          <a
-            href="/dashboard/team"
-            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            Team
-          </a>
-          <a
-            href="/dashboard/profile"
-            className="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-300 transition-colors"
-          >
-            Mein Profil
-          </a>
-        </div>
-      </nav>
+      <WerkstudentNav />
 
       <main className="max-w-3xl mx-auto px-6 py-8">
         <div className="mb-6">
