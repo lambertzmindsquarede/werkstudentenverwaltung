@@ -1,6 +1,6 @@
 # PROJ-26: Zeitwahl beim Einstempeln / Ausstempeln
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-05-18
 **Last Updated:** 2026-05-19
 
@@ -210,4 +210,7 @@ Die Änderungen in `src/app/dashboard/team/actions.ts` und `src/app/manager/team
 **✅ BEREIT** — Alle 21 AC bestanden, keine offenen Bugs.
 
 ## Deployment
-_To be added by /deploy_
+
+**Deployed:** 2026-05-19
+**Commits pushed:** `aec4cf8` (feat), `50e511f` (fix BUG-2), `7957bc2` (test)
+**Vercel:** Auto-deployed via push to `main` branch
