@@ -51,7 +51,7 @@ export function DevLoginButton({ enabled }: { enabled?: boolean }) {
 
       const { error } = await supabase.auth.verifyOtp({
         token_hash: data.tokenHash,
-        type: 'email',
+        type: 'magiclink',
       })
       if (error) {
         toast.error('Session-Fehler: ' + error.message)
