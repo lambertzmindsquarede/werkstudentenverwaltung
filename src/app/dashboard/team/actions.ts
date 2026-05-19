@@ -165,10 +165,12 @@ export async function getTeamPresence(date: string): Promise<{ data: TeamPresenc
       .map((e) => [e.user_id, e.mood_emoji as string | null])
   )
 
-  // Deduplicate planned entries: pick any arbeitsort per user for today
+  // Deduplicate planned entries: prefer non-null arbeitsort_id (PROJ-8: multiple blocks)
   const plannedArbeitsortMap = new Map<string, string | null>()
   for (const pe of plannedEntries ?? []) {
     if (!plannedArbeitsortMap.has(pe.user_id)) {
+      plannedArbeitsortMap.set(pe.user_id, pe.arbeitsort_id)
+    } else if (!plannedArbeitsortMap.get(pe.user_id) && pe.arbeitsort_id) {
       plannedArbeitsortMap.set(pe.user_id, pe.arbeitsort_id)
     }
   }
@@ -209,8 +211,8 @@ export async function getTeamPresence(date: string): Promise<{ data: TeamPresenc
     }
 
     const arbeitsortId = plannedArbeitsortMap.get(userId) ?? null
-    if (arbeitsortId && stampedInSet.has(userId)) {
-      const arbeitsortName = arbeitsortMap.get(arbeitsortId) ?? 'Büro'
+    if (stampedInSet.has(userId)) {
+      const arbeitsortName = arbeitsortId ? (arbeitsortMap.get(arbeitsortId) ?? 'Büro') : 'Anwesend'
       return {
         user_id: userId,
         full_name: member.full_name,

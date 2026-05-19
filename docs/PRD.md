@@ -42,6 +42,7 @@ Teamleiter oder HR-Verantwortliche, die einen Überblick über die Verfügbarkei
 | P1 | PROJ-23: Deckungsübersicht für Manager | Planned |
 | P1 | PROJ-24: Abwesenheiten pro Bereich deaktivierbar | Planned |
 | P1 | PROJ-25: Manager-Zeitkorrektur | Planned |
+| P1 | PROJ-26: Zeitwahl beim Einstempeln / Ausstempeln | Planned |
 
 ## Success Metrics
 - Alle Werkstudenten nutzen die App täglich zum Einstempeln (100% Adoption)

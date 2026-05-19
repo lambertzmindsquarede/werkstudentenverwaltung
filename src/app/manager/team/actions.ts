@@ -149,6 +149,8 @@ export async function getTeamPresenceForBereich(
   for (const pe of plannedEntries ?? []) {
     if (!plannedArbeitsortMap.has(pe.user_id)) {
       plannedArbeitsortMap.set(pe.user_id, pe.arbeitsort_id)
+    } else if (!plannedArbeitsortMap.get(pe.user_id) && pe.arbeitsort_id) {
+      plannedArbeitsortMap.set(pe.user_id, pe.arbeitsort_id)
     }
   }
 
@@ -187,12 +189,13 @@ export async function getTeamPresenceForBereich(
     }
 
     const arbeitsortId = plannedArbeitsortMap.get(member.id) ?? null
-    if (arbeitsortId && stampedInSet.has(member.id)) {
+    if (stampedInSet.has(member.id)) {
+      const arbeitsortName = arbeitsortId ? (arbeitsortMap.get(arbeitsortId) ?? 'Büro') : 'Anwesend'
       return {
         user_id: member.id,
         full_name: member.full_name,
         group_type: 'arbeitsort',
-        group_label: arbeitsortMap.get(arbeitsortId) ?? 'Büro',
+        group_label: arbeitsortName,
         arbeitsort_id: arbeitsortId,
         sub_location_id: subLocationId,
         sub_location_name: subLocationName,

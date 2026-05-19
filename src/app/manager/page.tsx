@@ -108,12 +108,6 @@ export default async function ManagerPage() {
         </div>
 
         <PresenceWidget />
-
-        <div className="mt-8 bg-blue-50 border border-blue-100 rounded-xl p-6 text-center">
-          <p className="text-slate-500 text-sm">
-            Weitere Features kommen bald — Auswertung &amp; Export (PROJ-6).
-          </p>
-        </div>
       </main>
     </div>
   )
