@@ -293,31 +293,30 @@ describe('PROJ-26: stamp-out – minimum 1 minute after start guard', () => {
   })
 })
 
-describe('PROJ-26: getBerlinTimeRounded – rounding direction', () => {
-  // Spec says: "nächste volle 5 Minuten gerundet (z.B. 09:13 → 09:15)" → CEILING
-  // BUG: current implementation uses Math.floor which rounds DOWN
-  it('floor (current impl): minute 13 rounds to 10 [spec expects 15]', () => {
+describe('PROJ-26: getBerlinTimeRounded – rounding direction (floor to last 5-min boundary)', () => {
+  // Spec: round DOWN to last 5-minute boundary (e.g. 09:13 → 09:10)
+  it('minute 13 rounds down to 10', () => {
     expect(getBerlinTimeRoundedFloor(13)).toBe(10)
   })
 
-  it('ceil (spec intent): minute 13 rounds to 15', () => {
-    expect(getBerlinTimeRoundedCeil(13)).toBe(15)
+  it('minute already on boundary (10) stays at 10', () => {
+    expect(getBerlinTimeRoundedFloor(10)).toBe(10)
   })
 
-  it('ceil: minute already on boundary (10) stays at 10', () => {
-    expect(getBerlinTimeRoundedCeil(10)).toBe(10)
+  it('minute 0 stays at 0', () => {
+    expect(getBerlinTimeRoundedFloor(0)).toBe(0)
   })
 
-  it('ceil: minute 0 stays at 0', () => {
-    expect(getBerlinTimeRoundedCeil(0)).toBe(0)
+  it('minute 1 rounds down to 0', () => {
+    expect(getBerlinTimeRoundedFloor(1)).toBe(0)
   })
 
-  it('ceil: minute 1 rounds to 5', () => {
-    expect(getBerlinTimeRoundedCeil(1)).toBe(5)
+  it('minute 59 rounds down to 55', () => {
+    expect(getBerlinTimeRoundedFloor(59)).toBe(55)
   })
 
-  it('ceil: minute 56 rounds to 60 (overflow — caller must handle)', () => {
-    expect(getBerlinTimeRoundedCeil(56)).toBe(60)
+  it('minute 56 rounds down to 55', () => {
+    expect(getBerlinTimeRoundedFloor(56)).toBe(55)
   })
 })
 

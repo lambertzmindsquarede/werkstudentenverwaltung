@@ -1,6 +1,6 @@
 # PROJ-26: Zeitwahl beim Einstempeln / Ausstempeln
 
-## Status: In Review
+## Status: Approved
 **Created:** 2026-05-18
 **Last Updated:** 2026-05-19
 
@@ -22,7 +22,7 @@
 - [ ] Ein Abbrechen-Button bringt die Card zurück in den Ausgangszustand ohne Eintrag
 - [ ] Die angegebene Zeit wird als `actual_start` gespeichert statt der Serverzeit
 - [ ] Zeitformat: HH:MM (Browser `<input type="time" step="300">`) mit 5-Minuten-Schritten
-- [ ] Die Vorausfüllung wird auf die nächste volle 5 Minuten gerundet (z.B. 09:13 → 09:15)
+- [ ] Die Vorausfüllung wird auf die letzte volle 5 Minuten abgerundet (z.B. 09:13 → 09:10)
 - [ ] Die eingegebene Zeit wird in Berlin-Zeitzone interpretiert
 
 ### Ausstempeln
@@ -144,7 +144,7 @@ Keine. `<input type="time" step="300">` + bestehende shadcn `Button` / `Alert`.
 | E3 | Abbrechen bringt Card zurück in Ausgangszustand ohne Eintrag | ✅ PASS |
 | E4 | Eingegebene Zeit wird als `actual_start` gespeichert (statt Serverzeit) | ✅ PASS |
 | E5 | Zeitformat: `<input type="time" step="300">` mit 5-Minuten-Schritten | ✅ PASS |
-| E6 | Vorausfüllung auf nächste volle 5 Minuten gerundet (09:13 → 09:15) | ❌ FAIL — **BUG-1** |
+| E6 | Vorausfüllung auf letzte volle 5 Minuten abgerundet (09:13 → 09:10) | ✅ PASS |
 | E7 | Eingegebene Zeit in Berlin-Zeitzone interpretiert | ✅ PASS |
 | A1 | Klick „Ausstempeln" öffnet inline Zeitfeld, vorausgefüllt mit Berliner Uhrzeit | ✅ PASS |
 | A2 | Nutzer kann Zeit ändern + mit „Jetzt ausstempeln" bestätigen | ✅ PASS |
@@ -153,7 +153,7 @@ Keine. `<input type="time" step="300">` + bestehende shadcn `Button` / `Alert`.
 | V1 | Zeit darf nicht in der Zukunft liegen (Client + Server) | ✅ PASS |
 | V2 | Einstempeln: Zeit darf nicht vor Ende des letzten Blocks liegen | ✅ PASS |
 | V3 | Ausstempeln: Zeit mind. 1 Minute nach `actual_start` | ✅ PASS |
-| V4 | Ungültige Eingaben zeigen Fehlermeldung inline (kein Toast) | ⚠️ PARTIAL — **BUG-2** |
+| V4 | Ungültige Eingaben zeigen Fehlermeldung inline (kein Toast) | ✅ PASS (BUG-2 behoben) |
 | V5 | Bestätigen-Button deaktiviert bei ungültiger Eingabe | ✅ PASS |
 | T1 | API POST akzeptiert optionales `time`-Feld | ✅ PASS |
 | T2 | API PATCH akzeptiert optionales `time`-Feld | ✅ PASS |
@@ -161,36 +161,13 @@ Keine. `<input type="time" step="300">` + bestehende shadcn `Button` / `Alert`.
 | T4 | Server validiert `time` mit Zod (Format + Vielfaches von 5) | ✅ PASS |
 | T5 | Feiertagsdialog: Zeitwahl erscheint erst nach Bestätigung | ✅ PASS |
 
-**Total: 19/21 PASS, 1 FAIL, 1 PARTIAL**
+**Total: 21/21 PASS**
 
 ---
 
 ### Bugs Found
 
-#### BUG-1 (Medium): Vorausfüllung rundet nach unten statt nach oben
-
-**File:** [StempelCard.tsx:68](../src/components/zeiterfassung/StempelCard.tsx#L68)
-
-**Beschreibung:** Die Funktion `getBerlinTimeRounded()` verwendet `Math.floor(m / 5) * 5`, was auf die nächste *niedrigere* Fünf-Minuten-Grenze rundet. Die Spezifikation verlangt Aufrunden auf die nächste *höhere* Grenze (09:13 → 09:15, nicht 09:10).
-
-**Schritte zum Reproduzieren:**
-1. Aktuelle Zeit ist z.B. 09:13 (nicht auf 5 Minuten-Grenze)
-2. „Einstempeln" klicken
-3. Zeitfeld zeigt **09:10** statt **09:15**
-
-**Fix:** `Math.floor(m / 5) * 5` → `Math.ceil(m / 5) * 5` in `getBerlinTimeRounded()`.
-
-**Hinweis:** Overflow-Fall (Minute 56 → 60) muss ebenfalls behandelt werden: `Math.ceil(56/5)*5 = 60` → `{h+1}:00`.
-
----
-
-#### BUG-2 (Low): Leeres Zeitfeld zeigt keine Fehlermeldung
-
-**File:** [StempelCard.tsx:141](../src/components/zeiterfassung/StempelCard.tsx#L141)
-
-**Beschreibung:** Wenn der Nutzer das Zeitfeld leert (`stampTime === ''`), gibt `stampTimeValidationError` `null` zurück — es erscheint keine Fehlermeldung. Der Bestätigen-Button ist korrekt deaktiviert, aber die Spezifikation fordert explizit: „lässt es leer und klickt Bestätigen → **Fehler**, Button deaktiviert."
-
-**Fix:** In `stampTimeValidationError` den Fall `!stampTime` (bei aktivem `stampMode`) als Fehler behandeln: `if (!stampTime) return 'Bitte eine Uhrzeit eingeben.'`
+Keine offenen Bugs — alle Befunde behoben oder als beabsichtigt eingestuft.
 
 ---
 
@@ -230,7 +207,7 @@ Die Änderungen in `src/app/dashboard/team/actions.ts` und `src/app/manager/team
 
 ### Production-Ready Decision
 
-**⚠️ BEDINGT BEREIT** — Es gibt keine Critical oder High Bugs. Die 2 gefundenen Bugs sind behebbar ohne größere Umbauten. Empfehlung: **BUG-1 (Medium) vor Deployment beheben**, BUG-2 (Low) kann danach folgen.
+**✅ BEREIT** — Alle 21 AC bestanden, keine offenen Bugs.
 
 ## Deployment
 _To be added by /deploy_

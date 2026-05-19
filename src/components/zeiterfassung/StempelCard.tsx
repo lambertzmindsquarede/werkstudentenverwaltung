@@ -56,6 +56,28 @@ function formatHours(h: number): string {
   return h.toFixed(1).replace('.', ',') + ' Std'
 }
 
+function getBerlinTimeRounded(): string {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Berlin',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(new Date())
+  const h = parseInt(parts.find(p => p.type === 'hour')!.value, 10)
+  const m = parseInt(parts.find(p => p.type === 'minute')!.value, 10)
+  return `${String(h).padStart(2, '0')}:${String(Math.floor(m / 5) * 5).padStart(2, '0')}`
+}
+
+function getCurrentBerlinHHMM(): string {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Berlin',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(new Date())
+  return `${parts.find(p => p.type === 'hour')!.value}:${parts.find(p => p.type === 'minute')!.value}`
+}
+
 export default function StempelCard({
   todayEntries,
   today,
@@ -78,6 +100,8 @@ export default function StempelCard({
   const [showHolidayDialog, setShowHolidayDialog] = useState(false)
   const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null)
   const [arbeitsortSaving, setArbeitsortSaving] = useState(false)
+  const [stampMode, setStampMode] = useState<'idle' | 'in' | 'out'>('idle')
+  const [stampTime, setStampTime] = useState('')
 
   async function handleArbeitsortChange(id: string) {
     const newId = id === '__none__' ? null : id
@@ -113,20 +137,49 @@ export default function StempelCard({
     ? checkArbZGWarning(totalBruttoMinutes, totalBreakMinutes)
     : null
 
-  async function doStampIn() {
+  const stampTimeValidationError = (() => {
+    if (stampMode === 'idle') return null
+    if (!stampTime) return 'Bitte eine Uhrzeit eingeben.'
+    const now = getCurrentBerlinHHMM()
+    if (stampTime > now) return 'Zeit darf nicht in der Zukunft liegen.'
+    if (stampMode === 'in') {
+      const lastBlock = completedBlocks[completedBlocks.length - 1]
+      if (lastBlock?.actual_end) {
+        const lastEnd = lastBlock.actual_end.slice(0, 5)
+        if (stampTime <= lastEnd) return `Zeit muss nach ${lastEnd} Uhr liegen.`
+      }
+    }
+    if (stampMode === 'out' && openBlock?.actual_start) {
+      const startMins = timeToMinutes(openBlock.actual_start.slice(0, 5))
+      const enteredMins = timeToMinutes(stampTime)
+      if (enteredMins - startMins < 1) {
+        return `Zeit muss mindestens 1 Minute nach ${openBlock.actual_start.slice(0, 5)} Uhr liegen.`
+      }
+    }
+    return null
+  })()
+
+  function openStampInPicker() {
+    setStampMode('in')
+    setStampTime(getBerlinTimeRounded())
+    setError(null)
+  }
+
+  async function doStampIn(time: string) {
     setLoading(true)
     setError(null)
     try {
       const res = await fetch('/api/time-entries/stamp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ emoji: selectedEmoji }),
+        body: JSON.stringify({ emoji: selectedEmoji, time }),
       })
       const json = await res.json()
       if (!res.ok) {
         setError(json.error ?? 'Fehler beim Einstempeln.')
       } else {
         setSelectedEmoji(null)
+        setStampMode('idle')
         onEntryChange(json.data as ActualEntry)
       }
     } catch {
@@ -158,20 +211,31 @@ export default function StempelCard({
     if (todayIsHoliday) {
       setShowHolidayDialog(true)
     } else {
-      doStampIn()
+      openStampInPicker()
     }
   }
 
-  async function handleStampOut() {
+  function handleStampOut() {
+    setStampMode('out')
+    setStampTime(getBerlinTimeRounded())
+    setError(null)
+  }
+
+  async function doStampOut(time: string) {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/time-entries/stamp', { method: 'PATCH' })
+      const res = await fetch('/api/time-entries/stamp', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ time }),
+      })
       const json = await res.json()
       if (!res.ok) {
         setError(json.error ?? 'Fehler beim Ausstempeln.')
       } else {
         const closedEntry = json.data as ActualEntry
+        setStampMode('idle')
         onEntryChange(closedEntry)
         setBreakQueryEntry(closedEntry)
         setBreakInput('')
@@ -427,67 +491,159 @@ export default function StempelCard({
             </Alert>
           )}
 
-          {/* Stamp button */}
-          {atMaxBlocks ? (
-            <div>
-              <Button disabled size="lg" className="bg-slate-200 text-slate-400 cursor-not-allowed">
-                Einstempeln
-              </Button>
-              <p className="text-xs text-slate-400 mt-1.5">
-                Maximum 3 Blöcke pro Tag erreicht.
-              </p>
+          {/* Inline time picker – stamp in */}
+          {stampMode === 'in' && (
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 space-y-3">
+              <p className="text-sm font-medium text-slate-700">Einstempelzeit eingeben</p>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="stamp-in-time" className="text-sm text-slate-600 whitespace-nowrap">
+                  Uhrzeit:
+                </Label>
+                <Input
+                  id="stamp-in-time"
+                  type="time"
+                  step={300}
+                  value={stampTime}
+                  onChange={(e) => setStampTime(e.target.value)}
+                  className="w-32"
+                />
+              </div>
+              {stampTimeValidationError && (
+                <Alert className="border-red-300 bg-red-50 py-2">
+                  <AlertDescription className="text-red-700 text-xs">
+                    {stampTimeValidationError}
+                  </AlertDescription>
+                </Alert>
+              )}
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => doStampIn(stampTime)}
+                  disabled={loading || !!stampTimeValidationError || !stampTime}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {loading ? '…' : 'Jetzt einstempeln'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setStampMode('idle')}
+                  disabled={loading}
+                >
+                  Abbrechen
+                </Button>
+              </div>
             </div>
-          ) : openBlock ? (
-            <Button
-              onClick={handleStampOut}
-              disabled={loading}
-              size="lg"
-              className="bg-slate-700 hover:bg-slate-800 text-white"
-            >
-              {loading ? '…' : 'Ausstempeln'}
-            </Button>
-          ) : todayAbsence ? (
-            <div>
-              <Button disabled size="lg" className="bg-slate-200 text-slate-400 cursor-not-allowed">
-                Einstempeln
-              </Button>
-              <p className="text-xs text-slate-400 mt-1.5">
-                Abwesenheit eingetragen – Einstempeln nicht möglich.
-              </p>
+          )}
+
+          {/* Inline time picker – stamp out */}
+          {stampMode === 'out' && (
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-3">
+              <p className="text-sm font-medium text-slate-700">Ausstempelzeit eingeben</p>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="stamp-out-time" className="text-sm text-slate-600 whitespace-nowrap">
+                  Uhrzeit:
+                </Label>
+                <Input
+                  id="stamp-out-time"
+                  type="time"
+                  step={300}
+                  value={stampTime}
+                  onChange={(e) => setStampTime(e.target.value)}
+                  className="w-32"
+                />
+              </div>
+              {stampTimeValidationError && (
+                <Alert className="border-red-300 bg-red-50 py-2">
+                  <AlertDescription className="text-red-700 text-xs">
+                    {stampTimeValidationError}
+                  </AlertDescription>
+                </Alert>
+              )}
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => doStampOut(stampTime)}
+                  disabled={loading || !!stampTimeValidationError || !stampTime}
+                  className="bg-slate-700 hover:bg-slate-800 text-white"
+                >
+                  {loading ? '…' : 'Jetzt ausstempeln'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setStampMode('idle')}
+                  disabled={loading}
+                >
+                  Abbrechen
+                </Button>
+              </div>
             </div>
-          ) : canStampIn ? (
-            <div className="flex items-center gap-2">
-              <EmojiPickerPopover
-                selected={selectedEmoji}
-                onSelect={setSelectedEmoji}
-                trigger={
-                  selectedEmoji ? (
-                    <button
-                      className="flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-2 text-sm hover:bg-blue-100 transition-colors"
-                      title="Stimmung ändern"
-                    >
-                      <span className="text-xl leading-none">{selectedEmoji}</span>
-                    </button>
-                  ) : (
-                    <button
-                      className="flex items-center gap-1 rounded-lg border border-dashed border-slate-300 px-2.5 py-2 text-slate-400 hover:border-slate-400 hover:text-slate-600 transition-colors"
-                      title="Stimmung auswählen (optional)"
-                    >
-                      <span className="text-xl leading-none">🙂</span>
-                    </button>
-                  )
-                }
-              />
+          )}
+
+          {/* Stamp button (hidden while time picker is open) */}
+          {stampMode === 'idle' && (
+            atMaxBlocks ? (
+              <div>
+                <Button disabled size="lg" className="bg-slate-200 text-slate-400 cursor-not-allowed">
+                  Einstempeln
+                </Button>
+                <p className="text-xs text-slate-400 mt-1.5">
+                  Maximum 3 Blöcke pro Tag erreicht.
+                </p>
+              </div>
+            ) : openBlock ? (
               <Button
-                onClick={handleStampIn}
+                onClick={handleStampOut}
                 disabled={loading}
                 size="lg"
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-slate-700 hover:bg-slate-800 text-white"
               >
-                {loading ? '…' : 'Einstempeln'}
+                {loading ? '…' : 'Ausstempeln'}
               </Button>
-            </div>
-          ) : null}
+            ) : todayAbsence ? (
+              <div>
+                <Button disabled size="lg" className="bg-slate-200 text-slate-400 cursor-not-allowed">
+                  Einstempeln
+                </Button>
+                <p className="text-xs text-slate-400 mt-1.5">
+                  Abwesenheit eingetragen – Einstempeln nicht möglich.
+                </p>
+              </div>
+            ) : canStampIn ? (
+              <div className="flex items-center gap-2">
+                <EmojiPickerPopover
+                  selected={selectedEmoji}
+                  onSelect={setSelectedEmoji}
+                  trigger={
+                    selectedEmoji ? (
+                      <button
+                        className="flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-2 text-sm hover:bg-blue-100 transition-colors"
+                        title="Stimmung ändern"
+                      >
+                        <span className="text-xl leading-none">{selectedEmoji}</span>
+                      </button>
+                    ) : (
+                      <button
+                        className="flex items-center gap-1 rounded-lg border border-dashed border-slate-300 px-2.5 py-2 text-slate-400 hover:border-slate-400 hover:text-slate-600 transition-colors"
+                        title="Stimmung auswählen (optional)"
+                      >
+                        <span className="text-xl leading-none">🙂</span>
+                      </button>
+                    )
+                  }
+                />
+                <Button
+                  onClick={handleStampIn}
+                  disabled={loading}
+                  size="lg"
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {loading ? '…' : 'Einstempeln'}
+                </Button>
+              </div>
+            ) : null
+          )}
         </CardContent>
       </Card>
 
@@ -523,7 +679,7 @@ export default function StempelCard({
             <AlertDialogAction
               onClick={() => {
                 setShowHolidayDialog(false)
-                doStampIn()
+                openStampInPicker()
               }}
             >
               Trotzdem einstempeln
