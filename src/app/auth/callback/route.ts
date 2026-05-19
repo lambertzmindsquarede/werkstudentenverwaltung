@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { withCleanSession } from '@/lib/session-cleaner'
 
 // Decode a JWT payload without verifying the signature.
 // The signature was already verified by Azure AD during code exchange.
@@ -32,11 +33,11 @@ export async function GET(request: NextRequest) {
         getAll() {
           return cookieStore.getAll()
         },
-        setAll(cookiesToSet) {
+        setAll: withCleanSession((cookiesToSet) => {
           cookiesToSet.forEach(({ name, value, options }) =>
             cookieStore.set(name, value, options)
           )
-        },
+        }),
       },
     }
   )

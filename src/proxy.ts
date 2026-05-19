@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { withCleanSession } from '@/lib/session-cleaner'
 
 const PUBLIC_ROUTES = ['/login', '/auth', '/api/auth/dev-login']
 
@@ -22,9 +23,11 @@ export async function proxy(request: NextRequest) {
             request.cookies.set(name, value)
           )
           supabaseResponse = NextResponse.next({ request })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
+          withCleanSession((cookies) =>
+            cookies.forEach(({ name, value, options }) =>
+              supabaseResponse.cookies.set(name, value, options)
+            )
+          )(cookiesToSet)
         },
       },
     }
