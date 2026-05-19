@@ -11,7 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { createClient } from '@/lib/supabase-browser'
 
 const DEV_USERS = [
   { userId: '00000000-0000-0000-0000-000000000001', label: 'Mia Schulz (Manager)' },
@@ -31,7 +30,6 @@ export function DevLoginButton({ enabled }: { enabled?: boolean }) {
   async function handleDevLogin() {
     try {
       setLoading(true)
-      const supabase = createClient()
 
       const res = await fetch('/api/auth/dev-login', {
         method: 'POST',
@@ -49,15 +47,7 @@ export function DevLoginButton({ enabled }: { enabled?: boolean }) {
         return
       }
 
-      const { error } = await supabase.auth.signInWithPassword({
-        email: data.email,
-        password: 'dev-login-2026',
-      })
-      if (error) {
-        toast.error('Login-Fehler: ' + error.message)
-        return
-      }
-
+      // Session cookies were set server-side on the API response — just navigate.
       window.location.href = data.redirectTo
     } catch {
       toast.error('Dev-Login fehlgeschlagen.')

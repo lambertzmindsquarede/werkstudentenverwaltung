@@ -1,8 +1,10 @@
 // DEV-ONLY: Guarded by DEV_LOGIN_ENABLED=true (set in Vercel env vars to enable on production)
 import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { createServerClient } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const DEV_PASSWORD = 'dev-login-2026'
 
 export async function POST(req: NextRequest) {
   if (process.env.DEV_LOGIN_ENABLED !== 'true') {
@@ -78,18 +80,52 @@ export async function POST(req: NextRequest) {
     profile = data
   }
 
-  // Set a known dev password so the client can use signInWithPassword (avoids PKCE complications)
+  // Ensure the dev password is set (idempotent — safe to call on every login)
   const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(profile.id, {
-    password: 'dev-login-2026',
+    password: DEV_PASSWORD,
   })
 
   if (updateError) {
     return NextResponse.json({ error: 'Session-Erzeugung fehlgeschlagen' }, { status: 500 })
   }
 
-  const redirectTo = profile.role === 'manager' ? '/manager' : '/dashboard'
-  return NextResponse.json({
+  // Sign in server-side so session cookies are set on the response — this avoids
+  // any dependency on NEXT_PUBLIC_ env vars being correctly baked into the browser bundle.
+  const pendingCookies: Array<{ name: string; value: string; options: Record<string, unknown> }> = []
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return req.cookies.getAll() },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            pendingCookies.push({ name, value, options: options as Record<string, unknown> })
+          )
+        },
+      },
+    }
+  )
+
+  const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
     email: profile.email,
-    redirectTo,
+    password: DEV_PASSWORD,
   })
+
+  if (signInError || !signInData.session) {
+    return NextResponse.json(
+      { error: signInError?.message ?? 'Login fehlgeschlagen' },
+      { status: 500 }
+    )
+  }
+
+  const redirectTo = profile.role === 'manager' ? '/manager' : '/dashboard'
+  const response = NextResponse.json({ redirectTo })
+
+  pendingCookies.forEach(({ name, value, options }) => {
+    response.cookies.set(name, value, options)
+  })
+
+  return response
 }
