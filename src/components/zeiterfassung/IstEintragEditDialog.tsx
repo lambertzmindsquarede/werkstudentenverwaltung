@@ -11,6 +11,16 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, h) => String(h).padStart(2, '0'))
+const MINUTE_OPTIONS = Array.from({ length: 60 }, (_, m) => String(m).padStart(2, '0'))
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import type { ActualEntry } from '@/lib/database.types'
 import {
@@ -181,36 +191,84 @@ export default function IstEintragEditDialog({
         <div className="space-y-4 py-2">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="ist-start" className="text-sm text-slate-700">
-                Startzeit
-              </Label>
-              <Input
-                id="ist-start"
-                type="time"
-                value={start}
-                onChange={(e) => {
-                  setStart(e.target.value)
-                  setAwaitingLongDayConfirm(false)
-                  setError(null)
-                }}
-                className="mt-1"
-              />
+              <Label className="text-sm text-slate-700">Startzeit</Label>
+              <div className="flex items-center gap-1 mt-1">
+                <Select
+                  value={start.length === 5 ? start.slice(0, 2) : ''}
+                  onValueChange={(h) => {
+                    setStart(start.length === 5 ? `${h}:${start.slice(3, 5)}` : `${h}:00`)
+                    setAwaitingLongDayConfirm(false)
+                    setError(null)
+                  }}
+                >
+                  <SelectTrigger className="w-16">
+                    <SelectValue placeholder="hh" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {HOUR_OPTIONS.map((h) => (
+                      <SelectItem key={h} value={h}>{h}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className="text-slate-500 font-medium">:</span>
+                <Select
+                  value={start.length === 5 ? start.slice(3, 5) : ''}
+                  onValueChange={(m) => {
+                    setStart(start.length === 5 ? `${start.slice(0, 2)}:${m}` : `00:${m}`)
+                    setAwaitingLongDayConfirm(false)
+                    setError(null)
+                  }}
+                >
+                  <SelectTrigger className="w-16">
+                    <SelectValue placeholder="mm" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MINUTE_OPTIONS.map((m) => (
+                      <SelectItem key={m} value={m}>{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div>
-              <Label htmlFor="ist-end" className="text-sm text-slate-700">
-                Endzeit
-              </Label>
-              <Input
-                id="ist-end"
-                type="time"
-                value={end}
-                onChange={(e) => {
-                  setEnd(e.target.value)
-                  setAwaitingLongDayConfirm(false)
-                  setError(null)
-                }}
-                className="mt-1"
-              />
+              <Label className="text-sm text-slate-700">Endzeit</Label>
+              <div className="flex items-center gap-1 mt-1">
+                <Select
+                  value={end.length === 5 ? end.slice(0, 2) : ''}
+                  onValueChange={(h) => {
+                    setEnd(end.length === 5 ? `${h}:${end.slice(3, 5)}` : `${h}:00`)
+                    setAwaitingLongDayConfirm(false)
+                    setError(null)
+                  }}
+                >
+                  <SelectTrigger className="w-16">
+                    <SelectValue placeholder="hh" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {HOUR_OPTIONS.map((h) => (
+                      <SelectItem key={h} value={h}>{h}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className="text-slate-500 font-medium">:</span>
+                <Select
+                  value={end.length === 5 ? end.slice(3, 5) : ''}
+                  onValueChange={(m) => {
+                    setEnd(end.length === 5 ? `${end.slice(0, 2)}:${m}` : `00:${m}`)
+                    setAwaitingLongDayConfirm(false)
+                    setError(null)
+                  }}
+                >
+                  <SelectTrigger className="w-16">
+                    <SelectValue placeholder="mm" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MINUTE_OPTIONS.map((m) => (
+                      <SelectItem key={m} value={m}>{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 

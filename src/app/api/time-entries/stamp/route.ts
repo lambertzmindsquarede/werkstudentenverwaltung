@@ -35,7 +35,7 @@ const timeFieldSchema = z
   .optional()
 
 const postBodySchema = z.object({
-  emoji: z.string().min(1).max(10).optional(),
+  emoji: z.string().min(1).max(10).nullish(),
   time: timeFieldSchema,
 })
 
@@ -163,12 +163,12 @@ export async function PATCH(request: Request) {
 
   const { date, time: serverTime } = getBerlinDateTime()
 
-  // Validate custom time if provided
+  // Validate custom time if provided — allow up to 5 min into the future for stamp-out
   if (requestedTime) {
     const nowHHMM = getBerlinHHMM()
-    if (requestedTime > nowHHMM) {
+    if (timeToMinutes(requestedTime) > timeToMinutes(nowHHMM) + 5) {
       return NextResponse.json(
-        { error: 'Zeit darf nicht in der Zukunft liegen.' },
+        { error: 'Ausstempelzeit darf maximal 5 Minuten in der Zukunft liegen.' },
         { status: 422 }
       )
     }

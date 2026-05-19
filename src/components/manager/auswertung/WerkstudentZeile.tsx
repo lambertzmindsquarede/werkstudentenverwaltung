@@ -1,10 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronRight, ChevronDown, AlertCircle } from 'lucide-react'
+import { ChevronRight, ChevronDown, AlertCircle, Plus } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { minutesToHHMM } from './utils'
 import type { WerkstudentAuswertung } from '@/app/manager/auswertung/actions'
 import TagDetailZeile from './TagDetailZeile'
+import ZeiteintragHinzufuegenDialog from './ZeiteintragHinzufuegenDialog'
 
 interface Props {
   ws: WerkstudentAuswertung
@@ -41,7 +43,9 @@ function AuslastungBadge({ pct, over }: { pct: number | null; over: boolean }) {
 
 export default function WerkstudentZeile({ ws, onCorrectionDone }: Props) {
   const [expanded, setExpanded] = useState(false)
+  const [showAddDialog, setShowAddDialog] = useState(false)
   const hasData = ws.geplanteMinutes > 0 || ws.istMinutes > 0
+  const today = new Date().toISOString().slice(0, 10)
 
   return (
     <>
@@ -111,6 +115,29 @@ export default function WerkstudentZeile({ ws, onCorrectionDone }: Props) {
           </td>
         </tr>
       )}
+      {expanded && (
+        <tr className="border-b border-slate-200 bg-slate-50/40">
+          <td colSpan={5} className="pl-10 py-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs text-slate-400 hover:text-slate-700 px-2 gap-1.5"
+              onClick={(e) => { e.stopPropagation(); setShowAddDialog(true) }}
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Tag nachträglich eintragen
+            </Button>
+          </td>
+        </tr>
+      )}
+
+      <ZeiteintragHinzufuegenDialog
+        open={showAddDialog}
+        date={today}
+        userId={ws.userId}
+        onClose={() => setShowAddDialog(false)}
+        onSaved={() => { setShowAddDialog(false); onCorrectionDone() }}
+      />
     </>
   )
 }

@@ -22,17 +22,23 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { updateTimeEntry } from '@/app/manager/auswertung/correction-actions'
 import type { IstEintragDetail } from '@/app/manager/auswertung/actions'
 
-function generateTimeOptions(): string[] {
-  const options: string[] = []
-  for (let h = 0; h <= 23; h++) {
-    for (let m = 0; m <= 45; m += 15) {
-      options.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`)
-    }
-  }
-  return options
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, h) => String(h).padStart(2, '0'))
+const MINUTE_OPTIONS = ['00', '15', '30', '45']
+
+function roundDownTo15(time: string): string {
+  const [h, m] = time.split(':').map(Number)
+  const mm = Math.floor(m / 15) * 15
+  return `${String(h).padStart(2, '0')}:${String(mm).padStart(2, '0')}`
 }
 
-const TIME_OPTIONS = generateTimeOptions()
+function roundUpTo15(time: string): string {
+  const [h, m] = time.split(':').map(Number)
+  const mm = Math.ceil(m / 15) * 15
+  if (mm === 60) {
+    return `${String((h + 1) % 24).padStart(2, '0')}:00`
+  }
+  return `${String(h).padStart(2, '0')}:${String(mm).padStart(2, '0')}`
+}
 
 function formatDateDE(dateStr: string): string {
   const [y, m, d] = dateStr.split('-')
@@ -57,8 +63,8 @@ export default function ZeitkorrektureDialog({ open, date, userId, entry, onClos
 
   useEffect(() => {
     if (open) {
-      setStart(entry.actual_start?.slice(0, 5) ?? '')
-      setEnd(entry.actual_end?.slice(0, 5) ?? '')
+      setStart(entry.actual_start ? roundDownTo15(entry.actual_start.slice(0, 5)) : '')
+      setEnd(entry.actual_end ? roundUpTo15(entry.actual_end.slice(0, 5)) : '')
       setReason('')
       setError(null)
     }
@@ -103,29 +109,67 @@ export default function ZeitkorrektureDialog({ open, date, userId, entry, onClos
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label className="text-sm text-slate-700">Startzeit</Label>
-              <Select value={start} onValueChange={(v) => { setStart(v); setError(null) }}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="HH:MM" />
-                </SelectTrigger>
-                <SelectContent className="max-h-60">
-                  {TIME_OPTIONS.map((t) => (
-                    <SelectItem key={t} value={t}>{t}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-1 mt-1">
+                <Select
+                  value={start.length === 5 ? start.slice(0, 2) : ''}
+                  onValueChange={(h) => { setStart(start.length === 5 ? `${h}:${start.slice(3, 5)}` : `${h}:00`); setError(null) }}
+                >
+                  <SelectTrigger className="w-16">
+                    <SelectValue placeholder="hh" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {HOUR_OPTIONS.map((h) => (
+                      <SelectItem key={h} value={h}>{h}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className="text-slate-500 font-medium">:</span>
+                <Select
+                  value={start.length === 5 ? start.slice(3, 5) : ''}
+                  onValueChange={(m) => { setStart(start.length === 5 ? `${start.slice(0, 2)}:${m}` : `00:${m}`); setError(null) }}
+                >
+                  <SelectTrigger className="w-16">
+                    <SelectValue placeholder="mm" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MINUTE_OPTIONS.map((m) => (
+                      <SelectItem key={m} value={m}>{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div>
               <Label className="text-sm text-slate-700">Endzeit</Label>
-              <Select value={end} onValueChange={(v) => { setEnd(v); setError(null) }}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="HH:MM" />
-                </SelectTrigger>
-                <SelectContent className="max-h-60">
-                  {TIME_OPTIONS.map((t) => (
-                    <SelectItem key={t} value={t}>{t}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-1 mt-1">
+                <Select
+                  value={end.length === 5 ? end.slice(0, 2) : ''}
+                  onValueChange={(h) => { setEnd(end.length === 5 ? `${h}:${end.slice(3, 5)}` : `${h}:00`); setError(null) }}
+                >
+                  <SelectTrigger className="w-16">
+                    <SelectValue placeholder="hh" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {HOUR_OPTIONS.map((h) => (
+                      <SelectItem key={h} value={h}>{h}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className="text-slate-500 font-medium">:</span>
+                <Select
+                  value={end.length === 5 ? end.slice(3, 5) : ''}
+                  onValueChange={(m) => { setEnd(end.length === 5 ? `${end.slice(0, 2)}:${m}` : `00:${m}`); setError(null) }}
+                >
+                  <SelectTrigger className="w-16">
+                    <SelectValue placeholder="mm" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MINUTE_OPTIONS.map((m) => (
+                      <SelectItem key={m} value={m}>{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 

@@ -56,6 +56,9 @@ function formatHours(h: number): string {
   return h.toFixed(1).replace('.', ',') + ' Std'
 }
 
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, h) => String(h).padStart(2, '0'))
+const MINUTE_OPTIONS = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'))
+
 function getBerlinTimeRounded(): string {
   const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Europe/Berlin',
@@ -141,7 +144,13 @@ export default function StempelCard({
     if (stampMode === 'idle') return null
     if (!stampTime) return 'Bitte eine Uhrzeit eingeben.'
     const now = getCurrentBerlinHHMM()
-    if (stampTime > now) return 'Zeit darf nicht in der Zukunft liegen.'
+    const nowMins = timeToMinutes(now)
+    const stampMins = timeToMinutes(stampTime)
+    if (stampMode === 'out') {
+      if (stampMins > nowMins + 5) return 'Ausstempelzeit darf maximal 5 Minuten in der Zukunft liegen.'
+    } else {
+      if (stampMins > nowMins) return 'Zeit darf nicht in der Zukunft liegen.'
+    }
     if (stampMode === 'in') {
       const lastBlock = completedBlocks[completedBlocks.length - 1]
       if (lastBlock?.actual_end) {
@@ -496,17 +505,34 @@ export default function StempelCard({
             <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 space-y-3">
               <p className="text-sm font-medium text-slate-700">Einstempelzeit eingeben</p>
               <div className="flex items-center gap-2">
-                <Label htmlFor="stamp-in-time" className="text-sm text-slate-600 whitespace-nowrap">
-                  Uhrzeit:
-                </Label>
-                <Input
-                  id="stamp-in-time"
-                  type="time"
-                  step={300}
-                  value={stampTime}
-                  onChange={(e) => setStampTime(e.target.value)}
-                  className="w-32"
-                />
+                <Label className="text-sm text-slate-600 whitespace-nowrap">Uhrzeit:</Label>
+                <Select
+                  value={stampTime.slice(0, 2)}
+                  onValueChange={(h) => setStampTime(`${h}:${stampTime.slice(3, 5)}`)}
+                >
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {HOUR_OPTIONS.map((h) => (
+                      <SelectItem key={h} value={h}>{h}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className="text-slate-500 font-medium">:</span>
+                <Select
+                  value={stampTime.slice(3, 5)}
+                  onValueChange={(m) => setStampTime(`${stampTime.slice(0, 2)}:${m}`)}
+                >
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MINUTE_OPTIONS.map((m) => (
+                      <SelectItem key={m} value={m}>{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               {stampTimeValidationError && (
                 <Alert className="border-red-300 bg-red-50 py-2">
@@ -541,17 +567,34 @@ export default function StempelCard({
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-3">
               <p className="text-sm font-medium text-slate-700">Ausstempelzeit eingeben</p>
               <div className="flex items-center gap-2">
-                <Label htmlFor="stamp-out-time" className="text-sm text-slate-600 whitespace-nowrap">
-                  Uhrzeit:
-                </Label>
-                <Input
-                  id="stamp-out-time"
-                  type="time"
-                  step={300}
-                  value={stampTime}
-                  onChange={(e) => setStampTime(e.target.value)}
-                  className="w-32"
-                />
+                <Label className="text-sm text-slate-600 whitespace-nowrap">Uhrzeit:</Label>
+                <Select
+                  value={stampTime.slice(0, 2)}
+                  onValueChange={(h) => setStampTime(`${h}:${stampTime.slice(3, 5)}`)}
+                >
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {HOUR_OPTIONS.map((h) => (
+                      <SelectItem key={h} value={h}>{h}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className="text-slate-500 font-medium">:</span>
+                <Select
+                  value={stampTime.slice(3, 5)}
+                  onValueChange={(m) => setStampTime(`${stampTime.slice(0, 2)}:${m}`)}
+                >
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MINUTE_OPTIONS.map((m) => (
+                      <SelectItem key={m} value={m}>{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               {stampTimeValidationError && (
                 <Alert className="border-red-300 bg-red-50 py-2">
