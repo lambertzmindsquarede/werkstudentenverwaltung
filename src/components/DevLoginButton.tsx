@@ -2,7 +2,6 @@
 
 // DEV-ONLY: Only rendered when NEXT_PUBLIC_DEV_LOGIN_ENABLED=true
 import { useState } from 'react'
-import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -27,33 +26,11 @@ export function DevLoginButton({ enabled }: { enabled?: boolean }) {
     return null
   }
 
-  async function handleDevLogin() {
-    try {
-      setLoading(true)
-
-      const res = await fetch('/api/auth/dev-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: selectedUserId }),
-      })
-      const data = await res.json()
-
-      if (!res.ok) {
-        const msg =
-          res.status === 404
-            ? 'User nicht gefunden — bitte Seed-Script ausführen (docs/dev-seed.sql)'
-            : (data.error ?? 'Dev-Login fehlgeschlagen.')
-        toast.error(msg)
-        return
-      }
-
-      // Session cookies were set server-side on the API response — just navigate.
-      window.location.href = data.redirectTo
-    } catch {
-      toast.error('Dev-Login fehlgeschlagen.')
-    } finally {
-      setLoading(false)
-    }
+  function handleDevLogin() {
+    setLoading(true)
+    // Navigate directly to the GET endpoint — the server sets session cookies
+    // and returns a redirect to /manager or /dashboard. No fetch needed.
+    window.location.href = `/api/auth/dev-login?userId=${selectedUserId}`
   }
 
   return (

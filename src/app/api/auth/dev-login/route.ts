@@ -6,9 +6,20 @@ import { NextRequest, NextResponse } from 'next/server'
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const DEV_PASSWORD = 'dev-login-2026'
 
-export async function POST(req: NextRequest) {
+// GET /api/auth/dev-login?userId=<uuid>
+// Browser navigates here directly — server sets session cookies and redirects.
+// No fetch/timing issues with cookie storage.
+export async function GET(req: NextRequest) {
+  const origin = req.nextUrl.origin
+
   if (process.env.DEV_LOGIN_ENABLED !== 'true') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    return NextResponse.redirect(`${origin}/login`)
+  }
+
+  const rawUserId = req.nextUrl.searchParams.get('userId')
+
+  if (!rawUserId || !UUID_REGEX.test(rawUserId)) {
+    return NextResponse.redirect(`${origin}/login?error=dev_login_invalid_user`)
   }
 
   const supabaseAdmin = createAdminClient(
@@ -17,84 +28,32 @@ export async function POST(req: NextRequest) {
     { auth: { autoRefreshToken: false, persistSession: false } }
   )
 
-  let userId: string | null = null
-  try {
-    const body = await req.json()
-    if (body.userId !== undefined) {
-      if (typeof body.userId !== 'string' || !UUID_REGEX.test(body.userId)) {
-        return NextResponse.json(
-          { error: 'Ungültige userId (kein gültiges UUID-Format)' },
-          { status: 400 }
-        )
-      }
-      userId = body.userId
-    }
-  } catch {
-    // no body or invalid JSON → treat as no userId provided
+  const { data: profileData, error: profileError } = await supabaseAdmin
+    .from('profiles')
+    .select('id, email, role, is_active')
+    .eq('id', rawUserId)
+    .single()
+
+  if (profileError || !profileData?.email || !profileData.is_active) {
+    return NextResponse.redirect(`${origin}/login?error=dev_login_user_not_found`)
   }
 
-  let profile: { id: string; email: string; role: string } | null = null
-
-  if (userId) {
-    const { data, error } = await supabaseAdmin
-      .from('profiles')
-      .select('id, email, role, is_active')
-      .eq('id', userId)
-      .single()
-
-    if (error || !data) {
-      return NextResponse.json(
-        { error: 'User nicht gefunden — bitte Seed-Script ausführen (docs/dev-seed.sql)' },
-        { status: 404 }
-      )
-    }
-
-    if (!data.is_active) {
-      return NextResponse.json({ error: 'Inaktiver User' }, { status: 403 })
-    }
-
-    if (!data.email) {
-      return NextResponse.json(
-        { error: 'User hat keine E-Mail-Adresse' },
-        { status: 404 }
-      )
-    }
-
-    profile = { id: data.id, email: data.email, role: data.role ?? 'werkstudent' }
-  } else {
-    const { data, error } = await supabaseAdmin
-      .from('profiles')
-      .select('id, email, role')
-      .eq('is_active', true)
-      .eq('role', 'manager')
-      .limit(1)
-      .single()
-
-    if (error || !data?.email) {
-      return NextResponse.json(
-        { error: 'Dev-Admin-User nicht gefunden' },
-        { status: 404 }
-      )
-    }
-
-    profile = data
+  const profile = {
+    id: profileData.id as string,
+    email: profileData.email as string,
+    role: (profileData.role ?? 'werkstudent') as string,
   }
 
-  // Ensure the dev password is set (idempotent — safe to call on every login)
   const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(profile.id, {
     password: DEV_PASSWORD,
   })
 
   if (updateError) {
-    return NextResponse.json({ error: 'Session-Erzeugung fehlgeschlagen' }, { status: 500 })
+    return NextResponse.redirect(`${origin}/login?error=dev_login_failed`)
   }
 
-  // Sign in server-side so session cookies are set on the response — this avoids
-  // any dependency on NEXT_PUBLIC_ env vars being correctly baked into the browser bundle.
   const pendingCookies: Array<{ name: string; value: string; options: Record<string, unknown> }> = []
 
-  // Use service role key here — NEXT_PUBLIC_SUPABASE_ANON_KEY may not be set
-  // in all Vercel projects. Supabase auth accepts either key for signInWithPassword.
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -116,14 +75,11 @@ export async function POST(req: NextRequest) {
   })
 
   if (signInError || !signInData.session) {
-    return NextResponse.json(
-      { error: signInError?.message ?? 'Login fehlgeschlagen' },
-      { status: 500 }
-    )
+    return NextResponse.redirect(`${origin}/login?error=dev_login_failed`)
   }
 
   const redirectTo = profile.role === 'manager' ? '/manager' : '/dashboard'
-  const response = NextResponse.json({ redirectTo })
+  const response = NextResponse.redirect(`${origin}${redirectTo}`)
 
   pendingCookies.forEach(({ name, value, options }) => {
     response.cookies.set(name, value, options)
