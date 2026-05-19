@@ -39,7 +39,8 @@
 | PROJ-23 | Deckungsübersicht für Manager | Deployed | [PROJ-23-deckungsuebersicht.md](PROJ-23-deckungsuebersicht.md) | 2026-05-07 |
 | PROJ-24 | Abwesenheiten pro Bereich deaktivierbar | Deployed | [PROJ-24-abwesenheiten-bereich-toggle.md](PROJ-24-abwesenheiten-bereich-toggle.md) | 2026-05-07 |
 | PROJ-25 | Manager-Zeitkorrektur | Deployed | [PROJ-25-manager-zeitkorrektur.md](PROJ-25-manager-zeitkorrektur.md) | 2026-05-07 |
+| PROJ-26 | Zeitwahl beim Einstempeln / Ausstempeln | In Review | [PROJ-26-zeitwahl-beim-stempeln.md](PROJ-26-zeitwahl-beim-stempeln.md) | 2026-05-18 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-26
+## Next Available ID: PROJ-27

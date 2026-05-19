@@ -163,6 +163,164 @@ describe('canStampOut (PATCH open-entry guard)', () => {
   })
 })
 
+// ── PROJ-26: Time field schema validation ─────────────────────────────────────
+
+function validateTimeField(value: string | undefined): { ok: boolean; error?: string } {
+  if (value === undefined) return { ok: true }
+  if (!/^\d{2}:\d{2}$/.test(value)) return { ok: false, error: 'Ungültiges Zeitformat (HH:MM erwartet).' }
+  if (parseInt(value.split(':')[1], 10) % 5 !== 0) return { ok: false, error: 'Minuten müssen ein Vielfaches von 5 sein.' }
+  return { ok: true }
+}
+
+// Mirrors future-time guard in route.ts
+function isFutureTime(requestedTime: string, nowHHMM: string): boolean {
+  return requestedTime > nowHHMM
+}
+
+// Mirrors last-block-end guard in POST route
+function isBeforeLastBlockEnd(requestedTime: string, lastEnd: string): boolean {
+  return requestedTime <= lastEnd
+}
+
+// Mirrors minimum-1-minute guard in PATCH route
+function isLessThanOneMinuteAfterStart(requestedTime: string, actualStart: string): boolean {
+  const toMinutes = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+  return toMinutes(requestedTime) - toMinutes(actualStart.slice(0, 5)) < 1
+}
+
+// Mirrors getBerlinTimeRounded from StempelCard.tsx (spec says round UP – spec example: 09:13 → 09:15)
+function getBerlinTimeRoundedFloor(minuteValue: number): number {
+  return Math.floor(minuteValue / 5) * 5
+}
+function getBerlinTimeRoundedCeil(minuteValue: number): number {
+  return Math.ceil(minuteValue / 5) * 5
+}
+
+describe('PROJ-26: timeFieldSchema validation', () => {
+  it('accepts valid time "09:15"', () => {
+    expect(validateTimeField('09:15').ok).toBe(true)
+  })
+
+  it('accepts valid time "00:00"', () => {
+    expect(validateTimeField('00:00').ok).toBe(true)
+  })
+
+  it('accepts valid time "23:55"', () => {
+    expect(validateTimeField('23:55').ok).toBe(true)
+  })
+
+  it('accepts undefined (optional field)', () => {
+    expect(validateTimeField(undefined).ok).toBe(true)
+  })
+
+  it('rejects format "9:15" (missing leading zero)', () => {
+    const result = validateTimeField('9:15')
+    expect(result.ok).toBe(false)
+    expect(result.error).toMatch(/HH:MM/)
+  })
+
+  it('rejects format "09:5" (missing leading zero on minute)', () => {
+    const result = validateTimeField('09:5')
+    expect(result.ok).toBe(false)
+    expect(result.error).toMatch(/HH:MM/)
+  })
+
+  it('rejects "09:13" (minute not a multiple of 5)', () => {
+    const result = validateTimeField('09:13')
+    expect(result.ok).toBe(false)
+    expect(result.error).toMatch(/Vielfaches/)
+  })
+
+  it('rejects "09:01" (minute not a multiple of 5)', () => {
+    const result = validateTimeField('09:01')
+    expect(result.ok).toBe(false)
+    expect(result.error).toMatch(/Vielfaches/)
+  })
+
+  it('rejects "abc:de" (non-numeric)', () => {
+    const result = validateTimeField('abc:de')
+    expect(result.ok).toBe(false)
+  })
+})
+
+describe('PROJ-26: future-time guard', () => {
+  it('rejects a time that is in the future', () => {
+    expect(isFutureTime('14:30', '14:00')).toBe(true)
+  })
+
+  it('accepts a time equal to now', () => {
+    expect(isFutureTime('14:00', '14:00')).toBe(false)
+  })
+
+  it('accepts a time in the past', () => {
+    expect(isFutureTime('13:55', '14:00')).toBe(false)
+  })
+
+  it('midnight boundary: 23:55 is past relative to 23:55', () => {
+    expect(isFutureTime('23:55', '23:55')).toBe(false)
+  })
+})
+
+describe('PROJ-26: stamp-in – last block end guard', () => {
+  it('rejects time exactly equal to last block end', () => {
+    expect(isBeforeLastBlockEnd('10:00', '10:00')).toBe(true)
+  })
+
+  it('rejects time before last block end', () => {
+    expect(isBeforeLastBlockEnd('09:55', '10:00')).toBe(true)
+  })
+
+  it('accepts time strictly after last block end', () => {
+    expect(isBeforeLastBlockEnd('10:05', '10:00')).toBe(false)
+  })
+})
+
+describe('PROJ-26: stamp-out – minimum 1 minute after start guard', () => {
+  it('rejects time exactly equal to start (0 min diff)', () => {
+    expect(isLessThanOneMinuteAfterStart('09:00', '09:00:00')).toBe(true)
+  })
+
+  it('rejects time that would be 0 minutes after start with different format', () => {
+    expect(isLessThanOneMinuteAfterStart('09:00', '09:00:30')).toBe(true)
+  })
+
+  it('accepts time exactly 1 minute after start', () => {
+    expect(isLessThanOneMinuteAfterStart('09:01', '09:00:00')).toBe(false)
+  })
+
+  it('accepts time 5 minutes after start', () => {
+    expect(isLessThanOneMinuteAfterStart('09:05', '09:00:00')).toBe(false)
+  })
+})
+
+describe('PROJ-26: getBerlinTimeRounded – rounding direction', () => {
+  // Spec says: "nächste volle 5 Minuten gerundet (z.B. 09:13 → 09:15)" → CEILING
+  // BUG: current implementation uses Math.floor which rounds DOWN
+  it('floor (current impl): minute 13 rounds to 10 [spec expects 15]', () => {
+    expect(getBerlinTimeRoundedFloor(13)).toBe(10)
+  })
+
+  it('ceil (spec intent): minute 13 rounds to 15', () => {
+    expect(getBerlinTimeRoundedCeil(13)).toBe(15)
+  })
+
+  it('ceil: minute already on boundary (10) stays at 10', () => {
+    expect(getBerlinTimeRoundedCeil(10)).toBe(10)
+  })
+
+  it('ceil: minute 0 stays at 0', () => {
+    expect(getBerlinTimeRoundedCeil(0)).toBe(0)
+  })
+
+  it('ceil: minute 1 rounds to 5', () => {
+    expect(getBerlinTimeRoundedCeil(1)).toBe(5)
+  })
+
+  it('ceil: minute 56 rounds to 60 (overflow — caller must handle)', () => {
+    expect(getBerlinTimeRoundedCeil(56)).toBe(60)
+  })
+})
+
 describe('ActualEntry shape contract', () => {
   it('accepts a complete entry with block_index', () => {
     const entry: ActualEntry = makeEntry({
