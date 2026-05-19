@@ -78,25 +78,18 @@ export async function POST(req: NextRequest) {
     profile = data
   }
 
-  const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-    type: 'magiclink',
-    email: profile.email,
+  // Set a known dev password so the client can use signInWithPassword (avoids PKCE complications)
+  const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(profile.id, {
+    password: 'dev-login-2026',
   })
 
-  if (linkError || !linkData?.properties?.hashed_token) {
-    const msg = linkError?.message?.toLowerCase() ?? ''
-    if (msg.includes('user not found') || msg.includes('not found')) {
-      return NextResponse.json(
-        { error: 'User nicht gefunden — bitte Seed-Script ausführen (docs/dev-seed.sql)' },
-        { status: 404 }
-      )
-    }
+  if (updateError) {
     return NextResponse.json({ error: 'Session-Erzeugung fehlgeschlagen' }, { status: 500 })
   }
 
   const redirectTo = profile.role === 'manager' ? '/manager' : '/dashboard'
   return NextResponse.json({
-    tokenHash: linkData.properties.hashed_token,
+    email: profile.email,
     redirectTo,
   })
 }

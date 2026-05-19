@@ -49,12 +49,12 @@ export function DevLoginButton({ enabled }: { enabled?: boolean }) {
         return
       }
 
-      const { error } = await supabase.auth.verifyOtp({
-        token_hash: data.tokenHash,
-        type: 'magiclink',
+      const { error } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: 'dev-login-2026',
       })
       if (error) {
-        toast.error('Session-Fehler: ' + error.message)
+        toast.error('Login-Fehler: ' + error.message)
         return
       }
 

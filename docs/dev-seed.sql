@@ -47,7 +47,7 @@ INSERT INTO auth.users (
   '00000000-0000-0000-0000-000000000002',
   'authenticated', 'authenticated',
   'anna.mueller@mindsquare.de',
-  crypt(gen_random_uuid()::text, gen_salt('bf', 10)),
+  crypt('dev-login-2026', gen_salt('bf', 10)),
   now(), null, '', null, '', null, '', '',
   null, null,
   '{"provider": "email", "providers": ["email"]}', '{}',
@@ -55,6 +55,7 @@ INSERT INTO auth.users (
   '', '', null, '', 0, '', false, null
 )
 ON CONFLICT (id) DO UPDATE SET
+  encrypted_password = crypt('dev-login-2026', gen_salt('bf', 10)),
   email_confirmed_at = now();
 
 -- Ben Schneider (Werkstudent)
@@ -72,7 +73,7 @@ INSERT INTO auth.users (
   '00000000-0000-0000-0000-000000000003',
   'authenticated', 'authenticated',
   'ben.schneider@mindsquare.de',
-  crypt(gen_random_uuid()::text, gen_salt('bf', 10)),
+  crypt('dev-login-2026', gen_salt('bf', 10)),
   now(), null, '', null, '', null, '', '',
   null, null,
   '{"provider": "email", "providers": ["email"]}', '{}',
@@ -80,6 +81,7 @@ INSERT INTO auth.users (
   '', '', null, '', 0, '', false, null
 )
 ON CONFLICT (id) DO UPDATE SET
+  encrypted_password = crypt('dev-login-2026', gen_salt('bf', 10)),
   email_confirmed_at = now();
 
 -- Clara Fischer (Werkstudentin) — leeres Konto
@@ -97,7 +99,7 @@ INSERT INTO auth.users (
   '00000000-0000-0000-0000-000000000004',
   'authenticated', 'authenticated',
   'clara.fischer@mindsquare.de',
-  crypt(gen_random_uuid()::text, gen_salt('bf', 10)),
+  crypt('dev-login-2026', gen_salt('bf', 10)),
   now(), null, '', null, '', null, '', '',
   null, null,
   '{"provider": "email", "providers": ["email"]}', '{}',
@@ -105,6 +107,7 @@ INSERT INTO auth.users (
   '', '', null, '', 0, '', false, null
 )
 ON CONFLICT (id) DO UPDATE SET
+  encrypted_password = crypt('dev-login-2026', gen_salt('bf', 10)),
   email_confirmed_at = now();
 
 -- ============================================================
