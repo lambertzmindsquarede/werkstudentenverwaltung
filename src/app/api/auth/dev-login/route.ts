@@ -93,9 +93,11 @@ export async function POST(req: NextRequest) {
   // any dependency on NEXT_PUBLIC_ env vars being correctly baked into the browser bundle.
   const pendingCookies: Array<{ name: string; value: string; options: Record<string, unknown> }> = []
 
+  // Use service role key here — NEXT_PUBLIC_SUPABASE_ANON_KEY may not be set
+  // in all Vercel projects. Supabase auth accepts either key for signInWithPassword.
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
       cookies: {
         getAll() { return req.cookies.getAll() },
