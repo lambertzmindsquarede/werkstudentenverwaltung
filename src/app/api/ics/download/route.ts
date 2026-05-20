@@ -96,20 +96,30 @@ export async function GET(req: NextRequest) {
 
   const profileMap = new Map(werkstudenten.map((w) => [w.id, w.full_name ?? w.id]))
 
-  const entries: IcsEntry[] = (planned ?? []).map((p) => {
-    const seq = sequenceMap.get(`${p.user_id}|${p.date}`) ?? 0
+  // Aggregate multiple time blocks per (user_id, date) into one entry (FIX BUG-M2: no duplicate UIDs)
+  const aggregatedMap = new Map<string, IcsEntry>()
+  for (const p of planned ?? []) {
+    const key = `${p.user_id}|${p.date}`
+    const seq = sequenceMap.get(key) ?? 0
     const start = p.planned_start?.substring(0, 5) ?? '00:00'
     const end = p.planned_end?.substring(0, 5) ?? '00:00'
-    return {
-      userId: p.user_id,
-      date: p.date,
-      fullName: profileMap.get(p.user_id) ?? p.user_id,
-      plannedStart: start,
-      plannedEnd: end,
-      sequence: seq,
-      cancel: false,
+    const existing = aggregatedMap.get(key)
+    if (!existing) {
+      aggregatedMap.set(key, {
+        userId: p.user_id,
+        date: p.date,
+        fullName: profileMap.get(p.user_id) ?? p.user_id,
+        plannedStart: start,
+        plannedEnd: end,
+        sequence: seq,
+        cancel: false,
+      })
+    } else {
+      if (start < existing.plannedStart) existing.plannedStart = start
+      if (end > existing.plannedEnd) existing.plannedEnd = end
     }
-  })
+  }
+  const entries: IcsEntry[] = [...aggregatedMap.values()]
 
   const icsContent = generateIcs(entries)
 

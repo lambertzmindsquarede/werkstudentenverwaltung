@@ -248,7 +248,7 @@ Werkstudent klickt "Speichern"
 - [x] SEQUENCE wird bei jeder Änderung erhöht — Logik in `ics_event_sequences` Tabelle
 
 #### Update bei Planänderung
-- [ ] **FAIL (BUG-M1):** CANCEL-Events werden nie generiert — `getPreviousDates` prüft nur Daten in `currentEntries`, nicht alle Wochentage
+- [x] CANCEL-Events werden generiert wenn ein Tag entfernt wird — **FIXED BUG-M1**
 - [x] UPDATE-Events (erhöhtes SEQUENCE) werden korrekt erzeugt für bestehende Termine
 
 #### Manueller Download
@@ -267,24 +267,11 @@ Werkstudent klickt "Speichern"
 **File:** `src/app/api/ics/download/route.ts`
 **Fix:** `allowedBereichIds` wird jetzt immer vorab geladen. Wenn `bereichFilter` angegeben wird und nicht in `allowedBereichIds` enthalten ist, antwortet die Route mit 403. Admins (`allowedBereichIds === null`) dürfen weiterhin alle Bereiche abfragen.
 
-#### BUG-27-M1: CANCEL-Events werden niemals generiert (MEDIUM)
-**File:** `src/lib/ics-sender.ts:124`
-**Steps to reproduce:**
-1. Werkstudent speichert Wochenplan mit Mo+Di (ICS wird gesendet, Sequences für Mo+Di angelegt)
-2. Werkstudent speichert Wochenplan erneut mit nur Mo (Di entfernt)
-3. Erwartetes Verhalten: CANCEL-VEVENT für Di wird gesendet
-4. Tatsächliches Verhalten: `weekDates = currentEntries.map(e => e.date)` enthält nur Mo → `getPreviousDates` findet Di's Sequence nicht → kein CANCEL
-**Root cause:** `getPreviousDates` wird mit `weekDates = currentEntries.map(e.date)` aufgerufen. Wenn Di nicht mehr in `currentEntries` ist, wird Di nicht abgefragt und ist nicht in `previousSequences`. In `buildIcsEntries` ist `allTrackedDates = [...previousSequences.keys()]` dann nur [Mo] → Di wird nie als Cancellation erkannt.
-**Fix:** `getPreviousDates` mit allen 5 Wochentagen aufrufen, nicht nur mit den Daten der aktuellen Einträge. Die Wochentage müssen aus `weekStr` berechnet werden.
+#### ~~BUG-27-M1: CANCEL-Events werden niemals generiert (MEDIUM)~~ **FIXED**
+**Fix:** `getPreviousDates` wird jetzt mit allen 5 Wochentagen (aus `getWeekDates(weekStr)`) aufgerufen, nicht nur mit den Daten der neuen Einträge. Dadurch werden entfernte Tage in `previousSequences` gefunden und als CANCEL-VEVENTs erzeugt.
 
-#### BUG-27-M2: Mehrere Zeitblöcke pro Tag erzeugen doppelte UIDs (MEDIUM)
-**File:** `src/lib/ics-sender.ts:158` + `src/app/api/ics/download/route.ts:90`
-**Steps to reproduce:**
-1. Werkstudent speichert Wochenplan mit 2 Blöcken an einem Tag (PROJ-8)
-2. ICS wird erzeugt: beide Blöcke erzeugen je ein VEVENT mit identischer UID `wsv-{userId}-{date}@werkstudentenverwaltung`
-3. RFC 5545 verbietet doppelte UIDs in einer Kalenderdatei → Kalender-Apps ignorieren oder überschreiben Duplikate
-**Root cause:** `toInsert` in `saveWeekPlan` enthält für multi-block Tage mehrere Einträge mit gleichem `date`. `buildIcsEntries` iteriert über alle und erzeugt VEVENTs mit demselben UID. Gleiche Logik betrifft den Download-Route.
-**Fix:** Einträge pro Tag aggregieren (z. B. nur Block 1 für die Event-Zeitangabe verwenden, oder alle Blöcke in einem einzigen VEVENT zusammenfassen).
+#### ~~BUG-27-M2: Mehrere Zeitblöcke pro Tag erzeugen doppelte UIDs (MEDIUM)~~ **FIXED**
+**Fix:** Neue exportierte Funktion `aggregateByDate` in `ics-sender.ts` fasst mehrere Blöcke pro Tag zusammen (früheste Startzeit, späteste Endzeit). Sender und Download-Route nutzen diese Aggregation — pro `(user_id, date)` entsteht genau ein VEVENT. 6 Unit-Tests für `aggregateByDate` hinzugefügt.
 
 #### BUG-27-L1: Doppelte E-Mail-Adressen server-seitig nicht abgelehnt (LOW)
 **File:** `src/app/manager/settings/ics-actions.ts:37`
