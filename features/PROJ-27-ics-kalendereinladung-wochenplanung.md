@@ -1,6 +1,6 @@
 # PROJ-27: ICS-Kalendereinladung bei Wochenplanung
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-05-20
 **Last Updated:** 2026-05-20
 
@@ -222,7 +222,7 @@ Werkstudent klickt "Speichern"
 
 **QA Date:** 2026-05-20
 **Tester:** QA Engineer (automated + code review)
-**Status:** NOT READY — 1 High bug, 2 Medium bugs must be fixed before deployment
+**Status:** APPROVED — alle 4 Bugs behoben, keine offenen Critical/High Bugs
 
 ### Acceptance Criteria
 
@@ -273,13 +273,8 @@ Werkstudent klickt "Speichern"
 #### ~~BUG-27-M2: Mehrere Zeitblöcke pro Tag erzeugen doppelte UIDs (MEDIUM)~~ **FIXED**
 **Fix:** Neue exportierte Funktion `aggregateByDate` in `ics-sender.ts` fasst mehrere Blöcke pro Tag zusammen (früheste Startzeit, späteste Endzeit). Sender und Download-Route nutzen diese Aggregation — pro `(user_id, date)` entsteht genau ein VEVENT. 6 Unit-Tests für `aggregateByDate` hinzugefügt.
 
-#### BUG-27-L1: Doppelte E-Mail-Adressen server-seitig nicht abgelehnt (LOW)
-**File:** `src/app/manager/settings/ics-actions.ts:37`
-**Steps to reproduce:**
-1. Direkt `saveIcsSettings` mit doppelter Adresse aufrufen (z. B. `["a@b.de", "a@b.de"]`)
-2. Zod-Schema validiert Format und max. 10 Adressen, aber keine Eindeutigkeit
-3. Doppelte Adressen werden in DB gespeichert → E-Mails werden mehrfach versandt
-**Fix:** `.refine((arr) => new Set(arr).size === arr.length, { message: 'Doppelte E-Mail-Adressen sind nicht erlaubt' })` zu Zod-Schema hinzufügen.
+#### ~~BUG-27-L1: Doppelte E-Mail-Adressen server-seitig nicht abgelehnt (LOW)~~ **FIXED**
+**Fix:** `.refine((arr) => new Set(arr).size === arr.length, 'Doppelte E-Mail-Adressen sind nicht erlaubt')` im Zod-Schema von `saveIcsSettings` ergänzt.
 
 ### Test Coverage Added
 

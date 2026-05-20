@@ -40,7 +40,7 @@
 | PROJ-24 | Abwesenheiten pro Bereich deaktivierbar | Deployed | [PROJ-24-abwesenheiten-bereich-toggle.md](PROJ-24-abwesenheiten-bereich-toggle.md) | 2026-05-07 |
 | PROJ-25 | Manager-Zeitkorrektur | Deployed | [PROJ-25-manager-zeitkorrektur.md](PROJ-25-manager-zeitkorrektur.md) | 2026-05-07 |
 | PROJ-26 | Zeitwahl beim Einstempeln / Ausstempeln | Deployed | [PROJ-26-zeitwahl-beim-stempeln.md](PROJ-26-zeitwahl-beim-stempeln.md) | 2026-05-18 |
-| PROJ-27 | ICS-Kalendereinladung bei Wochenplanung | In Review | [PROJ-27-ics-kalendereinladung-wochenplanung.md](PROJ-27-ics-kalendereinladung-wochenplanung.md) | 2026-05-20 |
+| PROJ-27 | ICS-Kalendereinladung bei Wochenplanung | Approved | [PROJ-27-ics-kalendereinladung-wochenplanung.md](PROJ-27-ics-kalendereinladung-wochenplanung.md) | 2026-05-20 |
 
 <!-- Add features above this line -->
 
