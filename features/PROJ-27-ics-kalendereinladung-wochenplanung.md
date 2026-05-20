@@ -263,15 +263,9 @@ Werkstudent klickt "Speichern"
 
 ### Bugs Found
 
-#### BUG-27-H1: Authorization bypass in ICS download API (HIGH)
-**File:** `src/app/api/ics/download/route.ts:44`
-**Steps to reproduce:**
-1. Als Manager (nicht Admin) einloggen
-2. GET `/api/ics/download?week=2026-W21&bereich=<UUID-eines-anderen-Bereichs>`
-3. Erwartetes Verhalten: 403 Forbidden
-4. Tatsächliches Verhalten: Die Route springt in den `if (bereichFilter)` Zweig ohne zu prüfen, ob der Manager den Bereich tatsächlich verwaltet — gibt Werkstudenten-Daten eines fremden Bereichs zurück.
-**Root cause:** `if (bereichFilter) { profilesQuery = profilesQuery.eq('bereich_id', bereichFilter) }` überspringt den Autorisierungscheck für nicht-Admins komplett wenn ein `bereich` Query-Parameter übergeben wird.
-**Fix:** Vor der Anwendung von `bereichFilter` muss geprüft werden, ob der eingeloggte Manager diesen Bereich verwaltet (Lookup in `bereich_manager`).
+#### ~~BUG-27-H1: Authorization bypass in ICS download API (HIGH)~~ **FIXED**
+**File:** `src/app/api/ics/download/route.ts`
+**Fix:** `allowedBereichIds` wird jetzt immer vorab geladen. Wenn `bereichFilter` angegeben wird und nicht in `allowedBereichIds` enthalten ist, antwortet die Route mit 403. Admins (`allowedBereichIds === null`) dürfen weiterhin alle Bereiche abfragen.
 
 #### BUG-27-M1: CANCEL-Events werden niemals generiert (MEDIUM)
 **File:** `src/lib/ics-sender.ts:124`
