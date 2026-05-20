@@ -1,6 +1,6 @@
 # PROJ-27: ICS-Kalendereinladung bei Wochenplanung
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-05-20
 **Last Updated:** 2026-05-20
 
@@ -291,4 +291,7 @@ Werkstudent klickt "Speichern"
 - Alle 14 neuen E2E-Tests bestanden
 
 ## Deployment
-_To be added by /deploy_
+**Deployed:** 2026-05-20
+**Commits pushed:** a910691 (feat) + 4 QA-Fix commits (f60ec42, 23bb586, f89b961, 16008b9)
+**Branch:** main → origin/main (GitHub)
+**Vercel:** Auto-Deploy via GitHub Push ausgelöst
