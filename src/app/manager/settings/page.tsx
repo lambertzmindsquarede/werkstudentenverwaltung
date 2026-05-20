@@ -8,6 +8,8 @@ import SubLocationVerwaltung from './SubLocationVerwaltung'
 import TeamSichtbarkeitToggle from './TeamSichtbarkeitToggle'
 import { loadManagerBereiche, loadBereichConfig } from './absence-type-override-actions'
 import { getManagerArbeitsorte, getSubLocations, getTeamVisibility } from './sublocation-actions'
+import IcsEinstellungen from './IcsEinstellungen'
+import { loadIcsSettings } from './ics-actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -55,6 +57,9 @@ export default async function ManagerSettingsPage() {
     )
   }
 
+  const icsSettingsResult = await loadIcsSettings()
+  const icsSettings = icsSettingsResult.data ?? { ics_enabled: false, additional_emails: [] }
+
   // Team visibility — one entry per managed bereich (BUG-20-5: support multiple bereiche)
   const bereichVisibilities = await Promise.all(
     bereiche.map(async (b) => {
@@ -94,6 +99,8 @@ export default async function ManagerSettingsPage() {
             initialVisibility={visibility}
           />
         ))}
+
+        <IcsEinstellungen initialSettings={icsSettings} />
       </main>
     </div>
   )

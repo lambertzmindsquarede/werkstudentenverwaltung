@@ -9,6 +9,45 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      ics_event_sequences: {
+        Row: {
+          user_id: string
+          date: string
+          sequence: number
+        }
+        Insert: {
+          user_id: string
+          date: string
+          sequence?: number
+        }
+        Update: {
+          user_id?: string
+          date?: string
+          sequence?: number
+        }
+        Relationships: []
+      }
+      manager_ics_settings: {
+        Row: {
+          manager_id: string
+          ics_enabled: boolean
+          additional_emails: string[]
+          updated_at: string
+        }
+        Insert: {
+          manager_id: string
+          ics_enabled?: boolean
+          additional_emails?: string[]
+          updated_at?: string
+        }
+        Update: {
+          manager_id?: string
+          ics_enabled?: boolean
+          additional_emails?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       arbeitsorte: {
         Row: {
           id: string

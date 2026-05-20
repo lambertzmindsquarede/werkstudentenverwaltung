@@ -34,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import IcsDownloadButton from '@/app/manager/kalender/IcsDownloadButton'
 
 interface Props {
   profiles: Profile[]
@@ -227,6 +228,9 @@ export default function KalenderGrid({
                 →
               </Button>
             </div>
+
+            {/* ICS download */}
+            <IcsDownloadButton weekStr={weekStr} bereichFilter={selectedBereich} />
 
             {/* User filter */}
             {profiles.length > 0 && (

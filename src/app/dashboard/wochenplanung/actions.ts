@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { getWeekDates, getPreviousWeek, dateToString } from '@/lib/week-utils'
 import { validateBlocks } from '@/lib/time-block-utils'
 import { getHolidayDates } from '@/lib/feiertage-server'
+import { triggerIcsSend } from '@/lib/ics-sender'
 import type { Arbeitsort } from '@/lib/database.types'
 
 export type DayEntry = {
@@ -146,6 +147,27 @@ export async function saveWeekPlan(
   }
 
   revalidatePath('/dashboard/wochenplanung')
+
+  // Fire-and-forget ICS send — must not block the response
+  const { data: profileForIcs } = await supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', user.id)
+    .single()
+
+  const icsEntries = toInsert.map((e) => ({
+    date: e.date,
+    plannedStart: e.planned_start,
+    plannedEnd: e.planned_end,
+  }))
+
+  void triggerIcsSend({
+    userId: user.id,
+    weekStr,
+    currentEntries: icsEntries,
+    fullName: profileForIcs?.full_name ?? user.email ?? user.id,
+  })
+
   return {}
 }
 
