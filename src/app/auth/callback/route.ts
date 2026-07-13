@@ -3,17 +3,7 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { withCleanSession } from '@/lib/session-cleaner'
-
-// Decode a JWT payload without verifying the signature.
-// The signature was already verified by Azure AD during code exchange.
-function decodeJwtPayload(token: string): Record<string, unknown> {
-  try {
-    const base64 = token.split('.')[1]
-    return JSON.parse(Buffer.from(base64, 'base64url').toString('utf-8'))
-  } catch {
-    return {}
-  }
-}
+import { checkAdminGroupMembership } from '@/lib/admin-group'
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
@@ -50,16 +40,13 @@ export async function GET(request: NextRequest) {
 
   const user = data.session.user
 
-  // Determine admin status from the Azure AD access token groups claim.
-  // Azure AD includes group object IDs in the `groups` claim when configured.
-  const adminGroupId = process.env.ENTRA_ADMIN_GROUP_ID
-  let isAdmin = false
-
-  if (adminGroupId && data.session.provider_token) {
-    const payload = decodeJwtPayload(data.session.provider_token)
-    const groups = Array.isArray(payload.groups) ? payload.groups : []
-    isAdmin = groups.includes(adminGroupId)
-  }
+  // Determine admin status via Microsoft Graph (the provider_token is a Graph
+  // access token and never carries the app's `groups` claim — see admin-group.ts).
+  // null = check not possible; keep the previously stored is_admin value then.
+  const isAdmin = await checkAdminGroupMembership(
+    data.session.provider_token,
+    process.env.ENTRA_ADMIN_GROUP_ID
+  )
 
   // Re-set the session without provider_token / provider_refresh_token.
   // Azure AD tokens can be several KB; keeping them in cookies causes
@@ -70,13 +57,15 @@ export async function GET(request: NextRequest) {
     refresh_token: data.session.refresh_token,
   })
 
-  // Upsert profile on every login so name/email stays fresh and is_admin is re-evaluated.
+  // Upsert profile on every login so name/email stays fresh and is_admin is
+  // re-evaluated. When the group check could not run (isAdmin === null), omit
+  // is_admin so the existing DB value is preserved instead of degrading the user.
   await supabase.from('profiles').upsert(
     {
       id: user.id,
       email: user.email,
       full_name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? null,
-      is_admin: isAdmin,
+      ...(isAdmin === null ? {} : { is_admin: isAdmin }),
     },
     { onConflict: 'id' }
   )

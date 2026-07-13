@@ -105,9 +105,11 @@ Alle UI-Komponenten bereits installiert: `dialog`, `alert-dialog`, `table`, `sel
 
 ### Admin-Erkennung beim Login
 
-Der Azure AD JWT enthält beim Login Gruppen-Claims. In `auth/callback/route.ts` wird geprüft: Ist `ENTRA_ADMIN_GROUP_ID` unter den Claims? Wenn ja → `is_admin = true`, sonst `false`. Der Wert wird in `profiles` gespeichert und bei jedem Login aktualisiert.
+~~Der Azure AD JWT enthält beim Login Gruppen-Claims. In `auth/callback/route.ts` wird geprüft: Ist `ENTRA_ADMIN_GROUP_ID` unter den Claims?~~
 
-Kein Graph-API-Call auf jede Seitenanfrage – Login-Sync ist schnell, sicher und konsistent mit dem bestehenden Role-Pattern.
+**Korrigiert (2026-07-13, Production-Bugfix):** Der ursprüngliche Ansatz (JWT-Decode des `provider_token`) konnte in Production nie funktionieren: Das `provider_token` von Supabase ist ein Access Token **für Microsoft Graph**, und Access Tokens werden aus dem Manifest der Ressource (Graph) erzeugt — der in der eigenen App Registration konfigurierte `groups`-Claim taucht darin nie auf. Stattdessen ruft `src/lib/admin-group.ts` beim Login `POST https://graph.microsoft.com/v1.0/me/checkMemberGroups` mit dem `provider_token` auf (benötigt nur Delegated Permission `User.Read`, prüft transitiv, umgeht das 200-Gruppen-Overage-Limit). Wenn ja → `is_admin = true`, sonst `false`. Der Wert wird in `profiles` gespeichert und bei jedem Login aktualisiert. Schlägt der Graph-Call fehl (Netzwerk/HTTP-Fehler oder fehlende Konfiguration), bleibt der bisherige `is_admin`-Wert erhalten, statt den Nutzer fälschlich zu degradieren.
+
+Ein Graph-API-Call pro Login (nicht pro Seitenanfrage) – Login-Sync bleibt schnell und konsistent mit dem bestehenden Role-Pattern.
 
 ### Routing-Logik (Erweiterung `proxy.ts`)
 
@@ -175,7 +177,7 @@ Konsistent mit dem bestehenden Pattern in `manager/users/actions.ts`:
 
 ### Architekturentscheidungen
 - Privilegierte Writes (bereich_id auf fremden Profilen) laufen über Service-Role-Client in Server Actions; keine RLS-Ausnahmen auf profiles nötig.
-- Admin-Erkennung: JWT payload-Decode (base64url) aus `provider_token` – kein Graph-API-Call pro Request.
+- Admin-Erkennung: ~~JWT payload-Decode (base64url) aus `provider_token`~~ → **ersetzt am 2026-07-13** durch Graph-Call `me/checkMemberGroups` in `src/lib/admin-group.ts` (siehe „Admin-Erkennung beim Login"); Unit-Tests in `src/lib/admin-group.test.ts`.
 - Seeding-Migration: alle bestehenden Profile erhalten den Bereich "Standard".
 
 ## QA Test Results
