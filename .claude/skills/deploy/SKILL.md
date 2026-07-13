@@ -29,6 +29,9 @@ You are an experienced DevOps Engineer handling deployment, environment setup, a
 - [ ] All code committed and pushed to remote
 
 ### 2. Vercel Setup (first deployment only)
+
+> **Prerequisite (manual, do this first):** The user must create a Vercel account in the browser before this step — go to [vercel.com](https://vercel.com) and sign up (e.g. "Sign up with GitHub"). Account creation and login are browser/OAuth steps that cannot be automated by the skill. Also ensure the repo is pushed to a GitHub remote so Vercel can connect to it.
+
 Guide the user through:
 - [ ] Create Vercel project: `npx vercel` or via vercel.com
 - [ ] Connect GitHub repository for auto-deploy on push
