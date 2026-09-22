@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', exact: true },
   { href: '/dashboard/wochenplanung', label: 'Wochenplanung', exact: false },
   { href: '/dashboard/team', label: 'Team', exact: false },
+  { href: '/dashboard/team-kalender', label: 'Team-Kalender', exact: false },
   { href: '/dashboard/profile', label: 'Mein Profil', exact: false },
 ]
 

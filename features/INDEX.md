@@ -42,7 +42,7 @@
 | PROJ-25 | Manager-Zeitkorrektur | Deployed | [PROJ-25-manager-zeitkorrektur.md](PROJ-25-manager-zeitkorrektur.md) | 2026-05-07 |
 | PROJ-26 | Zeitwahl beim Einstempeln / Ausstempeln | Deployed | [PROJ-26-zeitwahl-beim-stempeln.md](PROJ-26-zeitwahl-beim-stempeln.md) | 2026-05-18 |
 | PROJ-27 | ICS-Kalendereinladung bei Wochenplanung | Deployed | [PROJ-27-ics-kalendereinladung-wochenplanung.md](PROJ-27-ics-kalendereinladung-wochenplanung.md) | 2026-05-20 |
-| PROJ-28 | Team-Wochenkalender für Werkstudenten | Architected | [PROJ-28-team-wochenkalender-werkstudenten.md](PROJ-28-team-wochenkalender-werkstudenten.md) | 2026-09-22 |
+| PROJ-28 | Team-Wochenkalender für Werkstudenten | In Progress | [PROJ-28-team-wochenkalender-werkstudenten.md](PROJ-28-team-wochenkalender-werkstudenten.md) | 2026-09-22 |
 
 <!-- Add features above this line -->
 

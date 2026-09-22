@@ -1,6 +1,6 @@
 # PROJ-28: Team-Wochenkalender für Werkstudenten
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-09-22
 **Last Updated:** 2026-09-22
 
@@ -143,6 +143,25 @@ Der Server erzwingt außerdem den Zeithorizont: Wird eine vergangene Woche angef
 
 ### Dependencies
 Keine neuen Pakete — alles Nötige (Next.js, Supabase-Clients, shadcn/ui, date-fns) ist vorhanden.
+
+## Implementation Notes (Frontend)
+
+**Implemented:** 2026-09-22
+
+### Neue Dateien
+- `src/app/dashboard/team-kalender/page.tsx` — Server Component: Auth-Check, berechnet heutiges Datum (Europe/Berlin) und aktuelle KW, lädt Initialdaten
+- `src/app/dashboard/team-kalender/actions.ts` — Datenvertrag (`TeamKalenderWeekData`: nur Plan-Einträge, neutrale `teamAbsences`, typisierte `ownAbsences`, `noBereich`-Flag) + Stub; Implementierung folgt in `/backend`
+- `src/components/team-kalender/TeamKalenderClient.tsx` — Wochennavigation (← deaktiviert in aktueller KW), Wochen-Tabelle mit eigener Zeile zuerst (blau hinterlegt, „(Ich)"), Feiertagsanzeige pro Bundesland (Muster aus Manager-KalenderGrid), Fehler-/Leer-Zustände („Kein Bereich zugeordnet", „Noch keine weiteren Kollegen"), horizontales Scrollen auf Mobile
+- `src/components/team-kalender/TeamKalenderZelle.tsx` — Read-only-Tageszelle: Plan-Label (Uhrzeiten bzw. „N Bl. · Xh"), Arbeitsort, neutrales „Abwesend"-Badge für Kollegen, typisierte Abwesenheit nur in der eigenen Zeile, Feiertags-Badge
+- `src/components/team-kalender/utils.ts` + `utils.test.ts` — Plan-Label, Eigene-Zeile-zuerst-Sortierung, Initialen, Stunden-Format (11 Unit-Tests)
+
+### Geänderte Dateien
+- `src/components/werkstudent/WerkstudentNav.tsx` — neuer Nav-Punkt „Team-Kalender" zwischen „Team" und „Mein Profil"
+
+### Designentscheidungen
+- Kein Klick-Dialog auf Zellen (anders als Manager-Ansicht) — es gibt keine Detail-Ebene, die Werkstudenten sehen dürften
+- `proxy.ts` unverändert — die Route liegt unter `/dashboard/*` und ist damit vom bestehenden Werkstudenten-Guard abgedeckt
+- Die Seite rendert bis zur Backend-Anbindung einen klaren Fehlerhinweis („noch nicht angebunden") statt leerer Fake-Daten
 
 ## QA Test Results
 _To be added by /qa_
