@@ -91,12 +91,58 @@ Werkstudenten erhalten eine eigene Wochenkalender-Ansicht ihres Bereichs — ana
 <!-- Added by /architecture -->
 | Decision | Rationale | Date |
 |----------|-----------|------|
+| Server Action mit Service-Role-Client statt RLS-Erweiterung | RLS für Werkstudenten-Fremdzugriff zu öffnen wäre riskant; das PROJ-20-Muster (Auth-Check + beschnittene Antwort an einer Stelle) ist etabliert und auditiert | 2026-09-22 |
+| Beschneidung im Server-Antwortformat, nicht im UI | Kollegen-Ist-Zeiten und Abwesenheitstypen verlassen den Server nie — kein Leak über DevTools/Netzwerk-Tab möglich | 2026-09-22 |
+| Zeithorizont-Clamp auf dem Server (angefragte Vergangenheit → aktuelle Woche) | AC verlangt Absicherung gegen URL-Manipulation; Client-Sperre allein reicht nicht | 2026-09-22 |
+| Eigener `TeamKalenderClient` statt Wiederverwendung des Manager-`KalenderGrid` | KalenderGrid ist fest mit ManagerNav, Bereichs-Filter, Ist-Logik und ICS verdrahtet; Entkernung riskanter als schlanker Neubau mit Wiederverwendung von week-utils/Feiertagen/Zellen-Muster | 2026-09-22 |
+| Keine neuen Tabellen, keine Migration | Reines Lese-Feature auf bestehenden Daten | 2026-09-22 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+**Designed:** 2026-09-22
+
+### Grundidee
+Die neue Seite ist eine abgespeckte Schwester der Manager-Kalenderansicht (PROJ-5): gleiche Wochen-Tabelle, aber sie bekommt vom Server von vornherein nur die Daten, die Werkstudenten sehen dürfen. Die Beschneidung (nur Plan, Abwesenheit ohne Typ, nur eigener Bereich, keine Vergangenheit) passiert komplett auf dem Server — der Browser eines Werkstudenten erhält die sensiblen Daten nie, egal was im UI manipuliert wird.
+
+### Seitenstruktur (Component Tree)
+```
+/dashboard/team-kalender (neue Werkstudenten-Seite)
++-- WerkstudentNav (bestehend — neuer Punkt „Team-Kalender")
++-- TeamKalenderClient (neu, schlanke Variante des Manager-KalenderGrid)
+    +-- Wochennavigation (KW-Anzeige, ← deaktiviert in aktueller Woche, →)
+    +-- Wochen-Tabelle
+    |   +-- Zeile pro aktivem Werkstudenten des eigenen Bereichs (eigene Zeile zuerst)
+    |   +-- Zelle pro Tag: Plan-Zeitblöcke + Stundensumme, „Abwesend"-Badge oder „—"
+    |   +-- Feiertagsmarkierung (bestehende Feiertags-Logik aus PROJ-10)
+    +-- Hinweis-Zustände („Kein Bereich zugeordnet", „Noch keine weiteren Kollegen")
+```
+
+### Datenmodell
+**Keine neuen Tabellen, keine Migration.** Es werden ausschließlich bestehende Daten gelesen:
+- Profile (Name, Bereich) — nur aktive Werkstudenten des eigenen Bereichs
+- Plan-Einträge der Woche (PROJ-3)
+- Abwesenheiten der Woche (PROJ-17) — für Kollegen reduziert auf „ja/nein pro Tag", nur für die eigene Person mit Typ
+
+Der Server liefert ein bewusst schmales Antwortformat: Bei Kollegen sind Ist-Zeiten und Abwesenheitstypen gar nicht erst enthalten (nicht nur ausgeblendet).
+
+### Zugriffsweg (WARUM so)
+Werkstudenten dürfen per Datenbank-Rechten (RLS) grundsätzlich keine fremden Plan-Daten lesen — das ist gut so und bleibt unangetastet. Stattdessen nutzt die Seite dasselbe Muster wie die bestehende Team-Anwesenheitsübersicht (PROJ-20): eine Server Action prüft zuerst „ist das ein aktiver Werkstudent, und welchem Bereich gehört er an?" und liest dann mit erhöhten Rechten (Service-Role) genau die erlaubte Datenmenge. Vorteile:
+- Keine RLS-Änderung nötig → kein Risiko, versehentlich mehr freizugeben als gewollt
+- Die Beschneidungsregeln stehen an genau einer Stelle im Server-Code und sind dort testbar
+- Konsistent mit dem bereits auditierten PROJ-20-Muster
+
+Der Server erzwingt außerdem den Zeithorizont: Wird eine vergangene Woche angefragt (z. B. per manipuliertem Parameter), antwortet er mit der aktuellen Woche.
+
+### Wiederverwendung vs. Neubau
+- **Wiederverwendet:** Wochen-Logik (`week-utils`), Feiertags-Abfrage (PROJ-10), Zellen-Darstellung der Plan-Blöcke (Anlehnung an `KalenderZelle`), Navigations- und Layout-Muster der Werkstudenten-Seiten
+- **Neu gebaut:** `TeamKalenderClient` als eigene schlanke Komponente. Das Manager-`KalenderGrid` wird bewusst NICHT wiederverwendet — es ist fest mit Manager-Navigation, Bereichs-Filter, Ist-Zeiten-Logik und ICS-Download verdrahtet; eine „Entkernung" wäre riskanter als ein schlanker Neubau
+- **Unverändert:** Manager-Kalenderansicht, RLS-Policies, Datenbank-Schema
+
+### Dependencies
+Keine neuen Pakete — alles Nötige (Next.js, Supabase-Clients, shadcn/ui, date-fns) ist vorhanden.
 
 ## QA Test Results
 _To be added by /qa_
