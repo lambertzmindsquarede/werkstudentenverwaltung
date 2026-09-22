@@ -44,6 +44,7 @@ Teamleiter oder HR-Verantwortliche, die einen Überblick über die Verfügbarkei
 | P1 | PROJ-25: Manager-Zeitkorrektur | Planned |
 | P1 | PROJ-26: Zeitwahl beim Einstempeln / Ausstempeln | Planned |
 | P1 | PROJ-27: ICS-Kalendereinladung bei Wochenplanung | Planned |
+| P1 | PROJ-28: Team-Wochenkalender für Werkstudenten | Planned |
 
 ## Success Metrics
 - Alle Werkstudenten nutzen die App täglich zum Einstempeln (100% Adoption)
