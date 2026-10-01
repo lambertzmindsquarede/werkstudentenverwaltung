@@ -186,7 +186,69 @@ Keine neuen Pakete — alles Nötige (Next.js, Supabase-Clients, shadcn/ui, date
 - Testsuite: 365/365 grün, Production-Build sauber
 
 ## QA Test Results
-_To be added by /qa_
+
+**QA Date:** 2026-10-01
+**Tester:** /qa skill (Claude)
+**Status:** ✅ APPROVED — 15/15 Akzeptanzkriterien bestanden, 1 Medium-Bug offen (Bug 1, Mobile-Nav)
+
+### Automated Tests
+- Unit/Component tests: **373/373 passed** ✅ (davon neu für PROJ-28: 11 utils, 8 logic, 8 TeamKalenderZelle-Component-Tests)
+- E2E tests (PROJ-28): **19 passed, 1 skipped** ✅ (`tests/PROJ-28-team-wochenkalender.spec.ts`; Skip = Manager-Login bewusst nur auf chromium)
+- E2E tests (Gesamtsuite/Regression): **291 passed, 0 failed** ✅ (2 flaky = Dev-Server-Transient, im Retry grün; Skips größtenteils Mobile-Safari-bedingt wie in früheren QA-Läufen)
+- TypeScript build: **clean** ✅
+
+### Acceptance Criteria Results
+
+| AC | Beschreibung | Ergebnis | Nachweis |
+|----|--------------|----------|----------|
+| 1 | Nav-Punkt „Team-Kalender" sichtbar | ✅ PASS | Manuell + E2E |
+| 2 | Seite lädt aktuelle KW mit allen aktiven Bereichs-Werkstudenten inkl. selbst | ✅ PASS | Manuell (Anna: Anna/Ben/Clara) + E2E |
+| 3 | Hinweis „Kein Bereich zugeordnet" ohne Bereich | ✅ PASS (Code/Component) | `noBereich`-Flag + UI-Zustand; kein Testaccount ohne Bereich verfügbar |
+| 4 | Manager/Admin auf WS-Route → Rollen-Routing greift | ✅ PASS | Manuell (Mia → /manager) + E2E |
+| 5 | Plan-Blöcke mit Uhrzeiten + Stundensumme | ✅ PASS | Manuell (Fr 08:00–12:00, 4h, Arbeitsort) + Component-Test (auch Mehrblock) |
+| 6 | Keine Ist-Zeiten in der Antwort | ✅ PASS | Netzwerk-Payload geprüft + E2E-Assertion auf Response-Body |
+| 7 | Kollegen-Abwesenheit neutral „Abwesend" | ✅ PASS (Unit+Component) | `trimAbsences`-Unit-Test (Felder-Nachweis) + Component-Test (kein Typ-Name); UI-E2E nicht möglich: Demo-Bereich hat Abwesenheiten deaktiviert (PROJ-24), kein Admin-Dev-Login |
+| 8 | Eigene Abwesenheit darf Typ zeigen | ✅ PASS (Component) | Component-Test: eigener Datensatz → typisiertes Badge |
+| 9 | Leere Zelle „—" | ✅ PASS | Manuell + E2E + Component-Test |
+| 10 | Zurück-Blättern in aktueller KW gesperrt | ✅ PASS | Manuell (Button disabled) + E2E |
+| 11 | Aus Zukunft zurück bis aktuelle KW | ✅ PASS | E2E |
+| 12 | Manipulation auf vergangene Woche → Server liefert aktuelle | ✅ PASS (Unit) | `clampWeek`-Tests inkl. fehlgeformter Eingaben; es existiert kein URL-Parameter, Angriffsweg wäre direkter Action-POST — dort greift der Clamp |
+| 13 | Nur eigener Bereich, server-seitig | ✅ PASS | Code-Review (Scoping über `bereich_id` vor Query) + manuell (nur Demo-Mitglieder sichtbar) |
+| 14 | API-Manipulation liefert keine Fremddaten/Ist-Zeiten/Typen | ✅ PASS | Antwortformat enthält die Felder strukturell nicht (E2E-Response-Assertion); Woche ist einziger Parameter |
+| 15 | Deaktivierte Nutzer verschwinden | ✅ PASS (Code) | Query filtert `is_active = true`; kein Deaktivierungs-Flow im Dev-Test durchgespielt |
+
+### Edge Cases
+- Einziger Werkstudent im Bereich: Hinweis „Noch keine weiteren Kollegen" implementiert (Component-geprüft, kein passender Testaccount)
+- Feiertagsanzeige: Component-Test + Code übernimmt Manager-Muster (pro Bundesland)
+- Netzwerkfehler: Fehler-Alert mit „Erneut versuchen" implementiert und per Stub-Phase manuell gesehen
+- Jahreswechsel-Navigation: `clampWeek`-Unit-Test (2027-W02 > 2026-W40 lexikographisch korrekt, zero-padded Format)
+
+### Security Audit (Red Team)
+- ✅ Server Action verweigert Manager/Admins und deaktivierte Nutzer (Rollen-Check vor Service-Role-Nutzung)
+- ✅ Antwortformat enthält Ist-Zeiten und Kollegen-Abwesenheitstypen strukturell nicht — bestätigt per Netzwerk-Mitschnitt und E2E-Assertion
+- ✅ Wochen-Clamp server-seitig (inkl. Injection-artiger Eingaben, unit-getestet)
+- ✅ Route-Guard: unauthentifiziert → /login, Manager → /manager (E2E)
+- ✅ Keine Secrets im Client-Bundle (Service-Role nur in Server Action)
+
+### Bugs
+
+#### Bug 1 — MEDIUM: Werkstudenten-Navigation überläuft bei 375px
+- **Symptom:** Mit dem fünften Nav-Punkt („Team-Kalender", neu in PROJ-28) ist die Nav-Leiste ~585px breit; bei 375px Viewport überlaufen die Einträge die Seitenbreite, „Mein Profil" ist je nach Browser nur per Seiten-Scroll oder gar nicht erreichbar.
+- **Nachweis:** `nav.scrollWidth = 585` vs. `clientWidth = 375` (manuell gemessen); E2E-Test `mobile viewport (375px) has no horizontal page overflow` ist als `test.fail()` (expected fail) markiert und schlägt nach dem Fix als „unexpected pass" an — dann Markierung entfernen.
+- **Vorschlag:** `overflow-x-auto` auf dem Nav-Container in `WerkstudentNav.tsx` (betrifft ggf. auch ManagerNav mit 6+ Einträgen — prüfen).
+- **Betrifft:** Mobile-Nutzung aller Werkstudenten-Seiten, nicht nur PROJ-28.
+
+### Responsive Testing
+- Mobile (375px): Seite nutzbar, Kalender scrollt horizontal im Container ✅ — aber Nav-Overflow (Bug 1) ⚠️
+- Desktop: Layout `max-w-6xl`, keine Auffälligkeiten ✅
+- Browser: Chromium + Mobile Safari (WebKit) via Playwright ✅
+
+### Test-Infrastruktur-Notizen
+- Dev-Login resettet das Account-Passwort und invalidiert damit parallele Sessions desselben Accounts → PROJ-28-E2E-Spec läuft seriell, mit einem Account pro Playwright-Projekt (chromium: Anna, Mobile Safari: Clara)
+- Next-DEV-Server beantwortet Server-Action-POSTs während paralleler Recompiles sporadisch mit einer HTML-Fehlerseite — Datei-Retries (2) fangen das ab; in Production (ohne HMR) existiert der Effekt nicht
+
+### Production-Ready: ✅ APPROVED
+Keine Critical- oder High-Bugs. Bug 1 (Medium, Nav-Overflow auf Mobile) sollte zeitnah gefixt werden — er betrifft die Erreichbarkeit von „Mein Profil" auf schmalen Geräten —, blockiert das Deployment nach den Projektregeln aber nicht. Der zugehörige E2E-Test ist als expected-fail markiert und meldet sich nach dem Fix von selbst.
 
 ## Deployment
 _To be added by /deploy_
