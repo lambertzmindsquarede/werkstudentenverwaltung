@@ -163,6 +163,28 @@ Keine neuen Pakete — alles Nötige (Next.js, Supabase-Clients, shadcn/ui, date
 - `proxy.ts` unverändert — die Route liegt unter `/dashboard/*` und ist damit vom bestehenden Werkstudenten-Guard abgedeckt
 - Die Seite rendert bis zur Backend-Anbindung einen klaren Fehlerhinweis („noch nicht angebunden") statt leerer Fake-Daten
 
+## Implementation Notes (Backend)
+
+**Implemented:** 2026-10-01
+
+### Neue Dateien
+- `src/app/dashboard/team-kalender/logic.ts` — pure, testbare Logik: `clampWeek` (Zeithorizont-Clamp, auch gegen fehlgeformte Eingaben) und `trimAbsences` (Kollegen-Abwesenheiten → nur `user_id` + `date`; voller Datensatz nur für den eigenen Nutzer)
+- `src/app/dashboard/team-kalender/logic.test.ts` — 8 Unit-Tests inkl. Nachweis, dass Kollegen-Abwesenheiten keine weiteren Felder enthalten (Typ/Notiz/IDs)
+
+### Geänderte Dateien
+- `src/app/dashboard/team-kalender/actions.ts` — Stub durch echte Implementierung ersetzt: Auth-Check (nur aktive Werkstudenten), Bereichs-Scoping über `bereich_id` des eigenen Profils, Service-Role-Reads (PROJ-20-Muster), Wochen-Clamp, beschnittenes Antwortformat
+
+### Sicherheitsrelevante Details
+- Service-Role-Client wird erst NACH dem Autorisierungs-Check verwendet
+- `planned_entries` und `absences` werden nur für die Mitglieder des eigenen Bereichs und nur für die 5 Tage der effektiven Woche geladen
+- Ist-Zeiten (`actual_entries`, `daily_presence`) werden gar nicht abgefragt
+- Keine Migration, keine RLS-Änderung
+
+### Verifikation (Dev-Umgebung, 2026-10-01)
+- Browser-Test als Test-Account „Anna Müller": eigene Zeile zuerst mit „(Ich)", Bereichs-Kollegen (Ben, Clara) sichtbar, KW-Navigation lädt Folgewochen, Zurück-Button in aktueller KW deaktiviert
+- End-to-End: Plan-Eintrag Freitag 08:00–12:00 über Wochenplanung angelegt → erscheint korrekt im Team-Kalender (Zeiten, 4h, Arbeitsort)
+- Testsuite: 373/373 grün, Production-Build sauber
+
 ## QA Test Results
 _To be added by /qa_
 
