@@ -183,7 +183,7 @@ Keine neuen Pakete — alles Nötige (Next.js, Supabase-Clients, shadcn/ui, date
 ### Verifikation (Dev-Umgebung, 2026-10-01)
 - Browser-Test als Test-Account „Anna Müller": eigene Zeile zuerst mit „(Ich)", Bereichs-Kollegen (Ben, Clara) sichtbar, KW-Navigation lädt Folgewochen, Zurück-Button in aktueller KW deaktiviert
 - End-to-End: Plan-Eintrag Freitag 08:00–12:00 über Wochenplanung angelegt → erscheint korrekt im Team-Kalender (Zeiten, 4h, Arbeitsort)
-- Testsuite: 373/373 grün, Production-Build sauber
+- Testsuite: 365/365 grün, Production-Build sauber
 
 ## QA Test Results
 _To be added by /qa_
