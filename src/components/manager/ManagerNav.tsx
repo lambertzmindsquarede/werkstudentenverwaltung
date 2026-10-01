@@ -30,13 +30,13 @@ export default function ManagerNav({ isAdmin }: Props) {
 
   return (
     <>
-      <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-3">
+      <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between gap-3 shadow-sm">
+        <div className="flex items-center gap-3 min-w-0">
           <Image src="/logo-mindsquare-176x781.webp" alt="mindsquare" width={90} height={40} />
           <span className="text-slate-300">|</span>
-          <span className="text-slate-600 text-sm font-medium">Werkstudentenverwaltung</span>
+          <span className="text-slate-600 text-sm font-medium truncate">Werkstudentenverwaltung</span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0">
           <span
             className={`text-xs font-medium px-2.5 py-1 rounded-full ${
               isAdmin ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
@@ -47,7 +47,7 @@ export default function ManagerNav({ isAdmin }: Props) {
           <ManagerSignOutButton />
         </div>
       </header>
-      <nav className="bg-white border-b border-slate-200 px-6">
+      <nav className="bg-white border-b border-slate-200 px-6 overflow-x-auto">
         <div className="flex gap-1">
           {navItems.map((item) => (
             <Link

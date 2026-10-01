@@ -189,7 +189,7 @@ Keine neuen Pakete — alles Nötige (Next.js, Supabase-Clients, shadcn/ui, date
 
 **QA Date:** 2026-10-01
 **Tester:** /qa skill (Claude)
-**Status:** ✅ APPROVED — 15/15 Akzeptanzkriterien bestanden, 1 Medium-Bug offen (Bug 1, Mobile-Nav)
+**Status:** ✅ APPROVED — 15/15 Akzeptanzkriterien bestanden, Bug 1 (Medium, Mobile-Nav) behoben
 
 ### Automated Tests
 - Unit/Component tests: **373/373 passed** ✅ (davon neu für PROJ-28: 11 utils, 8 logic, 8 TeamKalenderZelle-Component-Tests)
@@ -232,11 +232,10 @@ Keine neuen Pakete — alles Nötige (Next.js, Supabase-Clients, shadcn/ui, date
 
 ### Bugs
 
-#### Bug 1 — MEDIUM: Werkstudenten-Navigation überläuft bei 375px
-- **Symptom:** Mit dem fünften Nav-Punkt („Team-Kalender", neu in PROJ-28) ist die Nav-Leiste ~585px breit; bei 375px Viewport überlaufen die Einträge die Seitenbreite, „Mein Profil" ist je nach Browser nur per Seiten-Scroll oder gar nicht erreichbar.
-- **Nachweis:** `nav.scrollWidth = 585` vs. `clientWidth = 375` (manuell gemessen); E2E-Test `mobile viewport (375px) has no horizontal page overflow` ist als `test.fail()` (expected fail) markiert und schlägt nach dem Fix als „unexpected pass" an — dann Markierung entfernen.
-- **Vorschlag:** `overflow-x-auto` auf dem Nav-Container in `WerkstudentNav.tsx` (betrifft ggf. auch ManagerNav mit 6+ Einträgen — prüfen).
-- **Betrifft:** Mobile-Nutzung aller Werkstudenten-Seiten, nicht nur PROJ-28.
+#### Bug 1 — MEDIUM → ✅ BEHOBEN (2026-10-01): Navigation/Header überliefen bei 375px
+- **Symptom:** Mit dem fünften Nav-Punkt („Team-Kalender", neu in PROJ-28) überliefen Nav-Leiste (585px) und Header (422px) die Seitenbreite; „Mein Profil" war auf schmalen Geräten schlecht erreichbar.
+- **Fix:** `overflow-x-auto` auf den Nav-Containern und shrink-/truncate-fähiger Header-Titel — in allen drei Navs (`WerkstudentNav`, `ManagerNav`, `AdminNav`), da baugleich.
+- **Verifikation:** Manuell bei 375px (`body.scrollWidth = 375`, Nav scrollt im Container, Header einzeilig); E2E-Test `mobile viewport (375px) has no horizontal page overflow` läuft jetzt als regulärer Regression-Guard grün (expected-fail-Markierung entfernt).
 
 ### Responsive Testing
 - Mobile (375px): Seite nutzbar, Kalender scrollt horizontal im Container ✅ — aber Nav-Overflow (Bug 1) ⚠️
@@ -248,7 +247,7 @@ Keine neuen Pakete — alles Nötige (Next.js, Supabase-Clients, shadcn/ui, date
 - Next-DEV-Server beantwortet Server-Action-POSTs während paralleler Recompiles sporadisch mit einer HTML-Fehlerseite — Datei-Retries (2) fangen das ab; in Production (ohne HMR) existiert der Effekt nicht
 
 ### Production-Ready: ✅ APPROVED
-Keine Critical- oder High-Bugs. Bug 1 (Medium, Nav-Overflow auf Mobile) sollte zeitnah gefixt werden — er betrifft die Erreichbarkeit von „Mein Profil" auf schmalen Geräten —, blockiert das Deployment nach den Projektregeln aber nicht. Der zugehörige E2E-Test ist als expected-fail markiert und meldet sich nach dem Fix von selbst.
+Keine Critical- oder High-Bugs. Bug 1 (Medium, Nav-/Header-Overflow auf Mobile) wurde am 2026-10-01 behoben und per E2E-Regression-Guard abgesichert — keine offenen Bugs mehr.
 
 ## Deployment
 _To be added by /deploy_

@@ -219,10 +219,8 @@ test('mobile viewport (375px) renders the page with scrollable calendar containe
 })
 
 test('mobile viewport (375px) has no horizontal page overflow', async ({ browser }) => {
-  // QA-Bug PROJ-28/1: Die Werkstudenten-Navigation (5 Einträge) überläuft bei
-  // 375px die Seitenbreite. Erwarteter Fehlschlag bis zum Fix — test.fail()
-  // schlägt dann als "unexpected pass" an und erinnert ans Entfernen.
-  test.fail(true, 'Bekannter Bug: WerkstudentNav überläuft bei 375px (QA Bug 1)')
+  // Regression-Guard für QA-Bug PROJ-28/1 (Nav-Overflow bei 375px, gefixt
+  // durch overflow-x-auto auf den Nav-Containern).
   const project = test.info().project.name
   await ensureWerkstudentAuth(browser, project)
   skipIfAuthFailed(project)
